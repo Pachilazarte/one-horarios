@@ -1,0 +1,1105 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ONE — Control de Horarios</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    :root{--ink:#1a181d;--pink:#e17bd7;--cyan:#6be1e3;--gold:#e4c76a;--mist:#c6c9d7;}
+    *{box-sizing:border-box;margin:0;padding:0;}
+    html{scrollbar-width:thin;scrollbar-color:var(--pink) #000;}
+    body{font-family:"Exo 2",sans-serif;background:var(--ink);color:#fefeff;min-height:100vh;}
+    .bg{position:fixed;inset:0;z-index:0;pointer-events:none;
+      background:
+        radial-gradient(1200px 700px at 70% 25%,rgba(225,123,215,.14),transparent 55%),
+        radial-gradient(900px 600px at 15% 65%,rgba(107,225,227,.10),transparent 55%),
+        radial-gradient(700px 500px at 50% 90%,rgba(228,199,106,.07),transparent 60%),
+        linear-gradient(180deg,#0a0810,#1a181d);}
+    .bg::before{content:"";position:absolute;inset:0;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='150'%3E%3Cg fill='none' stroke='%23c6c9d7' stroke-opacity='0.09' stroke-width='1'%3E%3Cpath d='M50 20l20-12 20 12v24l-20 12-20-12z'/%3E%3Cpath d='M120 20l20-12 20 12v24l-20 12-20-12z'/%3E%3Cpath d='M190 20l20-12 20 12v24l-20 12-20-12z'/%3E%3Cpath d='M85 55l20-12 20 12v24l-20 12-20-12z'/%3E%3Cpath d='M155 55l20-12 20 12v24l-20 12-20-12z'/%3E%3Cpath d='M50 90l20-12 20 12v24l-20 12-20-12z'/%3E%3Cpath d='M120 90l20-12 20 12v24l-20 12-20-12z'/%3E%3Cpath d='M190 90l20-12 20 12v24l-20 12-20-12z'/%3E%3C/g%3E%3C/svg%3E");
+      background-size:260px 150px;opacity:.5;}
+    .z1{position:relative;z-index:1;}
+
+    /* glass */
+    .g1{background:rgba(255,255,255,.055);border:1px solid rgba(198,201,215,.14);backdrop-filter:blur(18px);border-radius:16px;}
+    .g2{background:rgba(0,0,0,.38);border:1px solid rgba(198,201,215,.11);backdrop-filter:blur(20px);border-radius:12px;}
+
+    /* header */
+    header{position:sticky;top:0;z-index:50;background:rgba(10,8,16,.62);backdrop-filter:blur(22px);border-bottom:1px solid rgba(198,201,215,.09);padding:12px 20px;}
+
+    /* gradients */
+    .gc{background:linear-gradient(90deg,#6be1e3,#a8f1f1);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+    .gp{background:linear-gradient(90deg,#e17bd7,#f0a8e8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+    .gg{background:linear-gradient(90deg,#e4c76a,#f0d88a);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+
+    /* buttons */
+    .bp{background:linear-gradient(135deg,rgba(107,225,227,.22),rgba(225,123,215,.22));border:1px solid rgba(107,225,227,.38);color:#fff;padding:10px 22px;border-radius:999px;font-family:"Exo 2",sans-serif;font-weight:700;font-size:14px;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:7px;}
+    .bp:hover{background:linear-gradient(135deg,rgba(107,225,227,.38),rgba(225,123,215,.38));transform:translateY(-1px);box-shadow:0 8px 24px rgba(107,225,227,.18);}
+    .bp:disabled{opacity:.45;cursor:not-allowed;transform:none;}
+    .bg-btn{background:rgba(255,255,255,.06);border:1px solid rgba(198,201,215,.18);color:rgba(255,255,255,.8);padding:9px 18px;border-radius:999px;font-size:13px;cursor:pointer;transition:all .2s;font-weight:600;}
+    .bg-btn:hover{background:rgba(255,255,255,.11);}
+    .bd{background:rgba(239,68,68,.13);border:1px solid rgba(239,68,68,.32);color:#fca5a5;padding:5px 11px;border-radius:8px;font-size:12px;cursor:pointer;transition:all .2s;}
+    .bd:hover{background:rgba(239,68,68,.28);}
+    .bgold{background:linear-gradient(135deg,rgba(228,199,106,.28),rgba(228,199,106,.13));border:1px solid rgba(228,199,106,.38);color:#e4c76a;padding:9px 20px;border-radius:999px;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;}
+    .bgold:hover{background:linear-gradient(135deg,rgba(228,199,106,.45),rgba(228,199,106,.28));}
+    .bprint{background:rgba(107,225,227,.1);border:1px solid rgba(107,225,227,.28);color:#6be1e3;padding:9px 18px;border-radius:999px;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;}
+    .bprint:hover{background:rgba(107,225,227,.2);}
+    .bsuccess{background:linear-gradient(135deg,rgba(34,197,94,.28),rgba(34,197,94,.13));border:1px solid rgba(34,197,94,.48);color:#86efac;padding:14px 28px;border-radius:999px;font-family:"Exo 2",sans-serif;font-weight:800;font-size:16px;cursor:pointer;transition:all .25s;width:100%;display:flex;align-items:center;justify-content:center;gap:9px;}
+    .bsuccess:hover{background:linear-gradient(135deg,rgba(34,197,94,.42),rgba(34,197,94,.22));transform:translateY(-2px);box-shadow:0 12px 28px rgba(34,197,94,.18);}
+    .bsuccess:disabled{opacity:.45;cursor:not-allowed;transform:none;}
+
+    /* inputs */
+    .inp{background:rgba(255,255,255,.065);border:1px solid rgba(198,201,215,.19);color:#fff;padding:10px 13px;border-radius:10px;font-family:"Exo 2",sans-serif;font-size:14px;transition:border-color .2s;width:100%;appearance:none;-webkit-appearance:none;}
+    .inp:focus{outline:none;border-color:rgba(107,225,227,.52);box-shadow:0 0 0 3px rgba(107,225,227,.07);}
+    .inp option{background:#1a181d;color:#fff;}
+    .inp::placeholder{color:rgba(198,201,215,.42);}
+    .tinp{background:rgba(255,255,255,.065);border:1px solid rgba(198,201,215,.19);color:#fff;padding:11px 14px;border-radius:10px;font-family:"Exo 2",sans-serif;font-size:20px;font-weight:800;transition:border-color .2s;width:100%;text-align:center;letter-spacing:.08em;}
+    .tinp:focus{outline:none;border-color:rgba(107,225,227,.52);box-shadow:0 0 0 3px rgba(107,225,227,.07);}
+    .tinp::-webkit-calendar-picker-indicator{filter:invert(1) opacity(.32);cursor:pointer;}
+
+    /* labels */
+    .lbl{font-size:11px;font-weight:700;color:rgba(198,201,215,.62);letter-spacing:.07em;text-transform:uppercase;margin-bottom:5px;display:block;}
+
+    /* table */
+    .tbl{width:100%;border-collapse:collapse;font-size:13px;}
+    .tbl th{padding:10px 12px;text-align:left;font-size:11px;font-weight:700;color:rgba(198,201,215,.52);text-transform:uppercase;letter-spacing:.07em;border-bottom:1px solid rgba(198,201,215,.09);white-space:nowrap;}
+    .tbl td{padding:10px 12px;border-bottom:1px solid rgba(198,201,215,.055);vertical-align:middle;}
+    .tbl tr:hover td{background:rgba(255,255,255,.022);}
+    .tbl tr:last-child td{border-bottom:none;}
+    .tw{overflow-x:auto;border-radius:14px;}
+
+    /* badges */
+    .b{display:inline-flex;align-items:center;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:.04em;white-space:nowrap;}
+    .bc{background:rgba(107,225,227,.14);color:#6be1e3;border:1px solid rgba(107,225,227,.24);}
+    .bp2{background:rgba(225,123,215,.14);color:#e17bd7;border:1px solid rgba(225,123,215,.24);}
+    .br{background:rgba(239,68,68,.14);color:#fca5a5;border:1px solid rgba(239,68,68,.24);}
+    .bgreen{background:rgba(34,197,94,.14);color:#86efac;border:1px solid rgba(34,197,94,.24);}
+    .bgr{background:rgba(198,201,215,.09);color:rgba(198,201,215,.78);border:1px solid rgba(198,201,215,.18);}
+
+    /* tabs */
+    .tab{padding:8px 17px;border-radius:999px;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;border:1px solid transparent;color:rgba(198,201,215,.62);background:transparent;}
+    .tab.on{background:rgba(107,225,227,.14);border-color:rgba(107,225,227,.34);color:#6be1e3;}
+    .tab:hover:not(.on){background:rgba(255,255,255,.06);color:#fff;}
+
+    /* turno */
+    .tb{background:rgba(255,255,255,.06);border:1px solid rgba(198,201,215,.16);color:rgba(198,201,215,.78);padding:8px 16px;border-radius:999px;font-family:"Exo 2",sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;}
+    .tb:hover{background:rgba(107,225,227,.09);border-color:rgba(107,225,227,.28);color:#6be1e3;}
+    .tb.on{background:rgba(107,225,227,.17);border-color:rgba(107,225,227,.52);color:#6be1e3;font-weight:800;box-shadow:0 0 12px rgba(107,225,227,.13);}
+
+    /* modal */
+    .mbg{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.74);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:16px;}
+    .mbox{background:#100e18;border:1px solid rgba(198,201,215,.14);border-radius:20px;padding:26px;max-width:460px;width:100%;max-height:90vh;overflow-y:auto;}
+
+    /* stat cards */
+    .sc{background:rgba(255,255,255,.048);border:1px solid rgba(198,201,215,.11);border-radius:14px;padding:16px 18px;}
+    .sc-big{background:rgba(255,255,255,.048);border:1px solid rgba(198,201,215,.11);border-radius:16px;padding:20px 22px;}
+
+    /* toast */
+    .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(90px);z-index:300;padding:13px 26px;border-radius:13px;font-size:14px;font-weight:700;box-shadow:0 8px 30px rgba(0,0,0,.5);opacity:0;transition:all .32s cubic-bezier(.34,1.56,.64,1);white-space:nowrap;pointer-events:none;}
+    .toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+    .tok{background:rgba(34,197,94,.24);border:1px solid rgba(34,197,94,.48);color:#86efac;}
+    .terr{background:rgba(239,68,68,.24);border:1px solid rgba(239,68,68,.48);color:#fca5a5;}
+
+    /* queue row */
+    .qrow{background:rgba(107,225,227,.05);border:1px solid rgba(107,225,227,.12);border-radius:11px;padding:11px 15px;display:flex;align-items:center;justify-content:space-between;gap:10px;animation:fu .25s ease both;}
+
+    /* ok banner */
+    .okb{background:rgba(34,197,94,.09);border:1px solid rgba(34,197,94,.28);border-radius:14px;padding:16px 20px;text-align:center;animation:fu .35s ease both;}
+
+    /* chart containers */
+    .chart-wrap{position:relative;height:180px;}
+
+    /* print */
+    @media print{
+      .no-print{display:none!important;}
+      header{display:none!important;}
+      body{background:#fff!important;color:#000!important;}
+      .bg{display:none!important;}
+      .g1,.g2,.sc,.sc-big{background:#f8f8f8!important;border:1px solid #ddd!important;border-radius:8px!important;backdrop-filter:none!important;}
+      .tbl th,.tbl td{color:#000!important;border-color:#ddd!important;}
+      *{-webkit-text-fill-color:initial!important;background-clip:initial!important;}
+    }
+
+    /* misc */
+    .fade{animation:fu .3s ease both;}
+    @keyframes fu{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:translateY(0)}}
+    @media(max-width:640px){.hm{display:none!important;}.tbl th,.tbl td{padding:7px 6px;font-size:11px;}.tinp{font-size:17px;}}
+    ::-webkit-scrollbar{width:5px;height:5px;}
+    ::-webkit-scrollbar-thumb{background:rgba(225,123,215,.38);border-radius:99px;}
+    #loginView{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px;}
+    .nb{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:rgba(107,225,227,.11);border:1px solid rgba(107,225,227,.22);color:#6be1e3;font-size:10px;font-weight:800;}
+  </style>
+</head>
+<body>
+<div class="bg" aria-hidden="true"></div>
+<div class="z1">
+
+<!-- ════════════════ HEADER ════════════════ -->
+<header id="appHeader" style="display:none" class="no-print">
+  <div style="max-width:1280px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+    <div style="display:flex;align-items:center;gap:11px;">
+      <div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,rgba(107,225,227,.28),rgba(225,123,215,.28));border:1px solid rgba(107,225,227,.28);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;">ONE</div>
+      <div>
+        <div style="font-weight:800;font-size:16px;letter-spacing:.04em;">ONE <span class="gc">Horarios</span></div>
+        <div id="hSub" style="font-size:10px;color:rgba(198,201,215,.52);letter-spacing:.04em;"></div>
+      </div>
+    </div>
+    <div id="adminNav" style="display:none;flex-wrap:wrap;gap:5px;"></div>
+    <div style="display:flex;align-items:center;gap:7px;">
+      <span id="hBadge"></span>
+      <button class="bg-btn no-print" onclick="doLogout()" style="font-size:12px;padding:6px 13px;">Salir</button>
+    </div>
+  </div>
+</header>
+
+<!-- ════════════════ LOGIN ════════════════ -->
+<div id="loginView">
+  <div style="max-width:520px;width:100%;padding:16px;">
+
+    <!-- LOGO -->
+    <div style="text-align:center;margin-bottom:24px;">
+      <div style="font-size:40px;margin-bottom:6px;">🕐</div>
+      <h1 style="font-size:22px;font-weight:800;margin-bottom:2px;">ONE <span class="gc">Horarios</span></h1>
+      <p style="color:rgba(198,201,215,.48);font-size:12px;">Escencial Consultora</p>
+    </div>
+
+    <!-- FORMULARIO CARGA DIRECTO -->
+    <div class="g1" style="padding:24px;margin-bottom:14px;">
+      <h2 style="font-size:17px;font-weight:800;margin-bottom:16px;">Registrar <span class="gc">horario</span></h2>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+        <div>
+          <label class="lbl">Área *</label>
+          <select class="inp" id="lArea" onchange="lLoadPers()">
+            <option value="">Seleccionar...</option>
+            <option>ADMINISTRACION</option><option>COMERCIAL</option><option>RECURSOS HUMANOS</option>
+            <option>MARKETING</option><option>ACADEMICO / GT</option><option>INNOVACION Y DESARROLLO</option><option>MAESTRANZA</option>
+          </select>
+        </div>
+        <div>
+          <label class="lbl">Nombre *</label>
+          <select class="inp" id="lNom"><option value="">Seleccioná área primero</option></select>
+        </div>
+      </div>
+
+      <div style="margin-bottom:12px;">
+        <label class="lbl">Turno *</label>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="tb" onclick="lSetT('Mañana')" id="ltb-Mañana">☀ Mañana</button>
+          <button class="tb" onclick="lSetT('Tarde')" id="ltb-Tarde">🌤 Tarde</button>
+          <button class="tb" onclick="lSetT('Noche')" id="ltb-Noche">🌙 Noche</button>
+          <button class="tb" onclick="lSetT('Completo')" id="ltb-Completo">📅 Completo</button>
+          <button class="tb" onclick="lSetT('Personalizado')" id="ltb-Personalizado">⚙ Otro</button>
+        </div>
+        <input type="hidden" id="lTurno"/>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+        <div>
+          <label class="lbl">Hora de Entrada *</label>
+          <input class="tinp" type="time" id="lEnt" oninput="lUpdCalc()" onchange="lUpdCalc()"/>
+          <div id="lInfoT" style="font-size:12px;font-weight:700;margin-top:4px;min-height:16px;"></div>
+        </div>
+        <div>
+          <label class="lbl">Hora de Salida <span style="font-size:10px;opacity:.4;">(opcional)</span></label>
+          <input class="tinp" type="time" id="lSal" oninput="lUpdCalc()" onchange="lUpdCalc()"/>
+          <div id="lInfoH" style="font-size:12px;font-weight:700;margin-top:4px;color:rgba(107,225,227,.75);min-height:16px;"></div>
+        </div>
+      </div>
+
+      <div style="margin-bottom:16px;">
+        <label class="lbl">Observaciones <span style="font-size:10px;opacity:.4;">(opcional)</span></label>
+        <input class="inp" type="text" id="lObs" placeholder="Notas opcionales..."/>
+      </div>
+
+      <!-- Fecha oculta, siempre hoy -->
+      <input type="hidden" id="lFecha"/>
+
+      <button class="bsuccess" onclick="lGuardar()" id="lBtnG">
+        <span id="lBIco">✅</span><span id="lBTxt">Guardar registro</span>
+      </button>
+
+      <!-- Banner ok -->
+      <div id="lOkBanner" style="display:none;margin-top:14px;background:rgba(34,197,94,.09);border:1px solid rgba(34,197,94,.28);border-radius:12px;padding:14px;text-align:center;">
+        <div style="font-size:22px;margin-bottom:3px;">✅</div>
+        <div style="font-size:14px;font-weight:800;color:#86efac;" id="lOkMsg">¡Registrado!</div>
+        <div style="font-size:11px;color:rgba(134,239,172,.6);margin-top:2px;">Para cargar otro, completá de nuevo y guardá.</div>
+      </div>
+
+      <!-- Cola sesión -->
+      <div id="lQSec" style="display:none;margin-top:14px;">
+        <div style="font-size:11px;font-weight:700;color:rgba(198,201,215,.45);text-transform:uppercase;letter-spacing:.07em;margin-bottom:7px;">Esta sesión — <span id="lQCnt">0</span></div>
+        <div id="lQList" style="display:flex;flex-direction:column;gap:6px;"></div>
+      </div>
+    </div>
+
+    <!-- BOTÓN ADMIN pequeño -->
+    <div style="text-align:center;">
+      <button class="bg-btn" onclick="showAdminLogin()" id="btnShowAdmin" style="font-size:12px;padding:7px 18px;opacity:.7;">🔐 Acceder como administrador</button>
+      <div id="adminLoginBox" style="display:none;margin-top:12px;" class="g1 fade">
+        <div style="padding:18px 20px;">
+          <div style="font-size:13px;font-weight:700;margin-bottom:12px;color:rgba(198,201,215,.7);">Panel Administrador</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+            <input class="inp" type="text" id="aU" placeholder="Usuario" style="flex:1;min-width:100px;" onkeydown="if(event.key==='Enter')loginAdmin()"/>
+            <input class="inp" type="password" id="aP" placeholder="Contraseña" style="flex:1;min-width:100px;" onkeydown="if(event.key==='Enter')loginAdmin()"/>
+          </div>
+          <button class="bp" onclick="loginAdmin()" style="width:100%;justify-content:center;padding:10px;">Ingresar</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ════════════════ MAIN APP ════════════════ -->
+<main id="appMain" style="display:none;max-width:1280px;margin:0 auto;padding:20px 16px 80px;">
+
+  <!-- ── PANEL CARGA USUARIO ── -->
+  <div id="panelCarga" style="display:none;" class="fade">
+    <div id="okBanner" style="display:none;margin-bottom:16px;" class="okb">
+      <div style="font-size:24px;margin-bottom:4px;">✅</div>
+      <div style="font-size:15px;font-weight:800;color:#86efac;" id="okMsg">¡Registrado!</div>
+      <div style="font-size:12px;color:rgba(134,239,172,.62);margin-top:2px;">Para cargar otro, completá el formulario y guardá de nuevo.</div>
+    </div>
+
+    <div id="qSec" style="display:none;margin-bottom:16px;">
+      <div style="font-size:11px;font-weight:700;color:rgba(198,201,215,.5);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px;">Registrados en esta sesión — <span id="qCnt">0</span></div>
+      <div id="qList" style="display:flex;flex-direction:column;gap:7px;"></div>
+    </div>
+
+    <div class="g1" style="padding:22px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:8px;">
+        <div>
+          <h2 style="font-size:19px;font-weight:800;">Registrar <span class="gc">horario</span></h2>
+          <div style="font-size:13px;color:rgba(198,201,215,.52);margin-top:1px;" id="fechaLbl"></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:7px;">
+          <label class="lbl" style="margin:0;white-space:nowrap;">Fecha:</label>
+          <input class="inp" type="date" id="cFecha" style="width:145px;" onchange="updFecha()" />
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-bottom:13px;">
+        <div>
+          <label class="lbl">Área *</label>
+          <select class="inp" id="cArea" onchange="loadPers()">
+            <option value="">Seleccionar área...</option>
+            <option>ADMINISTRACION</option><option>COMERCIAL</option><option>RECURSOS HUMANOS</option>
+            <option>MARKETING</option><option>ACADEMICO / GT</option><option>INNOVACION Y DESARROLLO</option><option>MAESTRANZA</option>
+          </select>
+        </div>
+        <div>
+          <label class="lbl">Nombre *</label>
+          <select class="inp" id="cNom"><option value="">Seleccioná área primero</option></select>
+        </div>
+      </div>
+
+      <div style="margin-bottom:14px;">
+        <label class="lbl">Turno *</label>
+        <div style="display:flex;gap:7px;flex-wrap:wrap;">
+          <button class="tb" onclick="setT('Mañana')" id="tb-Mañana">☀ Mañana <span style="font-size:10px;opacity:.52;">(09:00)</span></button>
+          <button class="tb" onclick="setT('Tarde')" id="tb-Tarde">🌤 Tarde <span style="font-size:10px;opacity:.52;">(14:00)</span></button>
+          <button class="tb" onclick="setT('Noche')" id="tb-Noche">🌙 Noche <span style="font-size:10px;opacity:.52;">(22:00)</span></button>
+          <button class="tb" onclick="setT('Completo')" id="tb-Completo">📅 Completo <span style="font-size:10px;opacity:.52;">(09:00)</span></button>
+          <button class="tb" onclick="setT('Personalizado')" id="tb-Personalizado">⚙ Otro</button>
+        </div>
+        <input type="hidden" id="cTurno"/>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-bottom:14px;">
+        <div>
+          <label class="lbl">Hora de Entrada *</label>
+          <input class="tinp" type="time" id="cEnt" oninput="updCalc()" onchange="updCalc()"/>
+          <div id="infoT" style="font-size:12px;font-weight:700;margin-top:5px;min-height:17px;"></div>
+        </div>
+        <div>
+          <label class="lbl">Hora de Salida <span style="font-size:10px;font-weight:400;opacity:.44;">(opcional)</span></label>
+          <input class="tinp" type="time" id="cSal" oninput="updCalc()" onchange="updCalc()"/>
+          <div id="infoH" style="font-size:12px;font-weight:700;margin-top:5px;color:rgba(107,225,227,.78);min-height:17px;"></div>
+        </div>
+      </div>
+
+      <div style="margin-bottom:18px;">
+        <label class="lbl">Observaciones <span style="font-size:10px;font-weight:400;opacity:.42;">(opcional)</span></label>
+        <input class="inp" type="text" id="cObs" placeholder="Notas opcionales..."/>
+      </div>
+
+      <button class="bsuccess no-print" onclick="guardar()" id="btnG">
+        <span id="bIco">✅</span><span id="bTxt">Guardar registro</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ── PANEL ADMIN ── -->
+  <div id="panelAdmin" style="display:none;" class="fade">
+    <div id="adminTabsBar" style="display:flex;gap:6px;margin-bottom:18px;flex-wrap:wrap;align-items:center;justify-content:space-between;" class="no-print">
+      <div style="display:flex;gap:5px;flex-wrap:wrap;">
+        <button class="tab on" id="at-dash" onclick="aTab('dash')">📊 Dashboard</button>
+        <button class="tab" id="at-reg" onclick="aTab('reg')">📋 Registros</button>
+        <button class="tab" id="at-per" onclick="aTab('per')">👥 Personal</button>
+      </div>
+      <div style="display:flex;gap:6px;">
+        <button class="bprint no-print" onclick="window.print()">🖨 Imprimir</button>
+        <button class="bgold no-print" onclick="exportCSV()">⬇ CSV</button>
+      </div>
+    </div>
+
+    <!-- ═══ DASHBOARD ═══ -->
+    <div id="aDash" class="fade">
+      <!-- FILTRO DASHBOARD -->
+      <div class="g1 no-print" style="padding:14px 18px;margin-bottom:16px;">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end;">
+          <div style="flex:1;min-width:140px;">
+            <label class="lbl">Período</label>
+            <select class="inp" id="dPer" onchange="loadDash()">
+              <option value="hoy">Hoy</option>
+              <option value="semana" selected>Esta semana</option>
+              <option value="semana_ant">Semana anterior</option>
+              <option value="mes">Este mes</option>
+              <option value="mes_ant">Mes anterior</option>
+              <option value="anio">Este año</option>
+              <option value="todos">Todos</option>
+            </select>
+          </div>
+          <div style="flex:1;min-width:140px;">
+            <label class="lbl">Área</label>
+            <select class="inp" id="dArea" onchange="loadDash()">
+              <option value="">Todas las áreas</option>
+              <option>ADMINISTRACION</option><option>COMERCIAL</option><option>RECURSOS HUMANOS</option>
+              <option>MARKETING</option><option>ACADEMICO / GT</option><option>INNOVACION Y DESARROLLO</option><option>MAESTRANZA</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPI ROW -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:16px;" id="kpiRow">
+        <div class="sc-big"><div style="font-size:10px;color:rgba(198,201,215,.5);text-transform:uppercase;letter-spacing:.07em;">Total registros</div><div style="font-size:34px;font-weight:800;margin-top:4px;" class="gc" id="kT">—</div></div>
+        <div class="sc-big"><div style="font-size:10px;color:rgba(198,201,215,.5);text-transform:uppercase;letter-spacing:.07em;">Personas</div><div style="font-size:34px;font-weight:800;margin-top:4px;color:#a78bfa;" id="kP">—</div></div>
+        <div class="sc-big"><div style="font-size:10px;color:rgba(198,201,215,.5);text-transform:uppercase;letter-spacing:.07em;">Prom. tardanza</div><div style="font-size:34px;font-weight:800;margin-top:4px;" id="kTd">—</div><div style="font-size:11px;color:rgba(198,201,215,.45);margin-top:2px;" id="kTdSub"></div></div>
+        <div class="sc-big"><div style="font-size:10px;color:rgba(198,201,215,.5);text-transform:uppercase;letter-spacing:.07em;">Prom. Hs/día</div><div style="font-size:34px;font-weight:800;margin-top:4px;" class="gg" id="kH">—</div></div>
+        <div class="sc-big"><div style="font-size:10px;color:rgba(198,201,215,.5);text-transform:uppercase;letter-spacing:.07em;">Puntuales</div><div style="font-size:34px;font-weight:800;margin-top:4px;color:#86efac;" id="kPunt">—</div></div>
+        <div class="sc-big"><div style="font-size:10px;color:rgba(198,201,215,.5);text-transform:uppercase;letter-spacing:.07em;">Con tardanza</div><div style="font-size:34px;font-weight:800;margin-top:4px;color:#fca5a5;" id="kTarde">—</div></div>
+      </div>
+
+      <!-- CHARTS ROW -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-bottom:16px;">
+        <div class="g1" style="padding:18px 20px;">
+          <div style="font-size:13px;font-weight:700;margin-bottom:14px;color:rgba(198,201,215,.8);">Registros por área</div>
+          <div class="chart-wrap"><canvas id="chartArea"></canvas></div>
+        </div>
+        <div class="g1" style="padding:18px 20px;">
+          <div style="font-size:13px;font-weight:700;margin-bottom:14px;color:rgba(198,201,215,.8);">Puntualidad por área</div>
+          <div class="chart-wrap"><canvas id="chartPunt"></canvas></div>
+        </div>
+        <div class="g1" style="padding:18px 20px;">
+          <div style="font-size:13px;font-weight:700;margin-bottom:14px;color:rgba(198,201,215,.8);">Registros por día</div>
+          <div class="chart-wrap"><canvas id="chartDia"></canvas></div>
+        </div>
+      </div>
+
+      <!-- TOP TARDANZAS -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-bottom:16px;">
+        <div class="g1" style="padding:18px 20px;">
+          <div style="font-size:13px;font-weight:700;margin-bottom:14px;color:rgba(198,201,215,.8);">Top tardanzas del período</div>
+          <div id="topTard" style="display:flex;flex-direction:column;gap:8px;"></div>
+        </div>
+        <div class="g1" style="padding:18px 20px;">
+          <div style="font-size:13px;font-weight:700;margin-bottom:14px;color:rgba(198,201,215,.8);">Detalle por área</div>
+          <div id="areaTable" style="overflow-x:auto;">
+            <table class="tbl" style="font-size:12px;">
+              <thead><tr><th>Área</th><th>Reg.</th><th>Prom. tarde</th><th>Puntuales</th></tr></thead>
+              <tbody id="tbArea"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ REGISTROS ═══ -->
+    <div id="aReg" style="display:none;">
+      <div class="g1 no-print" style="padding:14px 16px;margin-bottom:14px;">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:9px;align-items:end;">
+          <div>
+            <label class="lbl">Período</label>
+            <select class="inp" id="fPer" onchange="changePer()">
+              <option value="hoy">Hoy</option>
+              <option value="semana">Esta semana</option>
+              <option value="semana_ant">Semana anterior</option>
+              <option value="mes" selected>Este mes</option>
+              <option value="mes_ant">Mes anterior</option>
+              <option value="anio">Este año</option>
+              <option value="custom">Personalizado</option>
+              <option value="todos">Todos</option>
+            </select>
+          </div>
+          <div id="fCDes" style="display:none;"><label class="lbl">Desde</label><input class="inp" type="date" id="fDes" onchange="loadRegs()"/></div>
+          <div id="fCHas" style="display:none;"><label class="lbl">Hasta</label><input class="inp" type="date" id="fHas" onchange="loadRegs()"/></div>
+          <div>
+            <label class="lbl">Área</label>
+            <select class="inp" id="fArea" onchange="loadRegs()">
+              <option value="">Todas</option>
+              <option>ADMINISTRACION</option><option>COMERCIAL</option><option>RECURSOS HUMANOS</option>
+              <option>MARKETING</option><option>ACADEMICO / GT</option><option>INNOVACION Y DESARROLLO</option><option>MAESTRANZA</option>
+            </select>
+          </div>
+          <div><label class="lbl">Buscar</label><input class="inp" type="text" id="fBusq" placeholder="Nombre..." oninput="renderRegs()"/></div>
+        </div>
+      </div>
+      <div class="g1 tw">
+        <table class="tbl">
+          <thead><tr><th>#</th><th>Área</th><th>Nombre</th><th class="hm">Rol</th><th>Fecha</th><th class="hm">Turno</th><th>Entrada</th><th>Salida</th><th>Hs. trab.</th><th>Min. tarde</th><th class="hm">Obs.</th><th class="no-print"></th></tr></thead>
+          <tbody id="tbR"><tr><td colspan="12" style="text-align:center;padding:40px;color:rgba(198,201,215,.3);">Cargando...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═══ PERSONAL ═══ -->
+    <div id="aPer" style="display:none;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:9px;">
+        <div>
+          <h3 style="font-size:17px;font-weight:800;">Personal <span class="gp">registrado</span></h3>
+          <p style="font-size:12px;color:rgba(198,201,215,.48);margin-top:1px;" id="pCnt"></p>
+        </div>
+        <button class="bp no-print" onclick="openMP()">+ Agregar persona</button>
+      </div>
+      <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px;" class="no-print">
+        <button class="tab on" id="pb-" onclick="filtPA('')">Todos</button>
+        <button class="tab" id="pb-ADMINISTRACION" onclick="filtPA('ADMINISTRACION')">Administ.</button>
+        <button class="tab" id="pb-COMERCIAL" onclick="filtPA('COMERCIAL')">Comercial</button>
+        <button class="tab" id="pb-RECURSOS HUMANOS" onclick="filtPA('RECURSOS HUMANOS')">RR.HH.</button>
+        <button class="tab" id="pb-MARKETING" onclick="filtPA('MARKETING')">Marketing</button>
+        <button class="tab" id="pb-ACADEMICO / GT" onclick="filtPA('ACADEMICO / GT')">Académico</button>
+        <button class="tab" id="pb-INNOVACION Y DESARROLLO" onclick="filtPA('INNOVACION Y DESARROLLO')">Innovación</button>
+        <button class="tab" id="pb-MAESTRANZA" onclick="filtPA('MAESTRANZA')">Maestranza</button>
+      </div>
+      <div class="g1 tw">
+        <table class="tbl">
+          <thead><tr><th>#</th><th>Nombre</th><th>Rol</th><th>Área</th><th>Estado</th><th class="no-print"></th></tr></thead>
+          <tbody id="tbP"><tr><td colspan="6" style="text-align:center;padding:40px;color:rgba(198,201,215,.3);">Cargando...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- MODAL PERSONAL -->
+<div class="mbg" id="mPers" style="display:none;" onclick="if(event.target===this)closeMP()">
+  <div class="mbox">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+      <h3 style="font-size:16px;font-weight:800;" id="mPT">Agregar Persona</h3>
+      <button onclick="closeMP()" style="background:none;border:none;color:rgba(198,201,215,.52);font-size:20px;cursor:pointer;">✕</button>
+    </div>
+    <input type="hidden" id="mpId"/>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div><label class="lbl">Nombre completo *</label><input class="inp" type="text" id="mpN" placeholder="Nombre y apellido"/></div>
+      <div><label class="lbl">Rol / Cargo *</label><input class="inp" type="text" id="mpR" placeholder="Ej: Coordinador..."/></div>
+      <div><label class="lbl">Área *</label>
+        <select class="inp" id="mpA"><option value="">Seleccionar...</option>
+          <option>ADMINISTRACION</option><option>COMERCIAL</option><option>RECURSOS HUMANOS</option>
+          <option>MARKETING</option><option>ACADEMICO / GT</option><option>INNOVACION Y DESARROLLO</option><option>MAESTRANZA</option>
+        </select>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="mpAc" checked style="width:15px;height:15px;cursor:pointer;accent-color:#6be1e3;"/><label for="mpAc" style="font-size:14px;cursor:pointer;">Persona activa</label></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:20px;">
+      <button class="bg-btn" onclick="closeMP()" style="flex:1;">Cancelar</button>
+      <button class="bp" onclick="savePersonal()" style="flex:1;justify-content:center;padding:11px;" id="btnSP">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EDITAR REGISTRO -->
+<div class="mbg" id="mReg" style="display:none;" onclick="if(event.target===this)closeMR()">
+  <div class="mbox">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+      <h3 style="font-size:16px;font-weight:800;">Editar Registro</h3>
+      <button onclick="closeMR()" style="background:none;border:none;color:rgba(198,201,215,.52);font-size:20px;cursor:pointer;">✕</button>
+    </div>
+    <input type="hidden" id="erId"/>
+    <div style="display:flex;flex-direction:column;gap:13px;">
+      <div>
+        <label class="lbl">Turno</label>
+        <select class="inp" id="erT">
+          <option value="">Sin turno</option>
+          <option value="Mañana">☀ Mañana (09:00)</option>
+          <option value="Tarde">🌤 Tarde (14:00)</option>
+          <option value="Noche">🌙 Noche (22:00)</option>
+          <option value="Completo">📅 Completo (09:00)</option>
+          <option value="Personalizado">⚙ Personalizado</option>
+        </select>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div><label class="lbl">Entrada</label><input class="tinp" type="time" id="erE"/></div>
+        <div><label class="lbl">Salida</label><input class="tinp" type="time" id="erS"/></div>
+      </div>
+      <div><label class="lbl">Observaciones</label><input class="inp" type="text" id="erO" placeholder="Notas..."/></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:20px;">
+      <button class="bg-btn" onclick="closeMR()" style="flex:1;">Cancelar</button>
+      <button class="bp" onclick="saveReg()" style="flex:1;justify-content:center;padding:11px;">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+</div><!-- /z1 -->
+
+<script>
+// ── SUPABASE ──
+const SB = supabase.createClient(
+  'https://qbgihaatifllskqveavg.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFiZ2loYWF0aWZsbHNrcXZlYXZnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NzE1MzcsImV4cCI6MjA4OTM0NzUzN30.x91ZvjEqGxiSuG9B0T_jOLclx2TT8u3VCG7N1KNOYA4'
+);
+
+// ── STATE ──
+let allRegs=[], allPersonal=[], filtPArea='', sessionQ=[], curT='';
+let chartArea=null, chartPunt=null, chartDia=null;
+
+// ── UTILS ──
+const toast=(msg,type='tok')=>{const t=document.getElementById('toast');t.textContent=msg;t.className=`toast ${type} show`;setTimeout(()=>t.classList.remove('show'),3000);};
+const today=()=>new Date().toISOString().slice(0,10);
+const fmtD=d=>{if(!d)return'—';const[y,m,day]=d.split('-');return`${day}/${m}/${y}`;};
+const calcHs=(e,s)=>{if(!e||!s)return null;const[eh,em]=e.split(':').map(Number);const[sh,sm]=s.split(':').map(Number);const m=(sh*60+sm)-(eh*60+em);return m>0?m/60:null;};
+const fmtHs=h=>{if(h===null||h===undefined)return'—';const hrs=Math.floor(h);const m=Math.round((h-hrs)*60);return m>0?`${hrs}h ${m}m`:`${hrs}h`;};
+
+// Tardanza: diferencia real entre hora de entrada y el :00 del turno
+// Positivo = minutos tarde | Negativo = minutos antes
+const TURNO_H={'Mañana':9,'Tarde':14,'Noche':22,'Completo':9,'Personalizado':null};
+const calcTard=(turno,entStr)=>{
+  if(!turno||!entStr)return null;
+  const ph=TURNO_H[turno];
+  if(ph===null)return null;
+  const[eh,em]=entStr.split(':').map(Number);
+  return(eh*60+em)-(ph*60);
+};
+
+const AREA_COL={'ADMINISTRACION':'#6be1e3','COMERCIAL':'#e17bd7','RECURSOS HUMANOS':'#e4c76a','MARKETING':'#f472b6','ACADEMICO / GT':'#a78bfa','INNOVACION Y DESARROLLO':'#34d399','MAESTRANZA':'#fb923c'};
+const areaC=a=>AREA_COL[a]||'#a4a8c0';
+
+function getMon(off=0){const d=new Date();const day=d.getDay();d.setDate(d.getDate()+(day===0?-6:1-day)+off*7);return d.toISOString().slice(0,10);}
+function getMonthStart(off=0){const d=new Date();d.setMonth(d.getMonth()+off,1);return d.toISOString().slice(0,10);}
+function getMonthEnd(off=0){const d=new Date();d.setMonth(d.getMonth()+off+1,0);return d.toISOString().slice(0,10);}
+
+function getRange(per){
+  const t=today();
+  if(per==='hoy') return{desde:t,hasta:t};
+  if(per==='semana') return{desde:getMon(0),hasta:t};
+  if(per==='semana_ant') return{desde:getMon(-1),hasta:getMon(0)};
+  if(per==='mes') return{desde:getMonthStart(0),hasta:t};
+  if(per==='mes_ant') return{desde:getMonthStart(-1),hasta:getMonthEnd(-1)};
+  if(per==='anio') return{desde:`${new Date().getFullYear()}-01-01`,hasta:t};
+  if(per==='custom') return{desde:document.getElementById('fDes')?.value||'',hasta:document.getElementById('fHas')?.value||''};
+  return{desde:null,hasta:null};
+}
+
+// ── AUTH ──
+function enterUser(){
+  document.getElementById('loginView').style.display='none';
+  document.getElementById('appHeader').style.display='';
+  document.getElementById('appMain').style.display='';
+  document.getElementById('hSub').textContent='Panel de carga';
+  document.getElementById('hBadge').innerHTML='<span class="b bc">👤 Usuario</span>';
+  showPanel('carga');
+  document.getElementById('cFecha').value=today();
+  updFecha();
+}
+
+function loginAdmin(){
+  const u=document.getElementById('aU').value.trim();
+  const p=document.getElementById('aP').value.trim();
+  if(u==='moni'&&p==='moni'){
+    document.getElementById('loginView').style.display='none';
+    document.getElementById('appHeader').style.display='';
+    document.getElementById('appMain').style.display='';
+    document.getElementById('hSub').textContent='Panel administrador';
+    document.getElementById('hBadge').innerHTML='<span class="b bp2">🔐 Admin</span>';
+    document.getElementById('adminNav').style.display='flex';
+    showPanel('admin');
+    loadDash();
+    loadRegs();
+    loadPersonal();
+  } else {
+    toast('Usuario o contraseña incorrectos','terr');
+  }
+}
+
+function doLogout(){
+  sessionQ=[];
+  document.getElementById('loginView').style.display='';
+  document.getElementById('appHeader').style.display='none';
+  document.getElementById('appMain').style.display='none';
+  document.getElementById('aU').value='';
+  document.getElementById('aP').value='';
+  document.getElementById('adminNav').style.display='none';
+}
+
+function showPanel(p){
+  document.getElementById('panelCarga').style.display=p==='carga'?'':'none';
+  document.getElementById('panelAdmin').style.display=p==='admin'?'':'none';
+}
+
+function aTab(t){
+  ['dash','reg','per'].forEach(x=>{
+    document.getElementById('a'+x.charAt(0).toUpperCase()+x.slice(1)).style.display=x===t?'':'none';
+    document.getElementById('at-'+x).classList.toggle('on',x===t);
+  });
+  // Fix: IDs son aDash, aReg, aPer
+  document.getElementById('aDash').style.display=t==='dash'?'':'none';
+  document.getElementById('aReg').style.display=t==='reg'?'':'none';
+  document.getElementById('aPer').style.display=t==='per'?'':'none';
+  ['dash','reg','per'].forEach(x=>document.getElementById('at-'+x).classList.toggle('on',x===t));
+}
+
+// ── PANEL CARGA ──
+function updFecha(){
+  const v=document.getElementById('cFecha').value;
+  if(!v){document.getElementById('fechaLbl').textContent='';return;}
+  const d=new Date(v+'T12:00:00');
+  const dias=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+  const mes=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  document.getElementById('fechaLbl').textContent=`${dias[d.getDay()]} ${d.getDate()} de ${mes[d.getMonth()]}`;
+}
+
+async function loadPers(){
+  const area=document.getElementById('cArea').value;
+  const sel=document.getElementById('cNom');
+  if(!area){sel.innerHTML='<option value="">Seleccioná área primero</option>';return;}
+  sel.innerHTML='<option value="">Cargando...</option>';
+  const{data}=await SB.from('personal').select('*').eq('area',area).eq('activo',true).order('nombre');
+  sel.innerHTML='<option value="">Seleccionar persona...</option>';
+  (data||[]).forEach(p=>{
+    const o=document.createElement('option');
+    o.value=JSON.stringify({nombre:p.nombre,rol:p.rol||''});
+    o.textContent=p.nombre;
+    sel.appendChild(o);
+  });
+}
+
+function setT(t){
+  curT=t;
+  document.getElementById('cTurno').value=t;
+  document.querySelectorAll('.tb').forEach(b=>b.classList.remove('on'));
+  document.getElementById('tb-'+t)?.classList.add('on');
+  updCalc();
+}
+
+function updCalc(){
+  const ent=document.getElementById('cEnt').value;
+  const sal=document.getElementById('cSal').value;
+  const it=document.getElementById('infoT');
+  const ih=document.getElementById('infoH');
+  if(ent&&curT&&TURNO_H[curT]!==null){
+    const d=calcTard(curT,ent);
+    if(d<0){it.style.color='#86efac';it.textContent=`✓ ${Math.abs(d)} min antes del horario`;}
+    else if(d===0){it.style.color='#86efac';it.textContent='✓ Llegó en horario exacto';}
+    else{it.style.color='#fca5a5';it.textContent=`⚠ ${d} min tarde`;}
+  }else{it.textContent='';}
+  const hs=calcHs(ent,sal);
+  ih.textContent=hs!==null?`⏱ ${fmtHs(hs)} trabajadas`:'';
+}
+
+async function guardar(){
+  const area=document.getElementById('cArea').value;
+  const nomSel=document.getElementById('cNom');
+  const nomOpt=nomSel.options[nomSel.selectedIndex];
+  const fecha=document.getElementById('cFecha').value;
+  const turno=curT;
+  const ent=document.getElementById('cEnt').value;
+  const sal=document.getElementById('cSal').value;
+  const obs=document.getElementById('cObs').value.trim();
+
+  if(!area||!nomOpt?.value||!fecha||!turno||!ent){toast('Completá área, nombre, turno y hora de entrada','terr');return;}
+
+  let nombre,rol;
+  try{const d=JSON.parse(nomOpt.value);nombre=d.nombre;rol=d.rol;}
+  catch(e){toast('Seleccioná una persona válida','terr');return;}
+
+  const btn=document.getElementById('btnG');
+  btn.disabled=true;
+  document.getElementById('bIco').textContent='⏳';
+  document.getElementById('bTxt').textContent='Guardando...';
+
+  const{error}=await SB.from('registros').insert({area,nombre,rol,fecha,turno,hora_entrada:ent+':00',hora_salida:sal?sal+':00':null,observaciones:obs||null});
+
+  btn.disabled=false;
+  document.getElementById('bIco').textContent='✅';
+  document.getElementById('bTxt').textContent='Guardar registro';
+
+  if(error){toast('Error: '+error.message,'terr');return;}
+
+  const diff=calcTard(turno,ent);
+  sessionQ.unshift({nombre,area,ent,sal,turno,hs:calcHs(ent,sal),diff});
+  renderQ();
+
+  document.getElementById('okMsg').textContent=`✓ ${nombre} registrado correctamente`;
+  const bEl=document.getElementById('okBanner');
+  bEl.style.display='';
+  clearTimeout(bEl._t);
+  bEl._t=setTimeout(()=>bEl.style.display='none',5000);
+
+  document.getElementById('cNom').value='';
+  document.getElementById('cEnt').value='';
+  document.getElementById('cSal').value='';
+  document.getElementById('cObs').value='';
+  document.getElementById('infoT').textContent='';
+  document.getElementById('infoH').textContent='';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function renderQ(){
+  const sec=document.getElementById('qSec');
+  if(!sessionQ.length){sec.style.display='none';return;}
+  sec.style.display='';
+  document.getElementById('qCnt').textContent=sessionQ.length;
+  document.getElementById('qList').innerHTML=sessionQ.slice(0,12).map(r=>{
+    const tb=r.diff===null?'':r.diff<=0?`<span class="b bgreen" style="font-size:10px;">✓ ${Math.abs(r.diff)}m antes</span>`:`<span class="b br" style="font-size:10px;">+${r.diff}m tarde</span>`;
+    const hb=r.hs?`<span class="b bc" style="font-size:10px;">${fmtHs(r.hs)}</span>`:'';
+    return`<div class="qrow"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><span style="color:${areaC(r.area)};font-size:11px;font-weight:800;">${r.area.split(' ')[0]}</span><span style="font-weight:700;font-size:14px;">${r.nombre}</span><span class="b bgr" style="font-size:10px;">${r.turno}</span><span style="font-size:13px;color:rgba(198,201,215,.6);">${r.ent}${r.sal?' → '+r.sal:''}</span>${hb}${tb}</div><span style="color:#86efac;font-size:15px;flex-shrink:0;">✓</span></div>`;
+  }).join('');
+}
+
+// ── DASHBOARD ──
+async function loadDash(){
+  const per=document.getElementById('dPer').value;
+  const area=document.getElementById('dArea').value;
+  const{desde,hasta}=getRange(per);
+
+  let q=SB.from('registros').select('*').order('fecha',{ascending:true});
+  if(desde)q=q.gte('fecha',desde);
+  if(hasta)q=q.lte('fecha',hasta);
+  if(area)q=q.eq('area',area);
+
+  const{data,error}=await q;
+  if(error){toast('Error al cargar dashboard','terr');return;}
+  const rows=data||[];
+
+  // KPIs
+  document.getElementById('kT').textContent=rows.length;
+  document.getElementById('kP').textContent=new Set(rows.map(r=>r.nombre)).size;
+
+  const conEnt=rows.filter(r=>r.hora_entrada&&r.turno&&TURNO_H[r.turno]!==null);
+  const diffs=conEnt.map(r=>calcTard(r.turno,r.hora_entrada.slice(0,5))).filter(d=>d!==null);
+  const puntuales=diffs.filter(d=>d<=0).length;
+  const tardes=diffs.filter(d=>d>0).length;
+  const promTarde=diffs.length?Math.round(diffs.reduce((a,b)=>a+b,0)/diffs.length):0;
+
+  const kTdEl=document.getElementById('kTd');
+  kTdEl.textContent=(promTarde>0?'+':'')+promTarde+' min';
+  kTdEl.style.color=promTarde>5?'#fca5a5':'#86efac';
+  document.getElementById('kTdSub').textContent=diffs.length?`sobre ${diffs.length} registros`:'';
+
+  document.getElementById('kPunt').textContent=puntuales;
+  document.getElementById('kTarde').textContent=tardes;
+
+  const conHs=rows.filter(r=>r.hora_entrada&&r.hora_salida);
+  const totalHs=conHs.reduce((acc,r)=>{const h=calcHs(r.hora_entrada.slice(0,5),r.hora_salida.slice(0,5));return h?acc+h:acc;},0);
+  document.getElementById('kH').textContent=conHs.length?fmtHs(totalHs/conHs.length):'—';
+
+  // Charts
+  buildChartArea(rows);
+  buildChartPunt(rows);
+  buildChartDia(rows);
+  buildTopTard(rows);
+  buildAreaTable(rows);
+}
+
+function destroyChart(c){if(c){try{c.destroy();}catch(e){}}}
+
+function buildChartArea(rows){
+  const areas=Object.keys(AREA_COL);
+  const counts=areas.map(a=>rows.filter(r=>r.area===a).length);
+  destroyChart(chartArea);
+  const ctx=document.getElementById('chartArea').getContext('2d');
+  chartArea=new Chart(ctx,{
+    type:'doughnut',
+    data:{labels:areas.map(a=>a.split(' ')[0]),datasets:[{data:counts,backgroundColor:areas.map(a=>AREA_COL[a]+'55'),borderColor:areas.map(a=>AREA_COL[a]),borderWidth:2}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'rgba(198,201,215,.75)',font:{size:11},boxWidth:12}}}}
+  });
+}
+
+function buildChartPunt(rows){
+  const areas=Object.keys(AREA_COL).filter(a=>rows.some(r=>r.area===a));
+  const punt=areas.map(a=>{
+    const ar=rows.filter(r=>r.area===a&&r.hora_entrada&&r.turno&&TURNO_H[r.turno]!==null);
+    return ar.length?Math.round(ar.filter(r=>calcTard(r.turno,r.hora_entrada.slice(0,5))<=0).length/ar.length*100):0;
+  });
+  destroyChart(chartPunt);
+  const ctx=document.getElementById('chartPunt').getContext('2d');
+  chartPunt=new Chart(ctx,{
+    type:'bar',
+    data:{labels:areas.map(a=>a.split(' ')[0]),datasets:[{label:'% puntualidad',data:punt,backgroundColor:areas.map((a,i)=>AREA_COL[a]+'55'),borderColor:areas.map(a=>AREA_COL[a]),borderWidth:2,borderRadius:6}]},
+    options:{responsive:true,maintainAspectRatio:false,scales:{y:{min:0,max:100,ticks:{color:'rgba(198,201,215,.6)',font:{size:10}},grid:{color:'rgba(198,201,215,.07)'}},x:{ticks:{color:'rgba(198,201,215,.6)',font:{size:10}},grid:{display:false}}},plugins:{legend:{display:false}}}
+  });
+}
+
+function buildChartDia(rows){
+  // Agrupar por fecha
+  const byDate={};
+  rows.forEach(r=>{byDate[r.fecha]=(byDate[r.fecha]||0)+1;});
+  const dates=Object.keys(byDate).sort();
+  const counts=dates.map(d=>byDate[d]);
+  destroyChart(chartDia);
+  const ctx=document.getElementById('chartDia').getContext('2d');
+  chartDia=new Chart(ctx,{
+    type:'line',
+    data:{labels:dates.map(d=>fmtD(d)),datasets:[{label:'Registros',data:counts,borderColor:'#6be1e3',backgroundColor:'rgba(107,225,227,.1)',fill:true,tension:.35,pointBackgroundColor:'#6be1e3',pointRadius:4,pointHoverRadius:6}]},
+    options:{responsive:true,maintainAspectRatio:false,scales:{y:{ticks:{color:'rgba(198,201,215,.6)',font:{size:10},stepSize:1},grid:{color:'rgba(198,201,215,.07)'}},x:{ticks:{color:'rgba(198,201,215,.6)',font:{size:10},maxTicksLimit:8},grid:{display:false}}},plugins:{legend:{display:false}}}
+  });
+}
+
+function buildTopTard(rows){
+  const conTarde=rows
+    .filter(r=>r.hora_entrada&&r.turno&&TURNO_H[r.turno]!==null)
+    .map(r=>({...r,diff:calcTard(r.turno,r.hora_entrada.slice(0,5))}))
+    .filter(r=>r.diff>0)
+    .sort((a,b)=>b.diff-a.diff)
+    .slice(0,8);
+
+  const el=document.getElementById('topTard');
+  if(!conTarde.length){el.innerHTML='<div style="color:rgba(198,201,215,.4);font-size:13px;text-align:center;padding:20px;">✓ Sin tardanzas registradas</div>';return;}
+  el.innerHTML=conTarde.map(r=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+      <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
+        <span style="color:${areaC(r.area)};font-size:10px;font-weight:800;white-space:nowrap;">${r.area.split(' ')[0]}</span>
+        <span style="font-weight:700;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.nombre}</span>
+        <span style="font-size:11px;color:rgba(198,201,215,.5);">${fmtD(r.fecha)}</span>
+      </div>
+      <span class="b br" style="flex-shrink:0;">+${r.diff}m</span>
+    </div>`).join('');
+}
+
+function buildAreaTable(rows){
+  const areas=Object.keys(AREA_COL);
+  const tbody=document.getElementById('tbArea');
+  tbody.innerHTML=areas.map(a=>{
+    const ar=rows.filter(r=>r.area===a);
+    if(!ar.length) return '';
+    const conEnt=ar.filter(r=>r.hora_entrada&&r.turno&&TURNO_H[r.turno]!==null);
+    const diffs=conEnt.map(r=>calcTard(r.turno,r.hora_entrada.slice(0,5))).filter(d=>d!==null);
+    const prom=diffs.length?Math.round(diffs.reduce((x,y)=>x+y,0)/diffs.length):null;
+    const punt=diffs.length?diffs.filter(d=>d<=0).length:0;
+    return`<tr>
+      <td style="color:${areaC(a)};font-weight:800;font-size:11px;">${a.split(' ')[0]}</td>
+      <td style="font-weight:700;">${ar.length}</td>
+      <td>${prom===null?'—':`<span class="${prom>5?'b br':'b bgreen'}">${prom>0?'+':''}${prom}m</span>`}</td>
+      <td>${diffs.length?`<span class="b bgreen">${punt}/${diffs.length}</span>`:'—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── REGISTROS ADMIN ──
+function changePer(){
+  const p=document.getElementById('fPer').value;
+  document.getElementById('fCDes').style.display=p==='custom'?'':'none';
+  document.getElementById('fCHas').style.display=p==='custom'?'':'none';
+  loadRegs();
+}
+
+async function loadRegs(){
+  const per=document.getElementById('fPer').value;
+  const area=document.getElementById('fArea').value;
+  const{desde,hasta}=getRange(per);
+  let q=SB.from('registros').select('*').order('fecha',{ascending:false}).order('created_at',{ascending:false});
+  if(desde)q=q.gte('fecha',desde);
+  if(hasta)q=q.lte('fecha',hasta);
+  if(area)q=q.eq('area',area);
+  const{data,error}=await q;
+  if(error){toast('Error al cargar','terr');return;}
+  allRegs=data||[];
+  renderRegs();
+}
+
+function renderRegs(){
+  const busq=(document.getElementById('fBusq').value||'').toLowerCase();
+  const rows=allRegs.filter(r=>!busq||r.nombre.toLowerCase().includes(busq)||(r.rol||'').toLowerCase().includes(busq));
+  const tbody=document.getElementById('tbR');
+  if(!rows.length){tbody.innerHTML=`<tr><td colspan="12" style="text-align:center;padding:40px;color:rgba(198,201,215,.28);">Sin registros</td></tr>`;return;}
+  tbody.innerHTML=rows.map((r,i)=>{
+    const hs=calcHs(r.hora_entrada?.slice(0,5),r.hora_salida?.slice(0,5));
+    const diff=calcTard(r.turno,r.hora_entrada?.slice(0,5));
+    let tb;
+    if(diff===null)tb='<span class="b bgr">—</span>';
+    else if(diff<0)tb=`<span class="b bgreen">✓ ${Math.abs(diff)}m ant.</span>`;
+    else if(diff===0)tb='<span class="b bgreen">✓ Exacto</span>';
+    else tb=`<span class="b br">+${diff}m</span>`;
+    const col=areaC(r.area);
+    return`<tr><td style="color:rgba(198,201,215,.3);font-size:11px;">${i+1}</td><td><span style="color:${col};font-weight:800;font-size:11px;">${r.area.split(' / ')[0]}</span></td><td style="font-weight:700;">${r.nombre}</td><td class="hm" style="color:rgba(198,201,215,.58);font-size:12px;">${r.rol||'—'}</td><td style="white-space:nowrap;">${fmtD(r.fecha)}</td><td class="hm"><span class="b bgr" style="font-size:10px;">${r.turno||'—'}</span></td><td style="font-weight:700;">${r.hora_entrada?.slice(0,5)||'—'}</td><td style="color:rgba(198,201,215,.62);">${r.hora_salida?.slice(0,5)||'—'}</td><td><span class="b bc">${hs!==null?fmtHs(hs):'—'}</span></td><td>${tb}</td><td class="hm" style="color:rgba(198,201,215,.42);font-size:12px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.observaciones||'—'}</td><td class="no-print"><div style="display:flex;gap:4px;"><button class="bg-btn" style="padding:4px 8px;font-size:11px;" onclick="openMR('${r.id}')">✏</button><button class="bd" onclick="delReg('${r.id}')">✕</button></div></td></tr>`;
+  }).join('');
+}
+
+function openMR(id){const r=allRegs.find(x=>x.id===id);if(!r)return;document.getElementById('erId').value=id;document.getElementById('erT').value=r.turno||'';document.getElementById('erE').value=r.hora_entrada?.slice(0,5)||'';document.getElementById('erS').value=r.hora_salida?.slice(0,5)||'';document.getElementById('erO').value=r.observaciones||'';document.getElementById('mReg').style.display='';}
+function closeMR(){document.getElementById('mReg').style.display='none';}
+async function saveReg(){const id=document.getElementById('erId').value;const t=document.getElementById('erT').value;const e=document.getElementById('erE').value;const s=document.getElementById('erS').value;const o=document.getElementById('erO').value;const{error}=await SB.from('registros').update({turno:t||null,hora_entrada:e?e+':00':null,hora_salida:s?s+':00':null,observaciones:o||null}).eq('id',id);if(error){toast('Error','terr');return;}toast('Actualizado');closeMR();loadRegs();}
+async function delReg(id){if(!confirm('¿Eliminar?'))return;const{error}=await SB.from('registros').delete().eq('id',id);if(error){toast('Error','terr');return;}toast('Eliminado');loadRegs();}
+
+// ── PERSONAL ──
+async function loadPersonal(){
+  const{data}=await SB.from('personal').select('*').order('area').order('nombre');
+  allPersonal=data||[];
+  document.getElementById('pCnt').textContent=`${allPersonal.length} personas en total`;
+  renderPersonal();
+}
+
+function filtPA(area){
+  filtPArea=area;
+  document.querySelectorAll('[id^="pb-"]').forEach(b=>b.classList.remove('on'));
+  document.getElementById('pb-'+area)?.classList.add('on');
+  renderPersonal();
+}
+
+function renderPersonal(){
+  const rows=filtPArea?allPersonal.filter(p=>p.area===filtPArea):allPersonal;
+  const tb=document.getElementById('tbP');
+  if(!rows.length){tb.innerHTML=`<tr><td colspan="6" style="text-align:center;padding:40px;color:rgba(198,201,215,.28);">Sin personal</td></tr>`;return;}
+  tb.innerHTML=rows.map((p,i)=>`<tr><td><span class="nb">${i+1}</span></td><td style="font-weight:700;">${p.nombre}</td><td style="color:rgba(198,201,215,.58);font-size:13px;">${p.rol||'—'}</td><td><span style="color:${areaC(p.area)};font-weight:800;font-size:11px;">${p.area}</span></td><td><span class="b ${p.activo?'bgreen':'br'}">${p.activo?'Activo':'Inactivo'}</span></td><td class="no-print"><div style="display:flex;gap:4px;"><button class="bg-btn" style="padding:4px 8px;font-size:11px;" onclick="openEP('${p.id}')">✏</button><button class="bd" onclick="delPersonal('${p.id}')">✕</button></div></td></tr>`).join('');
+}
+
+function openMP(){document.getElementById('mpId').value='';document.getElementById('mpN').value='';document.getElementById('mpR').value='';document.getElementById('mpA').value='';document.getElementById('mpAc').checked=true;document.getElementById('mPT').textContent='Agregar Persona';document.getElementById('btnSP').textContent='Guardar';document.getElementById('mPers').style.display='';}
+function openEP(id){const p=allPersonal.find(x=>x.id===id);if(!p)return;document.getElementById('mpId').value=id;document.getElementById('mpN').value=p.nombre;document.getElementById('mpR').value=p.rol||'';document.getElementById('mpA').value=p.area;document.getElementById('mpAc').checked=p.activo;document.getElementById('mPT').textContent='Editar Persona';document.getElementById('btnSP').textContent='Actualizar';document.getElementById('mPers').style.display='';}
+function closeMP(){document.getElementById('mPers').style.display='none';}
+async function savePersonal(){const id=document.getElementById('mpId').value;const n=document.getElementById('mpN').value.trim();const r=document.getElementById('mpR').value.trim();const a=document.getElementById('mpA').value;const ac=document.getElementById('mpAc').checked;if(!n||!a){toast('Nombre y área son obligatorios','terr');return;}let err;if(id)({error:err}=await SB.from('personal').update({nombre:n,rol:r,area:a,activo:ac}).eq('id',id));else({error:err}=await SB.from('personal').insert({nombre:n,rol:r,area:a,activo:ac}));if(err){toast('Error: '+err.message,'terr');return;}toast(id?'Actualizado':'Persona agregada');closeMP();loadPersonal();}
+async function delPersonal(id){if(!confirm('¿Eliminar?'))return;const{error}=await SB.from('personal').delete().eq('id',id);if(error){toast('Error','terr');return;}toast('Eliminado');loadPersonal();}
+
+// ── CSV ──
+function exportCSV(){
+  // Exporta los registros del tab activo
+  const rows=allRegs;
+  if(!rows.length){toast('Sin datos','terr');return;}
+  const cols=['Área','Nombre','Rol','Fecha','Turno','Hora Entrada','Hora Salida','Hs Trabajadas','Min Tardanza','Puntual','Observaciones'];
+  const lines=[cols.join(',')];
+  rows.forEach(r=>{
+    const hs=calcHs(r.hora_entrada?.slice(0,5),r.hora_salida?.slice(0,5));
+    const diff=calcTard(r.turno,r.hora_entrada?.slice(0,5));
+    lines.push([`"${r.area}"`,`"${r.nombre}"`,`"${r.rol||''}"`,`"${r.fecha}"`,`"${r.turno||''}"`,`"${r.hora_entrada?.slice(0,5)||''}"`,`"${r.hora_salida?.slice(0,5)||''}"`,hs!==null?hs.toFixed(2):'',diff!==null?diff:'',diff!==null?(diff<=0?'SÍ':'NO'):'',`"${r.observaciones||''}"`].join(','));
+  });
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob(['\uFEFF'+lines.join('\n')],{type:'text/csv;charset=utf-8;'}));
+  a.download=`ONE_horarios_${today()}.csv`;
+  a.click();
+  toast('CSV descargado ✓');
+}
+
+// ── FIX aTab (ids correctos) ──
+function aTab(t){
+  document.getElementById('aDash').style.display=t==='dash'?'':'none';
+  document.getElementById('aReg').style.display=t==='reg'?'':'none';
+  document.getElementById('aPer').style.display=t==='per'?'':'none';
+  ['dash','reg','per'].forEach(x=>document.getElementById('at-'+x).classList.toggle('on',x===t));
+}
+
+// ── FORMULARIO LOGIN (carga directa en pantalla inicial) ──
+let lCurT='';
+
+function showAdminLogin(){
+  const box=document.getElementById('adminLoginBox');
+  const btn=document.getElementById('btnShowAdmin');
+  const visible=box.style.display!=='none';
+  box.style.display=visible?'none':'';
+  btn.style.display=visible?'':'none';
+}
+
+async function lLoadPers(){
+  const area=document.getElementById('lArea').value;
+  const sel=document.getElementById('lNom');
+  if(!area){sel.innerHTML='<option value="">Seleccioná área primero</option>';return;}
+  sel.innerHTML='<option value="">Cargando...</option>';
+  const{data}=await SB.from('personal').select('*').eq('area',area).eq('activo',true).order('nombre');
+  sel.innerHTML='<option value="">Seleccionar persona...</option>';
+  (data||[]).forEach(p=>{const o=document.createElement('option');o.value=JSON.stringify({nombre:p.nombre,rol:p.rol||''});o.textContent=p.nombre;sel.appendChild(o);});
+}
+
+function lSetT(t){
+  lCurT=t;
+  document.getElementById('lTurno').value=t;
+  document.querySelectorAll('[id^="ltb-"]').forEach(b=>b.classList.remove('on'));
+  document.getElementById('ltb-'+t)?.classList.add('on');
+  lUpdCalc();
+}
+
+function lUpdCalc(){
+  const ent=document.getElementById('lEnt').value;
+  const sal=document.getElementById('lSal').value;
+  const it=document.getElementById('lInfoT');
+  const ih=document.getElementById('lInfoH');
+  if(ent&&lCurT&&TURNO_H[lCurT]!==null){
+    const d=calcTard(lCurT,ent);
+    if(d<0){it.style.color='#86efac';it.textContent=`✓ ${Math.abs(d)} min antes`;}
+    else if(d===0){it.style.color='#86efac';it.textContent='✓ En horario exacto';}
+    else{it.style.color='#fca5a5';it.textContent=`⚠ ${d} min tarde`;}
+  }else it.textContent='';
+  const hs=calcHs(ent,sal);
+  ih.textContent=hs!==null?`⏱ ${fmtHs(hs)} trabajadas`:'';
+}
+
+let lQueue=[];
+
+async function lGuardar(){
+  const area=document.getElementById('lArea').value;
+  const nomSel=document.getElementById('lNom');
+  const nomOpt=nomSel.options[nomSel.selectedIndex];
+  const fecha=today();
+  const turno=lCurT;
+  const ent=document.getElementById('lEnt').value;
+  const sal=document.getElementById('lSal').value;
+  const obs=document.getElementById('lObs').value.trim();
+
+  if(!area||!nomOpt?.value||!turno||!ent){toast('Completá área, nombre, turno y hora de entrada','terr');return;}
+  let nombre,rol;
+  try{const d=JSON.parse(nomOpt.value);nombre=d.nombre;rol=d.rol;}
+  catch(e){toast('Seleccioná una persona válida','terr');return;}
+
+  const btn=document.getElementById('lBtnG');
+  btn.disabled=true;
+  document.getElementById('lBIco').textContent='⏳';
+  document.getElementById('lBTxt').textContent='Guardando...';
+
+  const{error}=await SB.from('registros').insert({area,nombre,rol,fecha,turno,hora_entrada:ent+':00',hora_salida:sal?sal+':00':null,observaciones:obs||null});
+
+  btn.disabled=false;
+  document.getElementById('lBIco').textContent='✅';
+  document.getElementById('lBTxt').textContent='Guardar registro';
+
+  if(error){toast('Error: '+error.message,'terr');return;}
+
+  const diff=calcTard(turno,ent);
+  lQueue.unshift({nombre,area,ent,sal,turno,hs:calcHs(ent,sal),diff});
+
+  // Banner
+  document.getElementById('lOkMsg').textContent=`✓ ${nombre} registrado`;
+  const b=document.getElementById('lOkBanner');
+  b.style.display='';
+  clearTimeout(b._t);
+  b._t=setTimeout(()=>b.style.display='none',4500);
+
+  // Cola
+  const sec=document.getElementById('lQSec');
+  sec.style.display='';
+  document.getElementById('lQCnt').textContent=lQueue.length;
+  document.getElementById('lQList').innerHTML=lQueue.slice(0,8).map(r=>{
+    const tb=r.diff===null?'':r.diff<=0?`<span class="b bgreen" style="font-size:10px;">✓${Math.abs(r.diff)}m ant.</span>`:`<span class="b br" style="font-size:10px;">+${r.diff}m</span>`;
+    return`<div class="qrow" style="padding:8px 12px;"><div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;"><span style="color:${areaC(r.area)};font-size:10px;font-weight:800;">${r.area.split(' ')[0]}</span><span style="font-weight:700;font-size:13px;">${r.nombre}</span><span class="b bgr" style="font-size:10px;">${r.turno}</span><span style="font-size:12px;color:rgba(198,201,215,.55);">${r.ent}</span>${tb}</div><span style="color:#86efac;">✓</span></div>`;
+  }).join('');
+
+  // Reset
+  document.getElementById('lNom').value='';
+  document.getElementById('lEnt').value='';
+  document.getElementById('lSal').value='';
+  document.getElementById('lObs').value='';
+  document.getElementById('lInfoT').textContent='';
+  document.getElementById('lInfoH').textContent='';
+}
+
+// ── INIT ──
+document.getElementById('cFecha').value=today();
+updFecha();
+</script>
+</body>
+</html>
