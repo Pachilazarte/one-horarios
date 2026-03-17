@@ -190,10 +190,8 @@
       <div style="margin-bottom:12px;">
         <label class="lbl">Turno *</label>
         <div style="display:flex;gap:6px;flex-wrap:wrap;">
-          <button class="tb" onclick="lSetT('Mañana')" id="ltb-Mañana">☀ Mañana</button>
-          <button class="tb" onclick="lSetT('Tarde')" id="ltb-Tarde">🌤 Tarde</button>
-          <button class="tb" onclick="lSetT('Noche')" id="ltb-Noche">🌙 Noche</button>
-          <button class="tb" onclick="lSetT('Completo')" id="ltb-Completo">📅 Completo</button>
+          <button class="tb" onclick="lSetT('Mañana')" id="ltb-Mañana">☀ Mañana (09:00)</button>
+          <button class="tb" onclick="lSetT('Tarde')" id="ltb-Tarde">🌤 Tarde (14:00)</button>
           <button class="tb" onclick="lSetT('Personalizado')" id="ltb-Personalizado">⚙ Otro</button>
         </div>
         <input type="hidden" id="lTurno"/>
@@ -304,7 +302,6 @@
         <div style="display:flex;gap:7px;flex-wrap:wrap;">
           <button class="tb" onclick="setT('Mañana')" id="tb-Mañana">☀ Mañana <span style="font-size:10px;opacity:.52;">(09:00)</span></button>
           <button class="tb" onclick="setT('Tarde')" id="tb-Tarde">🌤 Tarde <span style="font-size:10px;opacity:.52;">(14:00)</span></button>
-          <button class="tb" onclick="setT('Noche')" id="tb-Noche">🌙 Noche <span style="font-size:10px;opacity:.52;">(22:00)</span></button>
           <button class="tb" onclick="setT('Completo')" id="tb-Completo">📅 Completo <span style="font-size:10px;opacity:.52;">(09:00)</span></button>
           <button class="tb" onclick="setT('Personalizado')" id="tb-Personalizado">⚙ Otro</button>
         </div>
@@ -530,7 +527,6 @@
           <option value="">Sin turno</option>
           <option value="Mañana">☀ Mañana (09:00)</option>
           <option value="Tarde">🌤 Tarde (14:00)</option>
-          <option value="Noche">🌙 Noche (22:00)</option>
           <option value="Completo">📅 Completo (09:00)</option>
           <option value="Personalizado">⚙ Personalizado</option>
         </select>
@@ -572,7 +568,7 @@ const fmtHs=h=>{if(h===null||h===undefined)return'—';const hrs=Math.floor(h);c
 
 // Tardanza: diferencia real entre hora de entrada y el :00 del turno
 // Positivo = minutos tarde | Negativo = minutos antes
-const TURNO_H={'Mañana':9,'Tarde':14,'Noche':22,'Completo':9,'Personalizado':null};
+const TURNO_H={'Mañana':9,'Tarde':14,'Completo':9,'Personalizado':null};
 const calcTard=(turno,entStr)=>{
   if(!turno||!entStr)return null;
   const ph=TURNO_H[turno];
