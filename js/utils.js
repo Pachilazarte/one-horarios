@@ -3,6 +3,17 @@
 // ── FECHAS ──
 const today = () => new Date().toISOString().slice(0,10);
 
+// Día anterior
+const yesterday = () => {
+  const d = new Date(); d.setDate(d.getDate()-1);
+  return d.toISOString().slice(0,10);
+};
+
+const addDays = (dateStr, n) => {
+  const d = new Date(dateStr+'T12:00:00'); d.setDate(d.getDate()+n);
+  return d.toISOString().slice(0,10);
+};
+
 const fmtDate = d => {
   if (!d) return '—';
   const [y,m,day] = d.split('-');
@@ -16,11 +27,10 @@ const getDayName = dateStr => {
   return `${dias[d.getDay()]} ${d.getDate()} de ${mes[d.getMonth()]}`;
 };
 
-// Nombre del día de la semana para mapear a columna en horarios_semanales
 const getDayKey = dateStr => {
   const d = new Date(dateStr+'T12:00:00');
   const keys = ['domingo','lunes','martes','miercoles','jueves','viernes','sabado'];
-  return keys[d.getDay()]; // 'lunes', 'martes', etc.
+  return keys[d.getDay()];
 };
 
 const getLunes = (dateStr, offsetWeeks=0) => {
@@ -69,10 +79,6 @@ const fmtHs = h => {
   return mins>0 ? `${hrs}h ${mins}m` : `${hrs}h`;
 };
 
-// Tardanza en minutos entre hora real de entrada y hora planificada
-// planStr = "09:00" (viene del horario semanal)
-// entStr  = "09:07" (hora real que ingresó el usuario)
-// Retorna: positivo=tarde, negativo=temprano, null=sin dato
 const calcTardVsPlan = (planStr, entStr) => {
   if (!planStr||!entStr) return null;
   const [ph,pm] = planStr.split(':').map(Number);
@@ -80,8 +86,6 @@ const calcTardVsPlan = (planStr, entStr) => {
   return (eh*60+em) - (ph*60+pm);
 };
 
-// Hora extra en minutos: cuánto trabajó más allá de la salida planificada
-// planSalStr = "17:00", salRealStr = "18:30" → 90 min extra
 const calcHsExtra = (planSalStr, salRealStr) => {
   if (!planSalStr||!salRealStr) return null;
   const [ph,pm] = planSalStr.split(':').map(Number);
@@ -101,7 +105,7 @@ const AREA_COLORS_HEX = {
   'MAESTRANZA':             '#fb923c',
 };
 const areaColorHex = a => AREA_COLORS_HEX[a]||'#a4a8c0';
-const areaColor    = a => AREA_COLORS_HEX[a]||'#a4a8c0'; // hex directo, funciona en CSS inline
+const areaColor    = a => AREA_COLORS_HEX[a]||'#a4a8c0';
 const AREAS = Object.keys(AREA_COLORS_HEX);
 
 // ── TOAST ──
@@ -128,25 +132,89 @@ const tardInfoText = diff => {
   return           { text:`⚠ ${diff} min tarde`,                         color:'var(--color-danger-text)' };
 };
 
-// ── BUSCAR HORARIO PLANIFICADO DE UNA PERSONA PARA UNA FECHA ──
-// Devuelve { entrada: "09:00", salida: "17:00" } o null si no hay
+// ── BUSCAR HORARIO PLANIFICADO — lee formato JSON nuevo ──
+// La tabla tiene 1 fila por área/semana con columna horarios (JSONB array)
+// Devuelve { entrada:"09:00", salida:"17:00" } o null
 const getHorarioPlanificado = async (nombre, fecha) => {
   const lunes  = getLunes(fecha);
-  const sabado = getSabado(fecha);
   const dayKey = getDayKey(fecha); // 'lunes','martes', etc.
 
-  if (!dayKey || dayKey==='domingo') return null;
+  if (!dayKey || dayKey === 'domingo') return null;
 
-  const { data } = await SB.from('horarios_semanales')
-    .select(`${dayKey}_entrada, ${dayKey}_salida`)
-    .eq('nombre', nombre)
-    .eq('semana_desde', lunes)
-    .limit(1)
-    .single();
+  // Buscar la fila del área para esa semana
+  // Como no sabemos el área de la persona acá, buscamos en todas las filas de esa semana
+  const { data } = await SB
+    .from('horarios_semanales')
+    .select('horarios')
+    .eq('semana_desde', lunes);
 
-  if (!data) return null;
-  const entrada = data[`${dayKey}_entrada`];
-  const salida  = data[`${dayKey}_salida`];
-  if (!entrada) return null;
-  return { entrada: entrada.slice(0,5), salida: salida?.slice(0,5)||null };
+  if (!data?.length) return null;
+
+  // Buscar a la persona dentro del JSON de cualquier área
+  for (const row of data) {
+    const horarios = row.horarios;
+    if (!Array.isArray(horarios)) continue;
+    const persona = horarios.find(h => h.nombre === nombre);
+    if (!persona) continue;
+    const diaData = persona[dayKey]; // { e:"09:00", s:"17:00", e2:"", s2:"" }
+    if (!diaData?.e) return null;
+    return {
+      entrada: diaData.e,
+      salida:  diaData.s || null,
+      entrada2: diaData.e2 || null,
+      salida2:  diaData.s2 || null,
+    };
+  }
+
+  return null;
+};
+
+// ── HORAS PLANIFICADAS SEMANALES DE UNA PERSONA (para dashboard) ──
+// Lee el JSON y suma todas las horas de la semana para esa persona
+const getHsSemanalesPorPersona = (hsRows, nombre) => {
+  const DIAS = ['lunes','martes','miercoles','jueves','viernes','sabado'];
+  let total = 0;
+  for (const row of hsRows) {
+    const horarios = row.horarios;
+    if (!Array.isArray(horarios)) continue;
+    const persona = horarios.find(h => h.nombre === nombre);
+    if (!persona) continue;
+    DIAS.forEach(d => {
+      const dd = persona[d];
+      if (!dd) return;
+      const h1 = calcHs(dd.e, dd.s);
+      const h2 = calcHs(dd.e2, dd.s2);
+      if (h1) total += h1;
+      if (h2) total += h2;
+    });
+  }
+  return total;
+};
+
+// Aplanar todas las personas de las filas de horarios_semanales (formato JSON)
+const flatPersonasDeHorarios = (hsRows) => {
+  const DIAS = ['lunes','martes','miercoles','jueves','viernes','sabado'];
+  const out = [];
+  hsRows.forEach(row => {
+    const horarios = row.horarios;
+    if (!Array.isArray(horarios)) return;
+    horarios.forEach(h => {
+      const p = { nombre: h.nombre, rol: h.rol||'', area: row.area };
+      let total = 0;
+      DIAS.forEach(d => {
+        const dd = h[d];
+        p[d+'_e']  = dd?.e  || '';
+        p[d+'_s']  = dd?.s  || '';
+        p[d+'_e2'] = dd?.e2 || '';
+        p[d+'_s2'] = dd?.s2 || '';
+        const h1 = calcHs(dd?.e, dd?.s);
+        const h2 = calcHs(dd?.e2, dd?.s2);
+        if (h1) total += h1;
+        if (h2) total += h2;
+      });
+      p._totalHs = total;
+      out.push(p);
+    });
+  });
+  return out;
 };

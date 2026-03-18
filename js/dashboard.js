@@ -4,8 +4,8 @@ const Dashboard = (() => {
   const _dest=c=>{if(c){try{c.destroy();}catch(e){}}};
 
   async function load(){
-    const per=document.getElementById('dPer').value;
-    const area=document.getElementById('dArea').value;
+    const per  = document.getElementById('dPer').value;
+    const area = document.getElementById('dArea').value;
     const{desde,hasta}=getDateRange(per);
 
     let q=SB.from('registros').select('*').order('fecha',{ascending:true});
@@ -16,38 +16,73 @@ const Dashboard = (() => {
     if(error){showToast('Error dashboard','err');return;}
     const rows=data||[];
 
-    // Cargar horarios semanales del período para horas extra
+    // Horarios semanales del período
     let qH=SB.from('horarios_semanales').select('*');
     if(desde)qH=qH.gte('semana_desde',desde);
     if(hasta)qH=qH.lte('semana_hasta',hasta);
     if(area)qH=qH.eq('area',area);
     const{data:hsData}=await qH;
-    const hs=hsData||[];
+    const hsRows=hsData||[];
 
-    _kpis(rows,hs);
+    // Obtener personas planificadas (compatible con ambos formatos de tabla)
+    const personas=_getPersonas(hsRows);
+
+    _kpis(rows,personas);
     _chartArea(rows);
     _chartPunt(rows);
     _chartDia(rows);
     _topTard(rows);
+    _topExtra(rows,personas);
     _areaTable(rows);
-    _extraTable(rows,hs);
+    _extraTable(rows,personas);
   }
 
-  function _kpis(rows,hs){
+  // Compatible con formato columnas (entrada/salida por día) y JSON
+  function _getPersonas(hsRows){
+    if(!hsRows.length)return[];
+    const DIAS=['lunes','martes','miercoles','jueves','viernes','sabado'];
+    const out=[];
+    hsRows.forEach(row=>{
+      // Formato columnas: cada fila es una persona
+      if(row.nombre){
+        const p={nombre:row.nombre,area:row.area,_totalHs:0};
+        DIAS.forEach(d=>{
+          const h1=calcHs(row[d+'_entrada']?.slice(0,5),row[d+'_salida']?.slice(0,5));
+          const h2=calcHs(row[d+'_entrada2']?.slice(0,5),row[d+'_salida2']?.slice(0,5));
+          if(h1)p._totalHs+=h1;
+          if(h2)p._totalHs+=h2;
+        });
+        out.push(p);
+      }
+      // Formato JSON
+      else if(Array.isArray(row.horarios)){
+        row.horarios.forEach(h=>{
+          const p={nombre:h.nombre,area:row.area,_totalHs:0};
+          DIAS.forEach(d=>{
+            const dd=h[d];
+            const h1=calcHs(dd?.e,dd?.s);
+            const h2=calcHs(dd?.e2,dd?.s2);
+            if(h1)p._totalHs+=h1;
+            if(h2)p._totalHs+=h2;
+          });
+          out.push(p);
+        });
+      }
+    });
+    return out;
+  }
+
+  function _kpis(rows,personas){
     document.getElementById('kT').textContent=rows.length;
     document.getElementById('kP').textContent=new Set(rows.map(r=>r.nombre)).size;
 
     // Tardanza: usa el horario planificado guardado en el campo turno
     const withPlan=rows.filter(r=>{
       if(!r.turno||!r.hora_entrada)return false;
-      const planEnt=r.turno.split('→')[0].trim();
-      return planEnt.match(/^\d{2}:\d{2}$/);
+      const e=r.turno.split('→')[0].trim();
+      return /^\d{2}:\d{2}$/.test(e);
     });
-    const diffs=withPlan.map(r=>{
-      const planEnt=r.turno.split('→')[0].trim();
-      return calcTardVsPlan(planEnt,r.hora_entrada.slice(0,5));
-    }).filter(d=>d!==null);
-
+    const diffs=withPlan.map(r=>calcTardVsPlan(r.turno.split('→')[0].trim(),r.hora_entrada.slice(0,5))).filter(d=>d!==null);
     const puntuales=diffs.filter(d=>d<=0).length;
     const tardes=diffs.filter(d=>d>0).length;
     const prom=diffs.length?Math.round(diffs.reduce((a,b)=>a+b,0)/diffs.length):0;
@@ -65,19 +100,14 @@ const Dashboard = (() => {
     const tot=conHs.reduce((acc,r)=>{const h=calcHs(r.hora_entrada.slice(0,5),r.hora_salida.slice(0,5));return h?acc+h:acc;},0);
     document.getElementById('kH').textContent=conHs.length?fmtHs(tot/conHs.length):'—';
 
-    // Horas extra
     const kE=document.getElementById('kExtra');
-    if(kE&&hs.length){
-      const dias=['lunes','martes','miercoles','jueves','viernes','sabado'];
-      const personas=[...new Set(hs.map(h=>h.nombre))];
+    if(kE){
+      if(!personas.length){kE.textContent='—';return;}
       let count=0;
-      personas.forEach(nombre=>{
-        const plans=hs.filter(h=>h.nombre===nombre);
-        let plan=0;
-        plans.forEach(p=>{dias.forEach(d=>{const h=calcHs(p[d+'_entrada']?.slice(0,5),p[d+'_salida']?.slice(0,5));if(h)plan+=h;});});
-        const real=rows.filter(r=>r.nombre===nombre&&r.hora_entrada&&r.hora_salida)
-          .reduce((acc,r)=>{const h=calcHs(r.hora_entrada.slice(0,5),r.hora_salida.slice(0,5));return h?acc+h:acc;},0);
-        if(real>plan&&plan>0)count++;
+      personas.forEach(p=>{
+        const real=rows.filter(r=>r.nombre===p.nombre&&r.hora_entrada&&r.hora_salida)
+          .reduce((a,r)=>{const h=calcHs(r.hora_entrada.slice(0,5),r.hora_salida.slice(0,5));return h?a+h:a;},0);
+        if(real>p._totalHs&&p._totalHs>0)count++;
       });
       kE.textContent=count;
     }
@@ -87,7 +117,12 @@ const Dashboard = (() => {
     _dest(_cA);
     const counts=AREAS.map(a=>rows.filter(r=>r.area===a).length);
     const ctx=document.getElementById('chartArea').getContext('2d');
-    _cA=new Chart(ctx,{type:'doughnut',data:{labels:AREAS.map(a=>a.split(' ')[0]),datasets:[{data:counts,backgroundColor:AREAS.map(a=>areaColorHex(a)+'55'),borderColor:AREAS.map(a=>areaColorHex(a)),borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'rgba(198,201,215,.75)',font:{size:11},boxWidth:12}}}}});
+    _cA=new Chart(ctx,{type:'doughnut',
+      data:{labels:AREAS.map(a=>a.split(' ')[0]),datasets:[{data:counts,
+        backgroundColor:AREAS.map(a=>areaColorHex(a)+'55'),
+        borderColor:AREAS.map(a=>areaColorHex(a)),borderWidth:2}]},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{labels:{color:'rgba(198,201,215,.75)',font:{size:11},boxWidth:12}}}}});
   }
 
   function _chartPunt(rows){
@@ -96,11 +131,18 @@ const Dashboard = (() => {
     const punt=areas.map(a=>{
       const ar=rows.filter(r=>r.area===a&&r.turno&&r.hora_entrada&&r.turno.includes(':'));
       if(!ar.length)return 0;
-      const p=ar.filter(r=>{const e=r.turno.split('→')[0].trim();return e.match(/^\d{2}:\d{2}$/)&&calcTardVsPlan(e,r.hora_entrada.slice(0,5))<=0;});
+      const p=ar.filter(r=>{const e=r.turno.split('→')[0].trim();return /^\d{2}:\d{2}$/.test(e)&&calcTardVsPlan(e,r.hora_entrada.slice(0,5))<=0;});
       return Math.round(p.length/ar.length*100);
     });
     const ctx=document.getElementById('chartPunt').getContext('2d');
-    _cP=new Chart(ctx,{type:'bar',data:{labels:areas.map(a=>a.split(' ')[0]),datasets:[{label:'% puntualidad',data:punt,backgroundColor:areas.map(a=>areaColorHex(a)+'55'),borderColor:areas.map(a=>areaColorHex(a)),borderWidth:2,borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{min:0,max:100,ticks:{color:'rgba(198,201,215,.6)',font:{size:10}},grid:{color:'rgba(198,201,215,.07)'}},x:{ticks:{color:'rgba(198,201,215,.6)',font:{size:10}},grid:{display:false}}},plugins:{legend:{display:false}}}});
+    _cP=new Chart(ctx,{type:'bar',
+      data:{labels:areas.map(a=>a.split(' ')[0]),datasets:[{label:'% puntualidad',data:punt,
+        backgroundColor:areas.map(a=>areaColorHex(a)+'55'),
+        borderColor:areas.map(a=>areaColorHex(a)),borderWidth:2,borderRadius:6}]},
+      options:{responsive:true,maintainAspectRatio:false,
+        scales:{y:{min:0,max:100,ticks:{color:'rgba(198,201,215,.6)',font:{size:10}},grid:{color:'rgba(198,201,215,.07)'}},
+                x:{ticks:{color:'rgba(198,201,215,.6)',font:{size:10}},grid:{display:false}}},
+        plugins:{legend:{display:false}}}});
   }
 
   function _chartDia(rows){
@@ -108,26 +150,73 @@ const Dashboard = (() => {
     const by={};rows.forEach(r=>{by[r.fecha]=(by[r.fecha]||0)+1;});
     const dates=Object.keys(by).sort();
     const ctx=document.getElementById('chartDia').getContext('2d');
-    _cD=new Chart(ctx,{type:'line',data:{labels:dates.map(d=>fmtDate(d)),datasets:[{label:'Registros',data:dates.map(d=>by[d]),borderColor:'#6be1e3',backgroundColor:'rgba(107,225,227,.10)',fill:true,tension:.35,pointBackgroundColor:'#6be1e3',pointRadius:4,pointHoverRadius:6}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{ticks:{color:'rgba(198,201,215,.6)',font:{size:10},stepSize:1},grid:{color:'rgba(198,201,215,.07)'}},x:{ticks:{color:'rgba(198,201,215,.6)',font:{size:10},maxTicksLimit:8},grid:{display:false}}},plugins:{legend:{display:false}}}});
+    _cD=new Chart(ctx,{type:'line',
+      data:{labels:dates.map(d=>fmtDate(d)),datasets:[{label:'Registros',data:dates.map(d=>by[d]),
+        borderColor:'#6be1e3',backgroundColor:'rgba(107,225,227,.10)',fill:true,tension:.35,
+        pointBackgroundColor:'#6be1e3',pointRadius:4,pointHoverRadius:6}]},
+      options:{responsive:true,maintainAspectRatio:false,
+        scales:{y:{ticks:{color:'rgba(198,201,215,.6)',font:{size:10},stepSize:1},grid:{color:'rgba(198,201,215,.07)'}},
+                x:{ticks:{color:'rgba(198,201,215,.6)',font:{size:10},maxTicksLimit:8},grid:{display:false}}},
+        plugins:{legend:{display:false}}}});
   }
 
+  // Top tardanzas — muestra aunque haya pocos datos
   function _topTard(rows){
-    const withTard=rows.filter(r=>{
-      if(!r.turno||!r.hora_entrada)return false;
-      const e=r.turno.split('→')[0].trim();
-      return e.match(/^\d{2}:\d{2}$/)&&calcTardVsPlan(e,r.hora_entrada.slice(0,5))>0;
-    }).map(r=>({...r,diff:calcTardVsPlan(r.turno.split('→')[0].trim(),r.hora_entrada.slice(0,5))}))
-    .sort((a,b)=>b.diff-a.diff).slice(0,8);
+    const withTard=rows
+      .filter(r=>{
+        if(!r.turno||!r.hora_entrada)return false;
+        const e=r.turno.split('→')[0].trim();
+        return /^\d{2}:\d{2}$/.test(e)&&calcTardVsPlan(e,r.hora_entrada.slice(0,5))>0;
+      })
+      .map(r=>({...r,diff:calcTardVsPlan(r.turno.split('→')[0].trim(),r.hora_entrada.slice(0,5))}))
+      .sort((a,b)=>b.diff-a.diff)
+      .slice(0,8);
+
     const el=document.getElementById('topTard');
-    if(!withTard.length){el.innerHTML='<div style="color:rgba(198,201,215,.4);font-size:13px;text-align:center;padding:20px;">✓ Sin tardanzas</div>';return;}
-    el.innerHTML=withTard.map(r=>`<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
-      <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
-        <span style="color:${areaColor(r.area)};font-size:10px;font-weight:800;white-space:nowrap;">${r.area.split(' ')[0]}</span>
-        <span style="font-weight:700;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.nombre}</span>
-        <span style="font-size:11px;color:rgba(198,201,215,.5);">${fmtDate(r.fecha)}</span>
-      </div>
-      <span class="badge badge-red" style="flex-shrink:0;">+${r.diff}m</span>
-    </div>`).join('');
+    if(!withTard.length){
+      el.innerHTML='<div style="color:rgba(198,201,215,.4);font-size:13px;text-align:center;padding:16px 0;">✓ Sin tardanzas registradas</div>';
+      return;
+    }
+    el.innerHTML=withTard.map(r=>`
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:3px 0;">
+        <div style="display:flex;align-items:center;gap:7px;flex:1;min-width:0;">
+          <span style="color:${areaColor(r.area)};font-size:10px;font-weight:800;white-space:nowrap;">${r.area.split(' ')[0]}</span>
+          <span style="font-weight:700;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.nombre}</span>
+          <span style="font-size:11px;color:rgba(198,201,215,.42);">${fmtDate(r.fecha)}</span>
+        </div>
+        <span class="badge badge-red" style="flex-shrink:0;">+${r.diff}m</span>
+      </div>`).join('');
+  }
+
+  // Top horas extra — muestra aunque haya pocos datos
+  function _topExtra(rows,personas){
+    const el=document.getElementById('topExtra');
+    if(!el)return;
+    if(!personas.length){
+      el.innerHTML='<div style="color:rgba(198,201,215,.4);font-size:13px;text-align:center;padding:16px 0;">Sin datos de planificación</div>';
+      return;
+    }
+    const resultados=personas.map(p=>{
+      const real=rows.filter(r=>r.nombre===p.nombre&&r.hora_entrada&&r.hora_salida)
+        .reduce((a,r)=>{const h=calcHs(r.hora_entrada.slice(0,5),r.hora_salida.slice(0,5));return h?a+h:a;},0);
+      return{nombre:p.nombre,area:p.area,plan:p._totalHs,real,extra:real-p._totalHs};
+    }).filter(r=>r.extra>0.05).sort((a,b)=>b.extra-a.extra).slice(0,8);
+
+    if(!resultados.length){
+      el.innerHTML='<div style="color:rgba(198,201,215,.4);font-size:13px;text-align:center;padding:16px 0;">✓ Sin horas extra registradas</div>';
+      return;
+    }
+    el.innerHTML=resultados.map(r=>`
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:3px 0;">
+        <div style="display:flex;align-items:center;gap:7px;flex:1;min-width:0;">
+          <span style="color:${areaColor(r.area)};font-size:10px;font-weight:800;white-space:nowrap;">${r.area.split(' ')[0]}</span>
+          <span style="font-weight:700;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.nombre}</span>
+        </div>
+        <div style="display:flex;gap:5px;align-items:center;flex-shrink:0;">
+          <span style="font-size:11px;color:rgba(198,201,215,.38);">${fmtHs(r.plan)} plan.</span>
+          <span class="badge badge-gold">+${fmtHs(r.extra)}</span>
+        </div>
+      </div>`).join('');
   }
 
   function _areaTable(rows){
@@ -135,7 +224,7 @@ const Dashboard = (() => {
     tbody.innerHTML=AREAS.map(a=>{
       const ar=rows.filter(r=>r.area===a);if(!ar.length)return'';
       const withP=ar.filter(r=>r.turno&&r.hora_entrada&&r.turno.includes(':'));
-      const diffs=withP.map(r=>{const e=r.turno.split('→')[0].trim();return e.match(/^\d{2}:\d{2}$/)?calcTardVsPlan(e,r.hora_entrada.slice(0,5)):null;}).filter(d=>d!==null);
+      const diffs=withP.map(r=>{const e=r.turno.split('→')[0].trim();return /^\d{2}:\d{2}$/.test(e)?calcTardVsPlan(e,r.hora_entrada.slice(0,5)):null;}).filter(d=>d!==null);
       const prom=diffs.length?Math.round(diffs.reduce((x,y)=>x+y,0)/diffs.length):null;
       const punt=diffs.filter(d=>d<=0).length;
       return`<tr>
@@ -147,21 +236,22 @@ const Dashboard = (() => {
     }).join('');
   }
 
-  function _extraTable(regs,hs){
+  function _extraTable(regs,personas){
     const el=document.getElementById('tbExtra');if(!el)return;
-    const dias=['lunes','martes','miercoles','jueves','viernes','sabado'];
-    const personas=[...new Set(hs.map(h=>h.nombre))];
-    const resultados=personas.map(nombre=>{
-      const plans=hs.filter(h=>h.nombre===nombre);
-      const area=plans[0]?.area||'';
-      let plan=0;
-      plans.forEach(p=>{dias.forEach(d=>{const h=calcHs(p[d+'_entrada']?.slice(0,5),p[d+'_salida']?.slice(0,5));if(h)plan+=h;});});
-      const real=regs.filter(r=>r.nombre===nombre&&r.hora_entrada&&r.hora_salida)
+    if(!personas.length){
+      el.innerHTML='<tr><td colspan="5" style="text-align:center;padding:24px;color:rgba(198,201,215,.3);">Sin datos de planificación cargados</td></tr>';
+      return;
+    }
+    const resultados=personas.map(p=>{
+      const real=regs.filter(r=>r.nombre===p.nombre&&r.hora_entrada&&r.hora_salida)
         .reduce((acc,r)=>{const h=calcHs(r.hora_entrada.slice(0,5),r.hora_salida.slice(0,5));return h?acc+h:acc;},0);
-      return{nombre,area,plan,real,extra:real-plan};
+      return{nombre:p.nombre,area:p.area,plan:p._totalHs,real,extra:real-p._totalHs};
     }).filter(r=>Math.abs(r.extra)>0.05).sort((a,b)=>b.extra-a.extra);
 
-    if(!resultados.length){el.innerHTML='<tr><td colspan="5" style="text-align:center;padding:24px;color:rgba(198,201,215,.3);">Sin datos de horas extra</td></tr>';return;}
+    if(!resultados.length){
+      el.innerHTML='<tr><td colspan="5" style="text-align:center;padding:24px;color:rgba(198,201,215,.3);">Sin diferencias de horas registradas</td></tr>';
+      return;
+    }
     el.innerHTML=resultados.map(r=>`<tr>
       <td><span style="color:${areaColor(r.area)};font-weight:800;font-size:11px;">${r.area.split(' ')[0]}</span></td>
       <td style="font-weight:700;">${r.nombre}</td>

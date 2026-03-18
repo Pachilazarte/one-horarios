@@ -9,49 +9,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/brand.css"/>
   <link rel="stylesheet" href="css/main.css"/>
-  <style>
-    /* ── NAV SEMANA ── */
-    .wnav-sm{background:rgba(255,255,255,.07);border:1px solid rgba(198,201,215,.18);color:var(--one-white);width:30px;height:30px;border-radius:50%;font-size:16px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:all .2s;}
-    .wnav-sm:hover:not([disabled]){background:rgba(107,225,227,.15);border-color:rgba(107,225,227,.35);}
-    .wnav-sm[disabled]{opacity:.28;cursor:not-allowed;}
-    .op30{opacity:.28;}
-    .week-pill{background:rgba(107,225,227,.1);border:1px solid rgba(107,225,227,.22);color:var(--one-cyan);padding:5px 15px;border-radius:999px;font-size:13px;font-weight:800;white-space:nowrap;}
-
-    /* ── ÁREAS GRID ── */
-    .areas-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px;}
-    .area-card{background:rgba(255,255,255,.048);border:1px solid rgba(198,201,215,.1);border-radius:14px;padding:14px 16px;cursor:pointer;transition:border-color .2s,transform .15s,box-shadow .15s;}
-    .area-card:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(0,0,0,.22);}
-
-    /* ── MODAL EDITOR INPUTS ── */
-    .edit-pcard{background:rgba(255,255,255,.04);border:1px solid rgba(198,201,215,.09);border-radius:12px;overflow:hidden;margin-bottom:8px;}
-    .ht-edit{background:rgba(255,255,255,.07);border:1px solid rgba(198,201,215,.15);color:var(--one-white);padding:6px 3px;border-radius:7px;font-family:var(--font-title);font-size:13px;font-weight:800;width:100%;text-align:center;transition:border-color .15s,background .15s;}
-    .ht-edit:focus{outline:none;border-color:rgba(107,225,227,.55);background:rgba(107,225,227,.05);}
-    .ht-edit::placeholder{color:rgba(198,201,215,.18);font-weight:400;font-size:10px;}
-    .ht-edit.v{border-color:rgba(107,225,227,.3);color:var(--one-cyan);}
-    .ht-edit.op50{opacity:.45;}
-    .ht-gold{border-color:rgba(228,199,106,.2)!important;}
-    .ht-gold.v{border-color:rgba(228,199,106,.4)!important;color:var(--one-gold)!important;}
-
-    /* Turno partido */
-    .sp-block{display:none;flex-direction:column;gap:3px;margin-top:4px;padding-top:5px;border-top:1px dashed rgba(228,199,106,.2);}
-    .sp-block.sp-show{display:flex;}
-
-    /* btn split */
-    .btn-split-sm{background:rgba(255,255,255,.05);border:1px solid rgba(198,201,215,.15)!important;color:rgba(198,201,215,.5);padding:4px 11px;border-radius:999px;font-family:var(--font-title);font-size:11px;font-weight:700;cursor:pointer;transition:all .2s;}
-    .btn-split-sm:hover{background:rgba(228,199,106,.1);border-color:rgba(228,199,106,.28)!important;color:var(--one-gold);}
-    .btn-split-sm.on{background:rgba(228,199,106,.13);border-color:rgba(228,199,106,.35)!important;color:var(--one-gold);}
-
-    /* btn copiar anterior */
-    .btn-ant{background:linear-gradient(135deg,rgba(107,225,227,.18),rgba(228,199,106,.12));border:1px solid rgba(107,225,227,.3)!important;color:var(--one-cyan);padding:7px 16px;border-radius:999px;font-family:var(--font-title);font-size:12px;font-weight:800;cursor:pointer;transition:all .2s;}
-    .btn-ant:hover{transform:translateY(-1px);box-shadow:0 5px 16px rgba(107,225,227,.14);}
-
-    .sp{display:inline-block;width:12px;height:12px;border:2px solid rgba(107,225,227,.28);border-top-color:var(--one-cyan);border-radius:50%;animation:spin .7s linear infinite;}
-    @keyframes spin{to{transform:rotate(360deg)}}
-
-    @media(max-width:640px){
-      .areas-grid{grid-template-columns:1fr;}
-    }
-  </style>
 </head>
 <body>
 <div class="bg-layer" aria-hidden="true"></div>
@@ -94,14 +51,20 @@
   <div id="tab-dash" class="fade-in">
     <div class="glass no-print" style="padding:13px 17px;margin-bottom:14px;">
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end;">
-        <div style="flex:1;min-width:135px;"><label class="lbl">Período</label>
+        <div style="flex:1;min-width:135px;">
+          <label class="lbl">Período</label>
           <select class="inp" id="dPer" onchange="Dashboard.load()">
-            <option value="hoy">Hoy</option><option value="semana" selected>Esta semana</option>
-            <option value="semana_ant">Semana anterior</option><option value="mes">Este mes</option>
-            <option value="mes_ant">Mes anterior</option><option value="anio">Este año</option><option value="todos">Todos</option>
+            <option value="hoy">Hoy</option>
+            <option value="semana" selected>Esta semana</option>
+            <option value="semana_ant">Semana anterior</option>
+            <option value="mes">Este mes</option>
+            <option value="mes_ant">Mes anterior</option>
+            <option value="anio">Este año</option>
+            <option value="todos">Todos</option>
           </select>
         </div>
-        <div style="flex:1;min-width:135px;"><label class="lbl">Área</label>
+        <div style="flex:1;min-width:135px;">
+          <label class="lbl">Área</label>
           <select class="inp" id="dArea" onchange="Dashboard.load()">
             <option value="">Todas</option>
             <option>ADMINISTRACION</option><option>COMERCIAL</option><option>RECURSOS HUMANOS</option>
@@ -125,8 +88,20 @@
       <div class="glass" style="padding:17px 19px;"><div style="font-size:13px;font-weight:700;margin-bottom:13px;color:rgba(198,201,215,.8);">Registros por día</div><div class="chart-wrap"><canvas id="chartDia"></canvas></div></div>
     </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:13px;margin-bottom:13px;">
-      <div class="glass" style="padding:17px 19px;"><div style="font-size:13px;font-weight:700;margin-bottom:13px;color:rgba(198,201,215,.8);">Top tardanzas</div><div id="topTard" style="display:flex;flex-direction:column;gap:7px;"></div></div>
-      <div class="glass" style="padding:17px 19px;"><div style="font-size:13px;font-weight:700;margin-bottom:13px;color:rgba(198,201,215,.8);">Resumen por área</div><div style="overflow-x:auto;"><table class="tbl" style="font-size:12px;"><thead><tr><th>Área</th><th>Reg.</th><th>Prom. tard.</th><th>Puntuales</th></tr></thead><tbody id="tbArea"></tbody></table></div></div>
+      <div class="glass" style="padding:17px 19px;">
+        <div style="font-size:13px;font-weight:700;margin-bottom:13px;color:rgba(198,201,215,.8);">Top tardanzas</div>
+        <div id="topTard" style="display:flex;flex-direction:column;gap:7px;"></div>
+      </div>
+      <div class="glass" style="padding:17px 19px;">
+        <div style="font-size:13px;font-weight:700;margin-bottom:13px;color:rgba(198,201,215,.8);">Top horas extra</div>
+        <div id="topExtra" style="display:flex;flex-direction:column;gap:7px;"></div>
+      </div>
+      <div class="glass" style="padding:17px 19px;">
+        <div style="font-size:13px;font-weight:700;margin-bottom:13px;color:rgba(198,201,215,.8);">Resumen por área</div>
+        <div style="overflow-x:auto;">
+          <table class="tbl" style="font-size:12px;"><thead><tr><th>Área</th><th>Reg.</th><th>Prom. tard.</th><th>Puntuales</th></tr></thead><tbody id="tbArea"></tbody></table>
+        </div>
+      </div>
     </div>
     <div class="glass" style="padding:17px 19px;">
       <div style="font-size:13px;font-weight:700;margin-bottom:5px;color:rgba(198,201,215,.8);">Horas extra / déficit vs planificado</div>
@@ -141,8 +116,9 @@
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;align-items:end;">
         <div><label class="lbl">Período</label>
           <select class="inp" id="fPer" onchange="Registros.changePer()">
-            <option value="hoy">Hoy</option><option value="semana">Esta semana</option><option value="semana_ant">Semana anterior</option>
-            <option value="mes" selected>Este mes</option><option value="mes_ant">Mes anterior</option><option value="anio">Este año</option>
+            <option value="hoy">Hoy</option><option value="semana">Esta semana</option>
+            <option value="semana_ant">Semana anterior</option><option value="mes" selected>Este mes</option>
+            <option value="mes_ant">Mes anterior</option><option value="anio">Este año</option>
             <option value="custom">Personalizado</option><option value="todos">Todos</option>
           </select>
         </div>
@@ -169,7 +145,10 @@
   <!-- ══ PERSONAL ══ -->
   <div id="tab-per" style="display:none;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:13px;flex-wrap:wrap;gap:8px;">
-      <div><h3 style="font-size:17px;font-weight:800;">Personal <span class="brand-gp">registrado</span></h3><p style="font-size:12px;color:rgba(198,201,215,.45);margin-top:1px;" id="pCnt"></p></div>
+      <div>
+        <h3 style="font-size:17px;font-weight:800;">Personal <span class="brand-gp">registrado</span></h3>
+        <p style="font-size:12px;color:rgba(198,201,215,.45);margin-top:1px;" id="pCnt"></p>
+      </div>
       <button class="btn btn-primary no-print" onclick="Personal.openNew()">+ Agregar persona</button>
     </div>
     <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:11px;" class="no-print">
@@ -190,59 +169,49 @@
 
   <!-- ══ HORARIOS SEMANALES ══ -->
   <div id="tab-hsem" style="display:none;">
-
-    <div style="display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:11px;margin-bottom:15px;">
       <div>
         <h3 style="font-size:17px;font-weight:800;">Horarios <span class="brand-gc">Semanales</span></h3>
-        <div style="font-size:12px;color:rgba(198,201,215,.45);margin-top:2px;" id="hsemTitulo"></div>
+        <p style="font-size:12px;color:rgba(198,201,215,.45);margin-top:1px;">Se cargan por área completa — vinculados con la tabla de personal</p>
+      </div>
+      <div style="display:flex;gap:7px;flex-wrap:wrap;">
+        <button class="btn btn-gold   no-print" onclick="HorariosSem.exportCSV()">⬇ CSV</button>
+        <button class="btn btn-primary no-print" onclick="HorariosSem.openModalArea()">+ Cargar semana por área</button>
       </div>
     </div>
-
-    <!-- 1. KPIs PRIMERO -->
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;">
-      <div class="stat-card-lg">
-        <div style="font-size:10px;color:rgba(198,201,215,.5);text-transform:uppercase;letter-spacing:.06em;">Personas plan.</div>
-        <div style="font-size:30px;font-weight:800;margin-top:4px;" class="brand-gc" id="hsKP">—</div>
-      </div>
-      <div class="stat-card-lg">
-        <div style="font-size:10px;color:rgba(198,201,215,.5);text-transform:uppercase;letter-spacing:.06em;">Áreas activas</div>
-        <div style="font-size:30px;font-weight:800;margin-top:4px;color:var(--one-purple);" id="hsKA">—</div>
-      </div>
-      <div class="stat-card-lg">
-        <div style="font-size:10px;color:rgba(198,201,215,.5);text-transform:uppercase;letter-spacing:.06em;">Con hs extra</div>
-        <div style="font-size:30px;font-weight:800;margin-top:4px;color:var(--one-gold);" id="hsKE">—</div>
-        <div style="font-size:10px;color:rgba(198,201,215,.3);margin-top:2px;">vs reales</div>
-      </div>
-      <div class="stat-card-lg">
-        <div style="font-size:10px;color:rgba(198,201,215,.5);text-transform:uppercase;letter-spacing:.06em;">Total hs plan.</div>
-        <div style="font-size:30px;font-weight:800;margin-top:4px;color:var(--color-success-text);" id="hsKH">—</div>
-      </div>
-    </div>
-
-    <!-- 2. NAVEGACIÓN DE SEMANAS -->
-    <div class="glass no-print" style="padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;" id="hsemNavBar">
-      <!-- Renderizado por JS -->
-    </div>
-
-    <!-- 3. GRID DE ÁREAS -->
-    <div class="areas-grid" id="hsemAreaGrid"></div>
-
-    <!-- 4. TABLA DETALLADA (colapsada) -->
-    <div style="margin-top:16px;">
-      <button class="btn btn-ghost" style="font-size:12px;padding:6px 16px;" onclick="toggleTabla()">
-        <span id="btnTablaLbl">📋 Ver tabla detallada</span>
-      </button>
-      <div id="hsemTablaWrap" style="display:none;margin-top:10px;">
-        <div class="glass tbl-wrap">
-          <table class="tbl">
-            <thead><tr><th>Área</th><th>Nombre</th><th>Lun</th><th>Mar</th><th>Mié</th><th>Jue</th><th>Vie</th><th>Sáb</th><th>Hs/sem</th><th class="hide-mobile">Obs</th><th class="no-print"></th></tr></thead>
-            <tbody id="tbHsem"><tr><td colspan="11" style="text-align:center;padding:30px;color:rgba(198,201,215,.28);">—</td></tr></tbody>
-          </table>
+    <div class="glass no-print" style="padding:13px 17px;margin-bottom:13px;">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end;">
+        <div style="flex:1;min-width:135px;">
+          <label class="lbl">Ver semana</label>
+          <input class="inp" type="date" id="hsemVer" onchange="HorariosSem.load()"/>
+        </div>
+        <div style="flex:1;min-width:135px;">
+          <label class="lbl">Área</label>
+          <select class="inp" id="hsemFArea" onchange="HorariosSem.load()">
+            <option value="">Todas</option>
+            <option>ADMINISTRACION</option><option>COMERCIAL</option><option>RECURSOS HUMANOS</option>
+            <option>MARKETING</option><option>ACADEMICO / GT</option><option>INNOVACION Y DESARROLLO</option><option>MAESTRANZA</option>
+          </select>
         </div>
       </div>
     </div>
-
-  </div><!-- /tab-hsem -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:13px;">
+      <div class="stat-card-lg"><div style="font-size:10px;color:rgba(198,201,215,.5);text-transform:uppercase;letter-spacing:.06em;">Personas plan.</div><div style="font-size:30px;font-weight:800;margin-top:4px;" class="brand-gc" id="hsKP">—</div></div>
+      <div class="stat-card-lg"><div style="font-size:10px;color:rgba(198,201,215,.5);text-transform:uppercase;letter-spacing:.06em;">Áreas activas</div><div style="font-size:30px;font-weight:800;margin-top:4px;color:var(--one-purple);" id="hsKA">—</div></div>
+      <div class="stat-card-lg"><div style="font-size:10px;color:rgba(198,201,215,.5);text-transform:uppercase;letter-spacing:.06em;">Con hs extra*</div><div style="font-size:30px;font-weight:800;margin-top:4px;color:var(--one-gold);" id="hsKE">—</div><div style="font-size:10px;color:rgba(198,201,215,.33);margin-top:2px;">*vs reales</div></div>
+      <div class="stat-card-lg"><div style="font-size:10px;color:rgba(198,201,215,.5);text-transform:uppercase;letter-spacing:.06em;">Total hs plan.</div><div style="font-size:30px;font-weight:800;margin-top:4px;color:var(--color-success-text);" id="hsKH">—</div></div>
+    </div>
+    <div id="hsemTitulo" style="font-size:13px;font-weight:700;color:rgba(198,201,215,.55);margin-bottom:8px;"></div>
+    <div class="glass tbl-wrap" style="margin-bottom:10px;">
+      <table class="tbl">
+        <thead><tr><th>Área</th><th>Nombre</th><th>Lunes</th><th>Martes</th><th>Miérc.</th><th>Jueves</th><th>Viernes</th><th>Sáb.</th><th>Hs/sem.</th><th class="hide-mobile">Obs. persona</th><th class="no-print"></th></tr></thead>
+        <tbody id="tbHsem"><tr><td colspan="11" style="text-align:center;padding:40px;color:rgba(198,201,215,.28);">Seleccioná una fecha para ver los horarios</td></tr></tbody>
+      </table>
+    </div>
+    <div id="hsemEmptyMsg" style="display:none;text-align:center;padding:8px;font-size:13px;color:rgba(198,201,215,.38);">
+      No hay horarios para esta semana. Usá <strong style="color:var(--one-cyan);">+ Cargar semana por área</strong>.
+    </div>
+  </div>
 
 </main>
 
@@ -255,14 +224,14 @@
 </footer>
 </div>
 
-<!-- ── MODAL PERSONAL ── -->
+<!-- MODAL PERSONAL -->
 <div class="modal-overlay" id="mPers" style="display:none;" onclick="if(event.target===this)Personal.closeModal()">
   <div class="modal-box">
     <div class="modal-header"><h3 style="font-size:16px;font-weight:800;" id="mPT">Agregar Persona</h3><button class="modal-close" onclick="Personal.closeModal()">✕</button></div>
     <input type="hidden" id="mpId"/>
     <div style="display:flex;flex-direction:column;gap:11px;">
       <div><label class="lbl">Nombre completo *</label><input class="inp" type="text" id="mpN" placeholder="Nombre y apellido"/></div>
-      <div><label class="lbl">Rol / Cargo</label><input class="inp" type="text" id="mpR" placeholder="Ej: Coordinador..."/></div>
+      <div><label class="lbl">Rol / Cargo *</label><input class="inp" type="text" id="mpR" placeholder="Ej: Coordinador..."/></div>
       <div><label class="lbl">Área *</label>
         <select class="inp" id="mpA"><option value="">Seleccionar...</option>
           <option>ADMINISTRACION</option><option>COMERCIAL</option><option>RECURSOS HUMANOS</option>
@@ -278,13 +247,13 @@
   </div>
 </div>
 
-<!-- ── MODAL EDITAR REGISTRO ── -->
+<!-- MODAL EDITAR REGISTRO -->
 <div class="modal-overlay" id="mReg" style="display:none;" onclick="if(event.target===this)Registros.closeModal()">
   <div class="modal-box">
     <div class="modal-header"><h3 style="font-size:16px;font-weight:800;">Editar Registro</h3><button class="modal-close" onclick="Registros.closeModal()">✕</button></div>
     <input type="hidden" id="erId"/>
     <div style="display:flex;flex-direction:column;gap:12px;">
-      <div><label class="lbl">Horario planificado</label><input class="inp" type="text" id="erT" placeholder="Ej: 09:00 → 17:00"/></div>
+      <div><label class="lbl">Horario planificado (entrada → salida)</label><input class="inp" type="text" id="erT" placeholder="Ej: 09:00 → 17:00"/></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px;">
         <div><label class="lbl">Entrada real</label><input class="time-inp" type="time" id="erE"/></div>
         <div><label class="lbl">Salida real</label><input class="time-inp" type="time" id="erS"/></div>
@@ -298,40 +267,92 @@
   </div>
 </div>
 
-<!-- ── MODAL EDITOR HORARIOS POR ÁREA ── -->
+<!-- MODAL HORARIOS SEMANALES — CARGA POR ÁREA -->
 <div class="modal-overlay" id="mHsem" style="display:none;" onclick="if(event.target===this)HorariosSem.closeModal()">
-  <div class="modal-box-lg" style="max-width:1000px;">
+  <div class="modal-box-lg">
     <div class="modal-header">
       <div>
-        <h3 style="font-size:16px;font-weight:800;">
-          Horarios <span class="brand-gc">— </span><span id="mhAreaTitle">—</span>
-        </h3>
-        <div style="display:flex;align-items:center;gap:10px;margin-top:6px;flex-wrap:wrap;">
-          <span class="badge badge-cyan" style="font-size:12px;" id="mhSemLabel"></span>
-          <button class="btn-ant" id="btnCopiarAnt" onclick="HorariosSem.copiarAntModal()" style="display:none;">
-            ⟳ Copiar semana anterior
-          </button>
-        </div>
+        <h3 style="font-size:16px;font-weight:800;">Cargar horarios <span class="brand-gc">por área</span></h3>
+        <p style="font-size:12px;color:rgba(198,201,215,.45);margin-top:2px;">Cada persona del área tiene su fila. Completá la semana completa.</p>
       </div>
       <button class="modal-close" onclick="HorariosSem.closeModal()">✕</button>
     </div>
 
-    <div style="margin-bottom:13px;">
-      <label class="lbl">Observación general del área (opcional)</label>
-      <input class="inp" id="mhAreaObs" type="text" placeholder="Notas de la semana..."/>
+    <!-- SEMANA + ÁREA -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:11px;margin-bottom:14px;">
+      <div>
+        <label class="lbl">Semana desde (Lunes) *</label>
+        <input class="inp" type="date" id="mhDesde" onchange="HorariosSem.autoHasta()"/>
+      </div>
+      <div>
+        <label class="lbl">Hasta (Sábado)</label>
+        <input class="inp" type="date" id="mhHasta" readonly/>
+      </div>
+      <div>
+        <label class="lbl">Área *</label>
+        <select class="inp" id="mhArea" onchange="HorariosSem.loadAreaPersonas()">
+          <option value="">Seleccionar área...</option>
+          <option>ADMINISTRACION</option><option>COMERCIAL</option><option>RECURSOS HUMANOS</option>
+          <option>MARKETING</option><option>ACADEMICO / GT</option><option>INNOVACION Y DESARROLLO</option><option>MAESTRANZA</option>
+        </select>
+      </div>
     </div>
 
-    <div id="mhPersonasBody" style="max-height:58vh;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding-right:2px;">
-      <div style="text-align:center;padding:30px;color:rgba(198,201,215,.3);"><span class="sp"></span></div>
+    <!-- CARGA DESDE PLANILLA -->
+    <div class="glass-dark" style="padding:14px 16px;margin-bottom:14px;">
+      <div style="font-size:12px;font-weight:700;color:rgba(198,201,215,.7);margin-bottom:4px;">
+        📋 Cargar desde planilla Excel / Google Sheets / WhatsApp
+      </div>
+      <div style="font-size:11px;color:rgba(198,201,215,.45);margin-bottom:10px;">
+        1. Abrí la planilla → seleccioná toda la tabla → <b>Ctrl+C</b><br/>
+        2. Hacé click en el área de abajo → <b>Ctrl+V</b> → los horarios se cargan automáticamente
+      </div>
+      <textarea id="mhTextoInput"
+        style="width:100%;height:90px;background:rgba(255,255,255,.06);border:1px solid rgba(198,201,215,.2);
+               color:#fff;padding:10px;border-radius:10px;font-size:12px;font-family:monospace;resize:vertical;"
+        placeholder="Pegá aquí el contenido copiado de la planilla (Ctrl+V)..."
+        onpaste="HorariosSem.onPasteText(event)"></textarea>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:8px;">
+        <button class="btn btn-primary" onclick="HorariosSem.cargarTexto()" id="btnOCR"
+          style="font-size:13px;padding:8px 18px;">
+          ✓ Cargar horarios
+        </button>
+        <div id="ocrStatus" style="font-size:12px;flex:1;min-height:15px;"></div>
+      </div>
     </div>
 
-    <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;">
-      <button class="btn btn-danger" onclick="HorariosSem.delArea()" style="flex-shrink:0;">🗑 Eliminar semana</button>
+    <!-- TABLA DE PERSONAS -->
+    <div style="font-size:11px;font-weight:700;color:rgba(198,201,215,.55);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">
+      Horario por persona y día
+    </div>
+    <div style="overflow-x:auto;margin-bottom:14px;max-height:380px;overflow-y:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:13px;min-width:900px;">
+        <thead style="position:sticky;top:0;background:#100e18;z-index:2;">
+          <tr>
+            <th style="padding:8px 10px;text-align:left;font-size:11px;font-weight:700;color:rgba(198,201,215,.52);border-bottom:1px solid rgba(198,201,215,.09);white-space:nowrap;min-width:130px;">Persona</th>
+            <th style="padding:8px 10px;font-size:11px;font-weight:700;color:rgba(198,201,215,.52);border-bottom:1px solid rgba(198,201,215,.09);text-align:center;">Lunes</th>
+            <th style="padding:8px 10px;font-size:11px;font-weight:700;color:rgba(198,201,215,.52);border-bottom:1px solid rgba(198,201,215,.09);text-align:center;">Martes</th>
+            <th style="padding:8px 10px;font-size:11px;font-weight:700;color:rgba(198,201,215,.52);border-bottom:1px solid rgba(198,201,215,.09);text-align:center;">Miércoles</th>
+            <th style="padding:8px 10px;font-size:11px;font-weight:700;color:rgba(198,201,215,.52);border-bottom:1px solid rgba(198,201,215,.09);text-align:center;">Jueves</th>
+            <th style="padding:8px 10px;font-size:11px;font-weight:700;color:rgba(198,201,215,.52);border-bottom:1px solid rgba(198,201,215,.09);text-align:center;">Viernes</th>
+            <th style="padding:8px 10px;font-size:11px;font-weight:700;color:rgba(198,201,215,.52);border-bottom:1px solid rgba(198,201,215,.09);text-align:center;">Sábado</th>
+            <th style="padding:8px 10px;font-size:11px;font-weight:700;color:rgba(198,201,215,.52);border-bottom:1px solid rgba(198,201,215,.09);text-align:center;">Total</th>
+          </tr>
+        </thead>
+        <tbody id="mhPersonasBody">
+          <tr><td colspan="8" style="text-align:center;padding:24px;color:rgba(198,201,215,.38);">Seleccioná un área para ver el personal</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div style="margin-bottom:16px;">
+      <label class="lbl">Observaciones generales del área</label>
+      <input class="inp" type="text" id="mhAreaObs" placeholder="Notas de la semana para toda el área..."/>
+    </div>
+
+    <div style="display:flex;gap:8px;">
       <button class="btn btn-ghost" onclick="HorariosSem.closeModal()" style="flex:1;">Cancelar</button>
-      <button class="btn btn-primary" onclick="HorariosSem.saveArea()" id="btnSHsem"
-        style="flex:2;justify-content:center;padding:12px;font-size:15px;">
-        ✓ Guardar área completa
-      </button>
+      <button class="btn btn-primary" onclick="HorariosSem.saveArea()" style="flex:1;justify-content:center;padding:11px;" id="btnSHsem">Guardar área completa</button>
     </div>
   </div>
 </div>
@@ -348,31 +369,42 @@
 <script src="js/dashboard.js"></script>
 <script src="js/horarios-sem.js"></script>
 <script>
-const TABS = ['dash','reg','per','hsem'];
-let _hsemOk = false;
-
-function switchTab(t) {
-  TABS.forEach(x => {
-    document.getElementById('tab-'+x).style.display = x===t ? '' : 'none';
-    document.getElementById('at-'+x).classList.toggle('active', x===t);
+const TABS=['dash','reg','per','hsem'];
+function switchTab(t){
+  TABS.forEach(x=>{
+    document.getElementById('tab-'+x).style.display=x===t?'':'none';
+    document.getElementById('at-'+x).classList.toggle('active',x===t);
   });
-  if (t === 'hsem' && !_hsemOk) { _hsemOk = true; HorariosSem.init(); }
+  if(t==='hsem'&&!document.getElementById('hsemVer').value){
+    document.getElementById('hsemVer').value=today();
+    HorariosSem.load();
+  }
 }
-
-function toggleTabla() {
-  const w   = document.getElementById('hsemTablaWrap');
-  const lbl = document.getElementById('btnTablaLbl');
-  const show = w.style.display === 'none';
-  w.style.display = show ? '' : 'none';
-  lbl.textContent = show ? '🔼 Ocultar tabla' : '📋 Ver tabla detallada';
-  if (show) HorariosSem._renderTabla();
-}
-
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded',()=>{
   Auth.requireAdmin();
   Dashboard.load();
   Registros.load();
   Personal.load();
+  HorariosSem.init();
+  // Activar zona de pegado Ctrl+V en el modal
+  document.addEventListener('paste', e => {
+    const modal = document.getElementById('mHsem');
+    if (modal.style.display === 'none') return;
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        const file = item.getAsFile();
+        window._ocrFile = file;
+        const url = URL.createObjectURL(file);
+        document.getElementById('mhImgTag').src = url;
+        document.getElementById('mhImgPreview').style.display = '';
+        document.getElementById('ocrStatus').innerHTML =
+          '<span style="color:rgba(198,201,215,.6);">Imagen pegada. Presioná <b style="color:var(--one-cyan);">Procesar imagen</b>.</span>';
+        break;
+      }
+    }
+  });
 });
 </script>
 </body>

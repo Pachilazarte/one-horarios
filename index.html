@@ -50,9 +50,24 @@
 
   <!-- FORMULARIO -->
   <div class="glass" style="padding:22px;margin-bottom:14px;">
-    <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:6px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:6px;">
       <h2 style="font-size:18px;font-weight:800;">Registrar <span class="brand-gc">horario</span></h2>
-      <span style="font-size:12px;color:rgba(198,201,215,.5);" id="fechaDisplay"></span>
+      <!-- Navegación de fecha -->
+      <div style="display:flex;align-items:center;gap:6px;">
+        <button onclick="lCambiarFecha(-1)" title="Día anterior"
+          style="background:rgba(255,255,255,.07);border:1px solid rgba(198,201,215,.18);color:rgba(198,201,215,.7);
+                 width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:16px;line-height:1;
+                 display:flex;align-items:center;justify-content:center;transition:all .2s;"
+          onmouseover="this.style.background='rgba(107,225,227,.15)';this.style.color='#6be1e3';"
+          onmouseout="this.style.background='rgba(255,255,255,.07)';this.style.color='rgba(198,201,215,.7)';">‹</button>
+        <span style="font-size:13px;color:rgba(198,201,215,.65);white-space:nowrap;" id="fechaDisplay"></span>
+        <button id="flechaSig" onclick="lCambiarFecha(1)" title="Día siguiente"
+          style="background:rgba(255,255,255,.07);border:1px solid rgba(198,201,215,.18);color:rgba(198,201,215,.7);
+                 width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:16px;line-height:1;
+                 display:flex;align-items:center;justify-content:center;transition:all .2s;"
+          onmouseover="this.style.background='rgba(107,225,227,.15)';this.style.color='#6be1e3';"
+          onmouseout="this.style.background='rgba(255,255,255,.07)';this.style.color='rgba(198,201,215,.7)';">›</button>
+      </div>
     </div>
 
     <input type="hidden" id="lFecha"/>
