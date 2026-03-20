@@ -76,6 +76,8 @@
     .ht::placeholder{color:rgba(198,201,215,.2);font-weight:400;font-size:11px;}
     .ht.v{border-color:rgba(107,225,227,.3);color:var(--one-cyan);}
     .ht.err{border-color:rgba(239,68,68,.5)!important;color:var(--color-danger-text)!important;}
+    .ht-split{font-size:12px!important;padding:5px 2px!important;}
+    .ht-split.v{border-color:rgba(228,199,106,.4)!important;color:var(--one-gold)!important;}
 
     /* Badge de tipo especial — reemplaza los inputs cuando es flex/guardia */
     .tipo-badge{width:100%;border-radius:8px;padding:7px 4px;font-family:var(--font-title);
@@ -149,7 +151,7 @@
       </div>
       <button class="btn btn-success" style="width:100%;justify-content:center;" onclick="login()">Ingresar →</button>
       <div style="margin-top:16px;text-align:center;">
-        <a href="index.html" style="font-size:12px;color:rgba(198,201,215,.3);">← Volver al inicio</a>
+        <a href="Lider.html" style="font-size:12px;color:rgba(198,201,215,.3);">← Actualizar</a>
       </div>
     </div>
   </div>
@@ -189,7 +191,6 @@
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
         <span id="hdrBadge" class="badge" style="font-size:11px;"></span>
         <button id="btnCambiarArea" onclick="mostrarSelectorArea()" class="btn btn-ghost" style="display:none;font-size:12px;padding:6px 12px;">⇄ Cambiar área</button>
-        <a href="index.html" class="btn btn-ghost" style="font-size:12px;padding:6px 12px;">← Inicio</a>
         <button class="btn btn-ghost" onclick="logout()" style="font-size:12px;padding:6px 12px;">Salir</button>
       </div>
     </div>
@@ -216,13 +217,13 @@
     <!-- LEYENDA DE TIPOS -->
     <div class="tipo-leyenda">
       <span>💡 En cada campo podés escribir:</span>
-      <span class="tip-c">09:00 → hora normal</span>
+      <span class="tip-c">09:00 → hora normal (Colocar siempre horario en ARG)</span>
       <span style="opacity:.3">·</span>
       <span class="tip-p"><strong>flex</strong> o <strong>f</strong> → Horario flexible</span>
       <span style="opacity:.3">·</span>
       <span class="tip-g"><strong>guardia</strong> o <strong>g</strong> → Guardia (1h)</span>
       <span style="opacity:.3">·</span>
-      <span style="color:rgba(198,201,215,.4);">Click en badge para quitar</span>
+      <span style="color:rgba(198,201,215,.4);">Click en la casilla para quitarlo </span>
     </div>
 
     <!-- OBS ÁREA -->
@@ -544,6 +545,7 @@ async function cargar() {
       r[d + '_e2']   = sv?.[d]?.e2   || '';
       r[d + '_s2']   = sv?.[d]?.s2   || '';
       r[d + '_tipo'] = sv?.[d]?.tipo  || 'normal';
+      r[d + '_split'] = !!(sv?.[d]?.e2 || sv?.[d]?.s2);
     });
     r.split = DIAS.some(d => r[d + '_e2']);
     return r;
@@ -574,6 +576,7 @@ function copiarAnterior() {
       r[d + '_e2']   = a[d]?.e2   || '';
       r[d + '_s2']   = a[d]?.s2   || '';
       r[d + '_tipo'] = a[d]?.tipo  || 'normal';
+      r[d + '_split'] = !!(a[d]?.e2 || a[d]?.s2);
     });
     if (a.obs) r.obs = a.obs;
     r.split = DIAS.some(d => r[d + '_e2']);
@@ -593,26 +596,17 @@ function renderCards() {
 
   grid.innerHTML = rows.map((r, i) => {
     const tot = calcTot(r);
-    const sp  = r.split;
 
     const dcols = DIAS.map((d, di) => {
-      const tipo = r[d + '_tipo'] || 'normal';
+      const tipo  = r[d + '_tipo'] || 'normal';
+      const spDia = !!(r[d + '_split'] || r[d + '_e2'] || r[d + '_s2']);
       let celda;
 
       if (tipo === 'flex') {
-        // Celda Flex: muestra badge, click para quitar
-        celda = `
-          <button class="tipo-badge tipo-badge-flex" onclick="quitarTipo(${i},'${d}')" title="Click para quitar Flex">
-            🔄 Flex
-          </button>`;
+        celda = `<button class="tipo-badge tipo-badge-flex" onclick="quitarTipo(${i},'${d}')" title="Click para quitar Flex">🔄 Flex</button>`;
       } else if (tipo === 'guardia') {
-        // Celda Guardia: muestra badge, click para quitar
-        celda = `
-          <button class="tipo-badge tipo-badge-guardia" onclick="quitarTipo(${i},'${d}')" title="Click para quitar Guardia">
-            🛡 Guard.
-          </button>`;
+        celda = `<button class="tipo-badge tipo-badge-guardia" onclick="quitarTipo(${i},'${d}')" title="Click para quitar Guardia">🛡 Guard.</button>`;
       } else {
-        // Celda normal: inputs de hora
         celda = `
           <input class="ht ${r[d+'_e']?'v':''}" type="text" maxlength="8"
             placeholder="09:00" value="${r[d+'_e']}"
@@ -623,19 +617,27 @@ function renderCards() {
             placeholder="17:00" value="${r[d+'_s']}"
             oninput="updCelda(${i},'${d}_s',this)"
             onblur="blurCelda(${i},'${d}',this,'s')"/>
-          ${sp ? `
-          <div class="split-sec show" id="sp_${i}_${d}">
-            <div class="split-lbl">2° turno</div>
-            <input class="ht ${r[d+'_e2']?'v':''}" type="text" maxlength="8"
+          <button onclick="togSplitDia(${i},'${d}')" title="${spDia?'Quitar 2° turno':'Agregar 2° turno'}"
+            style="width:100%;margin-top:3px;padding:3px 2px;border-radius:6px;border:1px dashed;
+              font-size:9px;font-weight:800;cursor:pointer;transition:all .15s;
+              background:${spDia?'rgba(228,199,106,.15)':'rgba(255,255,255,.04)'};
+              border-color:${spDia?'rgba(228,199,106,.5)':'rgba(198,201,215,.18)'};
+              color:${spDia?'var(--one-gold)':'rgba(198,201,215,.35)'};">
+            ${spDia?'✂ ×':'✂'}
+          </button>
+          ${spDia ? `
+          <div style="margin-top:4px;padding-top:5px;border-top:1px dashed rgba(228,199,106,.25);">
+            <div style="font-size:8px;color:rgba(228,199,106,.5);text-align:center;font-weight:700;margin-bottom:2px;">2°</div>
+            <input class="ht ht-split ${r[d+'_e2']?'v':''}" type="text" maxlength="8"
               placeholder="—" value="${r[d+'_e2']}"
               oninput="updCelda(${i},'${d}_e2',this)"
               onblur="blurCelda(${i},'${d}',this,'e2')"/>
             <div class="sep">↓</div>
-            <input class="ht ${r[d+'_s2']?'v':''}" type="text" maxlength="8"
+            <input class="ht ht-split ${r[d+'_s2']?'v':''}" type="text" maxlength="8"
               placeholder="—" value="${r[d+'_s2']}"
               oninput="updCelda(${i},'${d}_s2',this)"
               onblur="blurCelda(${i},'${d}',this,'s2')"/>
-          </div>` : `<div class="split-sec" id="sp_${i}_${d}"></div>`}`;
+          </div>` : ''}`;
       }
 
       return `<div class="dia-col${(di>=5)?' dia-col-fds':''}">
@@ -645,21 +647,15 @@ function renderCards() {
       </div>`;
     }).join('');
 
-    // Fin de semana incluido — todos los días son editables
-    const fdsHtml = '';
-
     return `<div class="pcard" id="pc${i}">
       <div class="pcard-head">
         <div><div class="pcard-name">${r.nombre}</div><div class="pcard-rol">${r.rol || '—'}</div></div>
         <div class="pcard-meta">
           <span class="tot-badge" id="tot${i}">${tot > 0 ? fmtHs(tot) : '—'}</span>
-          <button class="btn-split ${sp ? 'on' : ''}" id="spBtn${i}" onclick="togSplit(${i})">
-            ${sp ? '✂ Partido ON' : '✂ Turno partido'}
-          </button>
         </div>
       </div>
       <div class="pcard-body">
-        <div class="dias-grid">${dcols}${fdsHtml}</div>
+        <div class="dias-grid">${dcols}</div>
         <input class="obs-inp" type="text"
           placeholder="Observación de ${r.nombre} (opcional)..."
           value="${(r.obs || '').replace(/"/g, '&quot;')}"
@@ -738,13 +734,18 @@ function quitarTipo(i, d) {
   renderCards();
 }
 
-/* ── TOGGLE TURNO PARTIDO ── */
-function togSplit(i) {
-  rows[i].split = !rows[i].split;
-  const on = rows[i].split;
-  if (!on) {
-    DIAS.forEach(d => { rows[i][d + '_e2'] = ''; rows[i][d + '_s2'] = ''; });
+/* ── TOGGLE TURNO PARTIDO POR DÍA ── */
+function togSplitDia(i, d) {
+  const activo = rows[i][d + '_split'];
+  if (activo) {
+    rows[i][d + '_split'] = false;
+    rows[i][d + '_e2'] = '';
+    rows[i][d + '_s2'] = '';
+  } else {
+    rows[i][d + '_split'] = true;
   }
+  updTot(i);
+  dirty();
   renderCards();
 }
 
@@ -817,10 +818,58 @@ async function guardar() {
     document.getElementById('gbSt').textContent = '⚠ Error al guardar';
     document.getElementById('gbSt').style.color = 'var(--color-danger-text)';
   } else {
-    toast('✓ Horarios guardados correctamente');
+    // Sincronizar turno en registros existentes de esta semana
+    const sincCount = await _sincronizarRegistros(areaActual, semD, horarios);
+    const msg = sincCount > 0
+      ? `✓ Guardado · ${sincCount} registro(s) sincronizado(s)`
+      : '✓ Horarios guardados correctamente';
+    toast(msg);
     document.getElementById('gbSt').textContent = '✓ Guardado';
     document.getElementById('gbSt').style.color = 'var(--color-success-text)';
   }
+}
+
+/* ── SINCRONIZAR TURNO EN REGISTROS ── */
+async function _sincronizarRegistros(area, semDesde, horarios) {
+  const semHasta = getSab(semDesde);
+  const { data: regs } = await SB
+    .from('registros')
+    .select('id, nombre, fecha, turno')
+    .eq('area', area)
+    .gte('fecha', semDesde)
+    .lte('fecha', semHasta);
+
+  if (!regs?.length) return 0;
+
+  const DIAS_SEM = ['domingo','lunes','martes','miercoles','jueves','viernes','sabado'];
+  const horariosMap = {};
+  horarios.forEach(h => horariosMap[h.nombre] = h);
+
+  const updates = [];
+  regs.forEach(reg => {
+    const p = horariosMap[reg.nombre];
+    if (!p) return;
+    const dKey = DIAS_SEM[new Date(reg.fecha + 'T12:00:00').getDay()];
+    const dia  = p[dKey];
+    if (!dia) return;
+    const tipo = dia.tipo || 'normal';
+    let nuevoTurno;
+    if (tipo === 'flex')         nuevoTurno = 'Flex';
+    else if (tipo === 'guardia') nuevoTurno = 'Guardia';
+    else {
+      if (!dia.e) return;
+      nuevoTurno = dia.e + (dia.s ? ' → ' + dia.s : '');
+      if (dia.e2) nuevoTurno += ' | ' + dia.e2 + (dia.s2 ? ' → ' + dia.s2 : '');
+    }
+    if (reg.turno !== nuevoTurno) updates.push({ id: reg.id, turno: nuevoTurno });
+  });
+
+  if (updates.length) {
+    await Promise.all(
+      updates.map(u => SB.from('registros').update({ turno: u.turno }).eq('id', u.id))
+    );
+  }
+  return updates.length;
 }
 
 /* ── INIT ── */

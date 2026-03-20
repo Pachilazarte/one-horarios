@@ -154,11 +154,13 @@ body{-webkit-tap-highlight-color:transparent;}
       </div>
     </div>
 
-    <!-- HORAS TURNO 2 (solo si el plan es partido) -->
+    <!-- HORAS TURNO 2 (si el plan es partido O si el usuario lo activa) -->
     <div id="turno2Wrap" style="display:none;margin-bottom:10px;padding:10px 12px;
       background:rgba(228,199,106,.06);border:1px solid rgba(228,199,106,.2);border-radius:10px;">
-      <div style="font-size:10px;font-weight:800;color:rgba(228,199,106,.7);letter-spacing:.08em;
-        text-transform:uppercase;margin-bottom:8px;">✂ 2° Turno</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <div style="font-size:10px;font-weight:800;color:rgba(228,199,106,.7);letter-spacing:.08em;text-transform:uppercase;">✂ 2° Turno</div>
+        <button onclick="ocultarTurno2()" style="background:none;border:none;cursor:pointer;font-size:11px;color:rgba(228,199,106,.5);font-weight:700;">✕ Quitar</button>
+      </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
         <div>
           <label class="lbl">Entrada 2°</label>
@@ -169,6 +171,16 @@ body{-webkit-tap-highlight-color:transparent;}
           <input class="time-inp" type="time" id="lSal2" oninput="updCalc()" onchange="updCalc()"/>
         </div>
       </div>
+    </div>
+
+    <!-- Botón para agregar 2° turno manualmente -->
+    <div id="btnAgregar2do" style="margin-bottom:10px;display:none;">
+      <button onclick="mostrarTurno2()"
+        style="background:rgba(228,199,106,.08);border:1px dashed rgba(228,199,106,.3);
+          color:rgba(228,199,106,.6);padding:8px 14px;border-radius:8px;
+          font-family:var(--font-title);font-size:12px;font-weight:700;cursor:pointer;width:100%;">
+        ✂ Agregar 2° turno
+      </button>
     </div>
 
     <!-- OBS -->
@@ -306,6 +318,8 @@ async function onPersonaChange() {
 
   if (!plan) {
     el.innerHTML = '<span style="color:rgba(198,201,215,.45);">Sin horario planificado — podés ingresar igualmente.</span>';
+    document.getElementById('btnAgregar2do').style.display = '';
+    document.getElementById('turno2Wrap').style.display = 'none';
     return;
   }
   if (plan.tipo === 'flex') {
@@ -313,11 +327,17 @@ async function onPersonaChange() {
     el.innerHTML = '<span style="color:rgba(198,201,215,.6);">Planificado:</span>'
       + '<strong style="color:var(--one-purple);margin-left:5px;">&#x1F504; Flex</strong>'
       + '<span style="font-size:10px;color:rgba(198,201,215,.35);margin-left:4px;">Sin hora fija</span>';
+    document.getElementById('btnAgregar2do').style.display = 'none';
+    document.getElementById('turno2Wrap').style.display = 'none';
+    return;
   } else if (plan.tipo === 'guardia') {
     el.classList.add('plan-guardia');
     el.innerHTML = '<span style="color:rgba(198,201,215,.6);">Planificado:</span>'
       + '<strong style="color:var(--one-gold);margin-left:5px;">&#x1F6E1; Guardia</strong>'
       + '<span style="font-size:10px;color:rgba(198,201,215,.35);margin-left:4px;">1h computable</span>';
+    document.getElementById('btnAgregar2do').style.display = 'none';
+    document.getElementById('turno2Wrap').style.display = 'none';
+    return;
   } else {
     // Horario normal — mostrar horario y si es partido
     const esCortado = !!(plan.entrada2 || plan.salida2);
@@ -334,12 +354,17 @@ async function onPersonaChange() {
 
     // Mostrar/ocultar bloque de 2° turno
     const t2 = document.getElementById('turno2Wrap');
-    if (t2) t2.style.display = esCortado ? '' : 'none';
-    if (esCortado && plan.entrada2) {
+    const btn2 = document.getElementById('btnAgregar2do');
+    if (esCortado) {
+      if (t2) t2.style.display = '';
+      if (btn2) btn2.style.display = 'none';
       const e2 = document.getElementById('lEnt2');
       const s2 = document.getElementById('lSal2');
       if (e2) e2.value = '';
       if (s2) s2.value = '';
+    } else {
+      if (t2) t2.style.display = 'none';
+      if (btn2) btn2.style.display = ''; // mostrar botón manual
     }
   }
   updCalc();
@@ -498,10 +523,27 @@ function loginAdmin() {
   else showToast('Usuario o contraseña incorrectos', 'err');
 }
 
+function mostrarTurno2() {
+  document.getElementById('turno2Wrap').style.display = '';
+  document.getElementById('btnAgregar2do').style.display = 'none';
+}
+function ocultarTurno2() {
+  document.getElementById('turno2Wrap').style.display = 'none';
+  document.getElementById('btnAgregar2do').style.display = '';
+  const e2 = document.getElementById('lEnt2'); if (e2) e2.value = '';
+  const s2 = document.getElementById('lSal2'); if (s2) s2.value = '';
+}
+  const el = document.getElementById('lPlanInfo');
+  if (el) { el.style.display = 'none'; el.innerHTML = ''; }
+
 /* ── Helpers ── */
 function _clearPlan() {
   const el = document.getElementById('lPlanInfo');
   if (el) { el.style.display = 'none'; el.innerHTML = ''; }
+  const t2 = document.getElementById('turno2Wrap');
+  if (t2) t2.style.display = 'none';
+  const btn2 = document.getElementById('btnAgregar2do');
+  if (btn2) btn2.style.display = 'none';
 }
 function _clearCalc() {
   const it = document.getElementById('lInfoT');

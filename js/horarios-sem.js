@@ -270,6 +270,7 @@ const HorariosSem = (() => {
         r[d+'_e2']   = sv?.[d]?.e2   || '';
         r[d+'_s2']   = sv?.[d]?.s2   || '';
         r[d+'_tipo'] = sv?.[d]?.tipo  || 'normal';
+        r[d+'_split'] = !!(sv?.[d]?.e2 || sv?.[d]?.s2); // activar flag si ya hay 2° turno
       });
       r.split = DIAS.some(d => r[d+'_e2']);
       return r;
@@ -386,8 +387,8 @@ const HorariosSem = (() => {
     const fArr = _diasArr(semViendo);
 
     const personaRows = editRows.map((r, i) => {
-      const tipo = r[d+'_tipo'] || 'normal';
-      const sp   = r.split && tipo === 'normal';
+      const tipo  = r[d+'_tipo'] || 'normal';
+      const spDia = !!(r[d+'_split'] || r[d+'_e2'] || r[d+'_s2']); // flag O ya tiene horas
 
       const tipoSelector = `
         <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px;">
@@ -403,23 +404,28 @@ const HorariosSem = (() => {
         contenido = `<div style="padding:10px 14px;background:rgba(228,199,106,.07);border:1px solid rgba(228,199,106,.2);border-radius:8px;font-size:12px;color:var(--one-gold);">🛡 <strong>Guardia</strong> — 1 hora computable.</div>`;
       } else {
         contenido = `
-          <div style="display:grid;grid-template-columns:1fr 18px 1fr ${sp?'28px 1fr 18px 1fr':''};align-items:center;gap:6px;">
+          <div style="display:grid;grid-template-columns:1fr 18px 1fr;align-items:center;gap:6px;">
             <input class="ht-edit ${r[d+'_e']?'v':''}" type="text" maxlength="5" placeholder="09:00" value="${r[d+'_e']}"
               oninput="HorariosSem._uf(${i},'${d}_e',this)" onblur="HorariosSem._ff(${i},'${d}_e',this)"/>
             <span style="font-size:13px;color:rgba(198,201,215,.3);text-align:center;">→</span>
             <input class="ht-edit ${r[d+'_s']?'v':''}" type="text" maxlength="5" placeholder="17:00" value="${r[d+'_s']}"
               oninput="HorariosSem._uf(${i},'${d}_s',this)" onblur="HorariosSem._ff(${i},'${d}_s',this)"/>
-            ${sp ? `
-            <span style="font-size:11px;color:rgba(228,199,106,.5);text-align:center;font-weight:800;">+</span>
-            <input class="ht-edit ht-gold ${r[d+'_e2']?'v':''}" type="text" maxlength="5" placeholder="—" value="${r[d+'_e2']}"
-              oninput="HorariosSem._uf(${i},'${d}_e2',this)" onblur="HorariosSem._ff(${i},'${d}_e2',this)"/>
-            <span style="font-size:13px;color:rgba(228,199,106,.28);text-align:center;">→</span>
-            <input class="ht-edit ht-gold ${r[d+'_s2']?'v':''}" type="text" maxlength="5" placeholder="—" value="${r[d+'_s2']}"
-              oninput="HorariosSem._uf(${i},'${d}_s2',this)" onblur="HorariosSem._ff(${i},'${d}_s2',this)"/>
-            ` : ''}
           </div>
-          ${tipo === 'normal' ? `<button class="btn-split-sm ${r.split?'on':''}" id="mhSpBtn${i}" onclick="HorariosSem._ts(${i})" style="font-size:11px;margin-top:4px;">${r.split?'✂ Partido ON':'✂ Agregar 2° turno'}</button>` : ''}`;
-      }
+          ${spDia ? `
+          <div style="margin-top:6px;padding-top:6px;border-top:1px dashed rgba(228,199,106,.25);">
+            <div style="font-size:9px;color:rgba(228,199,106,.6);font-weight:800;margin-bottom:4px;">✂ 2° TURNO</div>
+            <div style="display:grid;grid-template-columns:1fr 18px 1fr;align-items:center;gap:6px;">
+              <input class="ht-edit ht-gold ${r[d+'_e2']?'v':''}" type="text" maxlength="5" placeholder="—" value="${r[d+'_e2']}"
+                oninput="HorariosSem._uf(${i},'${d}_e2',this)" onblur="HorariosSem._ff(${i},'${d}_e2',this)"/>
+              <span style="font-size:13px;color:rgba(228,199,106,.28);text-align:center;">→</span>
+              <input class="ht-edit ht-gold ${r[d+'_s2']?'v':''}" type="text" maxlength="5" placeholder="—" value="${r[d+'_s2']}"
+                oninput="HorariosSem._uf(${i},'${d}_s2',this)" onblur="HorariosSem._ff(${i},'${d}_s2',this)"/>
+            </div>
+          </div>` : ''}
+          <button class="btn-split-sm ${spDia?'on':''}" onclick="HorariosSem._tsDia(${i},'${d}')" style="font-size:11px;margin-top:4px;">
+            ${spDia?'✂ Quitar 2° turno':'✂ Agregar 2° turno'}
+          </button>`;
+      } // fin else normal
 
       let hsDay = '—';
       if (tipo === 'guardia') hsDay = '1h';
@@ -569,11 +575,18 @@ const HorariosSem = (() => {
 
   function _ddShort(s) { if(!s)return''; const[y,m,d]=s.split('-'); return`${d}/${m}`; }
 
-  // ─── TOGGLE TURNO PARTIDO ───
-  function _ts(i) {
-    editRows[i].split = !editRows[i].split;
-    if (!editRows[i].split) {
-      DIAS.forEach(d => { editRows[i][d+'_e2']=''; editRows[i][d+'_s2']=''; });
+  // ─── TOGGLE TURNO PARTIDO POR DÍA ───
+  // Usa flag r[d+'_split'] = true/false independiente de si hay horas cargadas
+  function _tsDia(i, d) {
+    const activo = editRows[i][d+'_split'];
+    if (activo) {
+      // Desactivar: limpiar horas y flag
+      editRows[i][d+'_split'] = false;
+      editRows[i][d+'_e2'] = '';
+      editRows[i][d+'_s2'] = '';
+    } else {
+      // Activar
+      editRows[i][d+'_split'] = true;
     }
     _renderEditCards();
   }
@@ -681,9 +694,68 @@ const HorariosSem = (() => {
 
     btn.disabled=false; btn.textContent='✓ Guardar área completa';
     if (error) { showToast('Error: '+error.message,'err'); return; }
+
+    // Sincronizar turno en registros existentes de esta semana
+    await _sincronizarRegistros(editArea, semViendo, horarios);
+
     showToast(`✓ Horarios de ${editArea} guardados`);
     closeModal();
     load();
+  }
+
+  // ─── SINCRONIZAR TURNO EN REGISTROS ───
+  // Actualiza el campo "turno" en la tabla registros para todos los registros
+  // de esa semana/área que ya estén cargados, usando el nuevo horario planificado.
+  async function _sincronizarRegistros(area, semDesde, horarios) {
+    // Calcular semana_hasta (domingo)
+    const semHasta = getSabado(semDesde);
+
+    // Traer registros de esa semana y área
+    const { data: regs } = await SB
+      .from('registros')
+      .select('id, nombre, fecha, turno')
+      .eq('area', area)
+      .gte('fecha', semDesde)
+      .lte('fecha', semHasta);
+
+    if (!regs?.length) return;
+
+    const DIAS_SEM = ['domingo','lunes','martes','miercoles','jueves','viernes','sabado'];
+    const horariosMap = {};
+    horarios.forEach(h => horariosMap[h.nombre] = h);
+
+    // Por cada registro, calcular el turno correcto del nuevo horario
+    const updates = [];
+    regs.forEach(reg => {
+      const p = horariosMap[reg.nombre];
+      if (!p) return;
+
+      const dKey = DIAS_SEM[new Date(reg.fecha + 'T12:00:00').getDay()];
+      const dia  = p[dKey];
+      if (!dia) return;
+
+      const tipo = dia.tipo || 'normal';
+      let nuevoTurno;
+      if (tipo === 'flex')    nuevoTurno = 'Flex';
+      else if (tipo === 'guardia') nuevoTurno = 'Guardia';
+      else {
+        if (!dia.e) return; // sin horario para ese día, no tocar
+        nuevoTurno = dia.e + (dia.s ? ' → ' + dia.s : '');
+        if (dia.e2) nuevoTurno += ' | ' + dia.e2 + (dia.s2 ? ' → ' + dia.s2 : '');
+      }
+
+      if (reg.turno !== nuevoTurno) {
+        updates.push({ id: reg.id, turno: nuevoTurno });
+      }
+    });
+
+    // Ejecutar updates en paralelo
+    if (updates.length) {
+      await Promise.all(
+        updates.map(u => SB.from('registros').update({ turno: u.turno }).eq('id', u.id))
+      );
+      showToast(`✓ Horarios guardados · ${updates.length} registro(s) sincronizado(s)`);
+    }
   }
 
   function closeModal() {
@@ -762,7 +834,7 @@ const HorariosSem = (() => {
     init, load, movSem, irSemana, irFecha,
     openAreaModal, copiarAntModal, closeModal, saveArea, delArea,
     exportCSV, _renderTabla,
-    _uf, _ff, _uo, _ts, _goDia, _backDias, _setTipo,
+    _uf, _ff, _uo, _tsDia, _goDia, _backDias, _setTipo,
   };
 
 })();

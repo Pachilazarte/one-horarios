@@ -102,8 +102,11 @@ const Registros = (() => {
     document.getElementById('erE').value=r.hora_entrada?.slice(0,5)||'';
     document.getElementById('erS').value=r.hora_salida?.slice(0,5)||'';
     document.getElementById('erO').value=r.observaciones||'';
+    // Extraer 2° turno de observaciones si existe "2° turno: HH:MM → HH:MM"
+    const match = (r.observaciones||'').match(/2° turno:\s*(\d{2}:\d{2})(?:\s*→\s*(\d{2}:\d{2}))?/);
+    document.getElementById('erE2').value = match?.[1] || '';
+    document.getElementById('erS2').value = match?.[2] || '';
     document.getElementById('mReg').style.display='';
-    // Cargar nombres del área
     _cargarNombresModal(r.area||'', r.nombre||'');
   }
   function closeModal(){document.getElementById('mReg').style.display='none';}
@@ -120,11 +123,19 @@ const Registros = (() => {
     const t=document.getElementById('erT').value;
     const e=document.getElementById('erE').value;
     const s=document.getElementById('erS').value;
-    const o=document.getElementById('erO').value;
+    const e2=document.getElementById('erE2').value;
+    const s2=document.getElementById('erS2').value;
+    const o=document.getElementById('erO').value.replace(/\s*\|\s*2° turno:.*$/,'').trim(); // limpiar 2° turno viejo
     if(!area||!nombre||!fecha){showToast('Área, nombre y fecha son obligatorios','err');return;}
+    // Reconstruir observaciones con 2° turno si existe
+    let obsFinal = o || null;
+    if(e2){
+      const t2str = e2 + (s2 ? ' → ' + s2 : '');
+      obsFinal = (o ? o + ' | ' : '') + '2° turno: ' + t2str;
+    }
     const{error}=await SB.from('registros').update({
       area,nombre,fecha,
-      turno:t||null,hora_entrada:e?e+':00':null,hora_salida:s?s+':00':null,observaciones:o||null
+      turno:t||null,hora_entrada:e?e+':00':null,hora_salida:s?s+':00':null,observaciones:obsFinal
     }).eq('id',id);
     if(error){showToast('Error','err');return;}
     showToast('Actualizado');closeModal();load();
