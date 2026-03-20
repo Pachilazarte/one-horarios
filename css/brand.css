@@ -1,0 +1,66 @@
+/* ═══════════════════════════════════════════════
+   BRAND.CSS — ONE Horarios · Escencial Consultora
+   Para cambiar colores o logos: editá SOLO este archivo.
+   ═══════════════════════════════════════════════ */
+:root {
+  --one-black:      #000000;
+  --one-ink:        #1a181d;
+  --one-ink-light:  #0a0810;
+  --one-white:      #fefeff;
+  --one-cyan:       #6be1e3;
+  --one-cyan-light: #a8f1f1;
+  --one-pink:       #e17bd7;
+  --one-pink-light: #f0a8e8;
+  --one-gold:       #e4c76a;
+  --one-gold-light: #f0d88a;
+  --one-slate:      #a4a8c0;
+  --one-mist:       #c6c9d7;
+  --one-purple:     #a78bfa;
+
+  --color-success:      #34d399;
+  --color-success-text: #86efac;
+  --color-danger:       #ef4444;
+  --color-danger-text:  #fca5a5;
+
+  --area-administracion:   #6be1e3;
+  --area-comercial:        #e17bd7;
+  --area-rrhh:             #e4c76a;
+  --area-marketing:        #f472b6;
+  --area-academico:        #a78bfa;
+  --area-innovacion:       #34d399;
+  --area-maestranza:       #fb923c;
+
+  --font-title: "Exo 2", system-ui, sans-serif;
+  --font-body:  "Exo 2", system-ui, sans-serif;
+
+  --glass-bg:          rgba(255,255,255,.055);
+  --glass-border:      rgba(198,201,215,.14);
+  --glass-blur:        18px;
+
+  --bg-gradient:
+    radial-gradient(1200px 700px at 70% 25%, rgba(225,123,215,.14), transparent 55%),
+    radial-gradient(900px  600px at 15% 65%, rgba(107,225,227,.10), transparent 55%),
+    radial-gradient(700px  500px at 50% 90%, rgba(228,199,106,.07), transparent 60%),
+    linear-gradient(180deg, #0a0810, #1a181d);
+
+  --radius-lg:   16px;
+  --radius-md:   12px;
+  --radius-sm:   8px;
+  --radius-pill: 999px;
+}
+
+.brand-gc { background: linear-gradient(90deg,var(--one-cyan),var(--one-cyan-light)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+.brand-gp { background: linear-gradient(90deg,var(--one-pink),var(--one-pink-light)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+.brand-gg { background: linear-gradient(90deg,var(--one-gold),var(--one-gold-light)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+
+.brand-mark {
+  width:36px; height:36px; border-radius:50%;
+  background-image: url('../img/one-iconocolor.png');
+  background-size:contain; background-repeat:no-repeat; background-position:center;
+  background-color:rgba(107,225,227,.08);
+  border:1px solid rgba(107,225,227,.28);
+  box-shadow:0 0 20px rgba(107,225,227,.15);
+  flex-shrink:0;
+}
+.brand-name { font-family:var(--font-title); font-weight:800; font-size:16px; letter-spacing:.04em; }
+.brand-sub  { font-size:10px; color:rgba(198,201,215,.52); letter-spacing:.04em; display:block; margin-top:1px; }

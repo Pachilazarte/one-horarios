@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ONE — Registrar Horario</title>
+<link rel="icon" type="image/png" href="img/favicon.png"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/brand.css"/>
+<link rel="stylesheet" href="css/main.css"/>
+<style>
+body{-webkit-tap-highlight-color:transparent;}
+
+/* ── Fecha nav ── */
+.fecha-nav{display:flex;align-items:center;justify-content:center;gap:12px;
+  padding:13px 14px;background:rgba(255,255,255,.04);
+  border:1px solid rgba(198,201,215,.1);border-radius:14px;margin-bottom:14px;}
+.fecha-arr{background:rgba(255,255,255,.08);border:1px solid rgba(198,201,215,.2);
+  color:rgba(198,201,215,.9);width:42px;height:42px;border-radius:50%;font-size:22px;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:all .18s;flex-shrink:0;-webkit-tap-highlight-color:transparent;
+  user-select:none;}
+.fecha-arr:hover,.fecha-arr:active{background:rgba(107,225,227,.18);
+  border-color:rgba(107,225,227,.45);color:var(--one-cyan);}
+.fecha-center{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;}
+.fecha-dia-txt{font-size:16px;font-weight:800;color:#fff;text-align:center;}
+.fecha-num-txt{font-size:12px;color:rgba(198,201,215,.5);text-align:center;}
+.fecha-hoy-btn{margin-top:2px;font-size:10px;font-weight:700;letter-spacing:.07em;
+  text-transform:uppercase;color:rgba(107,225,227,.65);background:none;border:none;
+  cursor:pointer;padding:2px 8px;font-family:var(--font-title);transition:color .15s;}
+.fecha-hoy-btn:hover{color:var(--one-cyan);}
+.fecha-hoy-btn.hide{visibility:hidden;pointer-events:none;}
+
+/* ── Plan info ── */
+.plan-info{margin-bottom:11px;padding:10px 13px;border-radius:10px;
+  background:rgba(107,225,227,.06);border:1px solid rgba(107,225,227,.2);
+  display:flex;align-items:center;flex-wrap:wrap;gap:5px;font-size:12px;}
+.plan-flex{background:rgba(167,139,250,.07)!important;border-color:rgba(167,139,250,.28)!important;}
+.plan-guardia{background:rgba(228,199,106,.07)!important;border-color:rgba(228,199,106,.28)!important;}
+
+/* ── Inputs mobile-friendly ── */
+.inp{min-height:46px;font-size:16px!important;}
+.time-inp{font-size:22px!important;min-height:56px;}
+.btn-success{min-height:54px;font-size:16px!important;border-radius:14px!important;}
+
+/* ── Cola ── */
+.queue-row{background:rgba(107,225,227,.05);border:1px solid rgba(107,225,227,.12);
+  border-radius:11px;padding:10px 14px;display:flex;align-items:center;
+  justify-content:space-between;gap:10px;animation:fadeUp .25s ease both;}
+
+@media(max-width:380px){
+  .fecha-dia-txt{font-size:14px;}
+  .time-inp{font-size:20px!important;}
+}
+</style>
+</head>
+<body>
+<div class="bg-layer" aria-hidden="true"></div>
+<div class="app-wrap">
+
+<header class="app-header">
+  <div class="app-header__inner">
+    <div class="app-header__brand">
+      <div class="brand-mark"></div>
+      <div>
+        <div class="brand-name">ONE <span class="brand-gc">Horarios</span></div>
+        <span class="brand-sub">Panel de registro</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main style="max-width:520px;margin:0 auto;padding:20px 14px 80px;">
+
+  <!-- LOGO -->
+  <div style="text-align:center;margin-bottom:20px;">
+    <img src="img/one-logocolor.png" alt="ONE"
+      style="height:80px;margin:0 auto 8px;display:block;"
+      onerror="this.style.display='none'"/>
+    <p style="color:rgba(198,201,215,.4);font-size:12px;letter-spacing:.03em;">Escencial Consultora</p>
+  </div>
+
+  <!-- BANNER OK -->
+  <div id="lOkBanner" style="display:none;margin-bottom:14px;" class="ok-banner">
+    <div style="font-size:24px;margin-bottom:4px;">&#x2705;</div>
+    <div style="font-size:15px;font-weight:800;color:var(--color-success-text);" id="lOkMsg">&#xa1;Registrado!</div>
+    <div style="font-size:12px;color:rgba(134,239,172,.55);margin-top:3px;">Para cargar otro, complet&#225; el formulario y guard&#225; de nuevo.</div>
+  </div>
+
+  <!-- COLA -->
+  <div id="lQSec" style="display:none;margin-bottom:14px;">
+    <div style="font-size:11px;font-weight:700;color:rgba(198,201,215,.38);text-transform:uppercase;letter-spacing:.07em;margin-bottom:7px;">
+      Esta sesi&#243;n &mdash; <span id="lQCnt">0</span>
+    </div>
+    <div id="lQList" style="display:flex;flex-direction:column;gap:6px;"></div>
+  </div>
+
+  <!-- FORM -->
+  <div class="glass" style="padding:20px;margin-bottom:14px;">
+    <h2 style="font-size:19px;font-weight:800;margin-bottom:14px;">
+      Registrar <span class="brand-gc">horario</span>
+    </h2>
+
+    <!-- FECHA NAV -->
+    <div class="fecha-nav">
+      <button class="fecha-arr" onclick="cambiarFecha(-1)">&#8249;</button>
+      <div class="fecha-center">
+        <div class="fecha-dia-txt" id="fechaDia">&#x2014;</div>
+        <div class="fecha-num-txt" id="fechaNum">&#x2014;</div>
+        <button class="fecha-hoy-btn hide" id="btnHoy" onclick="irAHoy()">&#x21a9; Hoy</button>
+      </div>
+      <button class="fecha-arr" onclick="cambiarFecha(+1)">&#8250;</button>
+    </div>
+    <input type="hidden" id="lFecha"/>
+
+    <!-- AREA + NOMBRE -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+      <div>
+        <label class="lbl">&#193;rea *</label>
+        <select class="inp" id="lArea" onchange="loadPersonal()">
+          <option value="">Seleccionar...</option>
+          <option>ADMINISTRACION</option>
+          <option>COMERCIAL</option>
+          <option>RECURSOS HUMANOS</option>
+          <option>MARKETING</option>
+          <option>ACADEMICO / GT</option>
+          <option>INNOVACION Y DESARROLLO</option>
+          <option>MAESTRANZA</option>
+        </select>
+      </div>
+      <div>
+        <label class="lbl">Nombre *</label>
+        <select class="inp" id="lNom" onchange="onPersonaChange()">
+          <option value="">Seleccion&#225; &#225;rea primero</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- PLAN INFO -->
+    <div id="lPlanInfo" class="plan-info" style="display:none;"></div>
+
+    <!-- HORAS -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+      <div>
+        <label class="lbl">Entrada *</label>
+        <input class="time-inp" type="time" id="lEnt" oninput="updCalc()" onchange="updCalc()"/>
+        <div id="lInfoT" style="font-size:11.5px;font-weight:700;margin-top:5px;min-height:16px;"></div>
+      </div>
+      <div>
+        <label class="lbl">Salida <span style="font-size:10px;font-weight:400;opacity:.4;">(opc.)</span></label>
+        <input class="time-inp" type="time" id="lSal" oninput="updCalc()" onchange="updCalc()"/>
+        <div id="lInfoH" style="font-size:11.5px;font-weight:700;margin-top:5px;min-height:16px;"></div>
+      </div>
+    </div>
+
+    <!-- OBS -->
+    <div style="margin-bottom:16px;">
+      <label class="lbl">Observaciones <span style="font-size:10px;font-weight:400;opacity:.4;">(opcional)</span></label>
+      <input class="inp" type="text" id="lObs" placeholder="Notas opcionales..." style="font-size:15px;"/>
+    </div>
+
+    <button class="btn btn-success" id="lBtnG" onclick="guardarRegistro()">
+      <span id="lBIco">&#x2705;</span>&nbsp;<span id="lBTxt">Guardar registro</span>
+    </button>
+  </div>
+
+  <!-- ADMIN -->
+  <div style="text-align:center;padding-bottom:10px;">
+    <button class="btn btn-ghost" id="btnShowAdmin" onclick="toggleAdmin()"
+      style="font-size:12px;padding:7px 18px;opacity:.55;">
+      &#x1F510; Acceder como administrador
+    </button>
+    <div id="adminLoginBox" style="display:none;margin-top:10px;" class="glass fade-in"
+      style="border-radius:14px;overflow:hidden;">
+      <div style="padding:16px 18px;">
+        <div style="font-size:12px;font-weight:700;margin-bottom:10px;color:rgba(198,201,215,.55);">Panel Administrador</div>
+        <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:9px;">
+          <input class="inp" type="text" id="aU" placeholder="Usuario"
+            style="flex:1;min-width:90px;font-size:15px;"
+            onkeydown="if(event.key==='Enter')document.getElementById('aP').focus()"/>
+          <input class="inp" type="password" id="aP" placeholder="Contrase&#241;a"
+            style="flex:1;min-width:90px;font-size:15px;"
+            onkeydown="if(event.key==='Enter')loginAdmin()"/>
+        </div>
+        <button class="btn btn-primary" onclick="loginAdmin()"
+          style="width:100%;justify-content:center;padding:11px;font-size:15px;">
+          Ingresar &rarr;
+        </button>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<footer class="app-footer">
+  <img src="img/one-logoletra.png" alt="ONE" class="footer-logo"
+    onerror="this.replaceWith(document.createTextNode('ONE'))"/>
+  <span style="opacity:.3;">&middot;</span>
+  <span style="display:flex;align-items:center;gap:5px;">Desarrollado por
+    <img src="img/escencial-logoblanco.png" alt="Escencial" class="footer-logo"
+      onerror="this.replaceWith(document.createTextNode('Escencial'))"/>
+  </span>
+</footer>
+
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/auth.js"></script>
+<script>
+/* ═══════════════════════════════════════════════
+   REGISTRO — lógica completa inline (sin carga.js)
+   ═══════════════════════════════════════════════ */
+
+let horarioPlan  = null;
+let sessionQueue = [];
+
+/* ── Fecha ── */
+const _DIAS  = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+const _MESES = ['enero','febrero','marzo','abril','mayo','junio','julio',
+                'agosto','septiembre','octubre','noviembre','diciembre'];
+let _offset = -1;
+
+function _fechaStr(off) {
+  const d = new Date();
+  d.setDate(d.getDate() + off);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function getFechaActual() { return _fechaStr(_offset); }
+
+function _updFecha() {
+  const fs = getFechaActual();
+  const d  = new Date(fs + 'T12:00:00');
+  document.getElementById('lFecha').value    = fs;
+  document.getElementById('fechaDia').textContent =
+    _DIAS[d.getDay()] + ' ' + d.getDate() + ' de ' + _MESES[d.getMonth()];
+  document.getElementById('fechaNum').textContent =
+    fs.split('-').reverse().join('/');
+  const b = document.getElementById('btnHoy');
+  _offset !== 0 ? b.classList.remove('hide') : b.classList.add('hide');
+}
+
+function cambiarFecha(d) {
+  _offset += d;
+  _updFecha();
+  if (document.getElementById('lNom')?.value) onPersonaChange();
+}
+function irAHoy() {
+  _offset = 0;
+  _updFecha();
+  if (document.getElementById('lNom')?.value) onPersonaChange();
+}
+
+/* ── Personal ── */
+async function loadPersonal() {
+  const area = document.getElementById('lArea').value;
+  const sel  = document.getElementById('lNom');
+  horarioPlan = null; _clearCalc(); _clearPlan();
+  if (!area) { sel.innerHTML = '<option value="">Seleccioná área primero</option>'; return; }
+  sel.innerHTML = '<option value="">Cargando...</option>';
+  const { data } = await SB.from('personal')
+    .select('nombre,rol').eq('area', area).eq('activo', true).order('nombre');
+  sel.innerHTML = '<option value="">Seleccionar persona...</option>';
+  (data || []).forEach(p => {
+    const o = document.createElement('option');
+    o.value = JSON.stringify({ nombre: p.nombre, rol: p.rol || '' });
+    o.textContent = p.nombre;
+    sel.appendChild(o);
+  });
+}
+
+/* ── Persona cambia ── */
+async function onPersonaChange() {
+  const opt = document.getElementById('lNom').selectedOptions[0];
+  horarioPlan = null; _clearCalc(); _clearPlan();
+  if (!opt?.value) return;
+  let nombre;
+  try { nombre = JSON.parse(opt.value).nombre; } catch { return; }
+
+  const plan = await getHorarioPlanificado(nombre, getFechaActual());
+  horarioPlan = plan;
+
+  const el = document.getElementById('lPlanInfo');
+  el.className = 'plan-info';
+  el.style.display = '';
+
+  if (!plan) {
+    el.innerHTML = '<span style="color:rgba(198,201,215,.45);">Sin horario planificado — podés ingresar igualmente.</span>';
+    return;
+  }
+  if (plan.tipo === 'flex') {
+    el.classList.add('plan-flex');
+    el.innerHTML = '<span style="color:rgba(198,201,215,.6);">Planificado:</span>'
+      + '<strong style="color:var(--one-purple);margin-left:5px;">&#x1F504; Flex</strong>'
+      + '<span style="font-size:10px;color:rgba(198,201,215,.35);margin-left:4px;">Sin hora fija</span>';
+  } else if (plan.tipo === 'guardia') {
+    el.classList.add('plan-guardia');
+    el.innerHTML = '<span style="color:rgba(198,201,215,.6);">Planificado:</span>'
+      + '<strong style="color:var(--one-gold);margin-left:5px;">&#x1F6E1; Guardia</strong>'
+      + '<span style="font-size:10px;color:rgba(198,201,215,.35);margin-left:4px;">1h computable</span>';
+  } else {
+    el.innerHTML = '<span style="color:rgba(198,201,215,.6);">Planificado:</span>'
+      + '<strong style="color:var(--one-cyan);margin-left:5px;">' + plan.entrada + '</strong>'
+      + (plan.salida ? '<span style="color:rgba(198,201,215,.4);font-size:11px;"> &#x2192; </span><strong>' + plan.salida + '</strong>' : '');
+  }
+  updCalc();
+}
+
+/* ── Calcular ── */
+function updCalc() {
+  const ent = document.getElementById('lEnt').value;
+  const sal = document.getElementById('lSal').value;
+  const it  = document.getElementById('lInfoT');
+  const ih  = document.getElementById('lInfoH');
+
+  if (horarioPlan?.tipo === 'flex') {
+    it.style.color = 'var(--one-purple)';
+    it.textContent = ent ? '&#x1F504; Flex — sin tardanza calculada' : '';
+  } else if (horarioPlan?.tipo === 'guardia') {
+    it.style.color = 'var(--one-gold)';
+    it.textContent = ent ? '&#x1F6E1; Guardia — 1h computable' : '';
+  } else if (ent && horarioPlan?.entrada) {
+    const diff = calcTardVsPlan(horarioPlan.entrada, ent);
+    const info = tardInfoText(diff);
+    it.style.color = info.color; it.textContent = info.text;
+  } else if (ent) {
+    it.style.color = 'rgba(198,201,215,.45)';
+    it.textContent = 'Sin planificación para comparar';
+  } else { it.textContent = ''; }
+
+  const hs = calcHs(ent, sal);
+  if (hs !== null) {
+    let ext = '';
+    if (horarioPlan?.tipo === 'normal' && horarioPlan?.salida && sal) {
+      const m = calcHsExtra(horarioPlan.salida, sal);
+      if (m > 0) ext = ' <span style="color:var(--one-gold);">(+' + m + 'm extra)</span>';
+    }
+    ih.innerHTML = '&#x23F1; ' + fmtHs(hs) + ' trabajadas' + ext;
+  } else { ih.textContent = ''; }
+}
+
+/* ── Guardar ── */
+async function guardarRegistro() {
+  const area = document.getElementById('lArea').value;
+  const opt  = document.getElementById('lNom').selectedOptions[0];
+  const ent  = document.getElementById('lEnt').value;
+  const sal  = document.getElementById('lSal').value;
+  const obs  = document.getElementById('lObs').value.trim();
+  const fecha = getFechaActual();
+
+  if (!area || !opt?.value || !ent) {
+    showToast('Completá área, nombre y hora de entrada', 'err'); return;
+  }
+  let nombre, rol;
+  try { const d = JSON.parse(opt.value); nombre = d.nombre; rol = d.rol; }
+  catch { showToast('Seleccioná una persona válida', 'err'); return; }
+
+  const btn = document.getElementById('lBtnG');
+  btn.disabled = true;
+  document.getElementById('lBIco').textContent = '⏳';
+  document.getElementById('lBTxt').textContent = 'Guardando...';
+
+  const turno = !horarioPlan ? 'Personalizado'
+    : horarioPlan.tipo === 'flex'    ? 'Flex'
+    : horarioPlan.tipo === 'guardia' ? 'Guardia'
+    : horarioPlan.entrada + (horarioPlan.salida ? ' → ' + horarioPlan.salida : '');
+
+  const tardanza = horarioPlan?.tipo === 'normal' && horarioPlan?.entrada
+    ? calcTardVsPlan(horarioPlan.entrada, ent) : null;
+
+  const { error } = await SB.from('registros').insert({
+    area, nombre, rol, fecha,
+    turno, hora_entrada: ent + ':00',
+    hora_salida: sal ? sal + ':00' : null,
+    observaciones: obs || null,
+  });
+
+  btn.disabled = false;
+  document.getElementById('lBIco').textContent = '✅';
+  document.getElementById('lBTxt').textContent = 'Guardar registro';
+
+  if (error) { showToast('Error: ' + error.message, 'err'); return; }
+
+  sessionQueue.unshift({ nombre, area, ent, sal, tardanza, hs: calcHs(ent,sal), plan: horarioPlan });
+  _renderQueue();
+
+  document.getElementById('lOkMsg').textContent = '✓ ' + nombre + ' registrado';
+  const banner = document.getElementById('lOkBanner');
+  banner.style.display = '';
+  clearTimeout(banner._t);
+  banner._t = setTimeout(() => banner.style.display = 'none', 5000);
+
+  document.getElementById('lNom').value = '';
+  document.getElementById('lEnt').value = '';
+  document.getElementById('lSal').value = '';
+  document.getElementById('lObs').value = '';
+  horarioPlan = null; _clearCalc(); _clearPlan();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/* ── Cola ── */
+function _renderQueue() {
+  const sec = document.getElementById('lQSec');
+  if (!sessionQueue.length) { sec.style.display = 'none'; return; }
+  sec.style.display = '';
+  document.getElementById('lQCnt').textContent = sessionQueue.length;
+  document.getElementById('lQList').innerHTML = sessionQueue.slice(0, 12).map(r => {
+    let tb = '';
+    if (r.plan?.tipo === 'flex')     tb = '<span class="badge badge-purple" style="font-size:10px;">Flex</span>';
+    else if (r.plan?.tipo === 'guardia') tb = '<span class="badge badge-gold" style="font-size:10px;">Guardia</span>';
+    else if (r.tardanza !== null) tb = r.tardanza <= 0
+      ? '<span class="badge badge-green" style="font-size:10px;">✓ ' + Math.abs(r.tardanza) + 'm ant.</span>'
+      : '<span class="badge badge-red" style="font-size:10px;">+' + r.tardanza + 'm</span>';
+    const hb = r.hs ? '<span class="badge badge-cyan" style="font-size:10px;">' + fmtHs(r.hs) + '</span>' : '';
+    let pt = r.plan?.tipo === 'flex'    ? '<span style="font-size:11px;color:var(--one-purple);">Flex</span>'
+           : r.plan?.tipo === 'guardia' ? '<span style="font-size:11px;color:var(--one-gold);">Guardia</span>'
+           : r.plan?.entrada ? '<span style="font-size:11px;color:rgba(198,201,215,.5);">' + r.plan.entrada + '</span>' : '';
+    return '<div class="queue-row">'
+      + '<div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;">'
+      + '<span style="color:' + areaColor(r.area) + ';font-size:11px;font-weight:800;">' + r.area.split(' ')[0] + '</span>'
+      + '<span style="font-weight:700;font-size:13px;">' + r.nombre + '</span>'
+      + pt
+      + '<span style="font-size:12px;color:rgba(198,201,215,.5);">' + r.ent + (r.sal ? ' → ' + r.sal : '') + '</span>'
+      + hb + tb
+      + '</div>'
+      + '<span style="color:var(--color-success-text);font-size:15px;">✓</span></div>';
+  }).join('');
+}
+
+/* ── Admin ── */
+function toggleAdmin() {
+  const box = document.getElementById('adminLoginBox');
+  const btn = document.getElementById('btnShowAdmin');
+  const v = box.style.display !== 'none';
+  box.style.display = v ? 'none' : '';
+  btn.style.display = v ? '' : 'none';
+}
+function loginAdmin() {
+  const u = document.getElementById('aU').value.trim();
+  const p = document.getElementById('aP').value.trim();
+  if (Auth.loginAdmin(u, p)) window.location.href = 'admin.html';
+  else showToast('Usuario o contraseña incorrectos', 'err');
+}
+
+/* ── Helpers ── */
+function _clearPlan() {
+  const el = document.getElementById('lPlanInfo');
+  if (el) { el.style.display = 'none'; el.innerHTML = ''; }
+}
+function _clearCalc() {
+  const it = document.getElementById('lInfoT');
+  const ih = document.getElementById('lInfoH');
+  if (it) it.textContent = '';
+  if (ih) ih.textContent = '';
+}
+
+/* ── Init ── */
+document.addEventListener('DOMContentLoaded', _updFecha);
+</script>
+</body>
+</html>

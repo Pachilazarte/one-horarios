@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ONE — Líder · Horarios</title>
+  <link rel="icon" type="image/png" href="img/favicon.png"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/brand.css"/>
+  <link rel="stylesheet" href="css/main.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+    .login-card{background:rgba(255,255,255,.06);border:1px solid rgba(198,201,215,.15);backdrop-filter:blur(22px);border-radius:22px;padding:36px 30px 30px;width:100%;max-width:370px;animation:fadeUp .4s ease both;}
+    .lg-brand{display:flex;align-items:center;gap:12px;margin-bottom:26px;}
+    .lg-brand .brand-mark{width:44px;height:44px;}
+    .fld{margin-bottom:14px;}
+    .fld label{font-size:10px;font-weight:700;color:rgba(198,201,215,.55);letter-spacing:.07em;text-transform:uppercase;margin-bottom:5px;display:block;}
+
+    .app-header{position:sticky;top:0;z-index:50;background:rgba(10,8,16,.7);backdrop-filter:blur(22px);border-bottom:1px solid rgba(198,201,215,.09);padding:12px 20px;}
+    .app-header__inner{max-width:1100px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+    .app-header__brand{display:flex;align-items:center;gap:11px;}
+    .main-wrap{max-width:1100px;margin:0 auto;padding:20px 16px 110px;}
+
+    .week-bar{background:rgba(255,255,255,.055);border:1px solid rgba(198,201,215,.13);border-radius:14px;padding:13px 18px;margin-bottom:12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+    .week-label{font-size:15px;font-weight:800;color:var(--one-cyan);flex:1;}
+    .wnav{background:rgba(255,255,255,.07);border:1px solid rgba(198,201,215,.18);color:var(--one-white);width:32px;height:32px;border-radius:50%;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0;}
+    .wnav:hover{background:rgba(107,225,227,.15);border-color:rgba(107,225,227,.35);}
+
+    .copy-banner{background:linear-gradient(135deg,rgba(107,225,227,.1),rgba(228,199,106,.08));border:1px solid rgba(107,225,227,.28);border-radius:14px;padding:13px 18px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+    .btn-copy{background:linear-gradient(135deg,rgba(107,225,227,.22),rgba(228,199,106,.15));border:1px solid rgba(107,225,227,.38)!important;color:var(--one-cyan);padding:9px 20px;border-radius:999px;font-family:var(--font-title);font-size:13px;font-weight:800;cursor:pointer;transition:all .2s;white-space:nowrap;}
+    .btn-copy:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(107,225,227,.18);}
+
+    /* Leyenda de tipos */
+    .tipo-leyenda{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;padding:10px 14px;
+      background:rgba(255,255,255,.03);border:1px solid rgba(198,201,215,.08);border-radius:10px;
+      font-size:11px;color:rgba(198,201,215,.5);align-items:center;}
+    .tipo-leyenda strong{color:rgba(198,201,215,.8);}
+    .tip-c{color:var(--one-cyan);}
+    .tip-p{color:var(--one-purple);}
+    .tip-g{color:var(--one-gold);}
+
+    .cards-grid{display:flex;flex-direction:column;gap:10px;}
+    .pcard{background:rgba(255,255,255,.048);border:1px solid rgba(198,201,215,.11);border-radius:14px;overflow:hidden;}
+    .pcard-head{display:flex;align-items:center;justify-content:space-between;padding:12px 16px 10px;gap:10px;flex-wrap:wrap;border-bottom:1px solid rgba(198,201,215,.07);}
+    .pcard-name{font-size:15px;font-weight:800;}
+    .pcard-rol{font-size:11px;color:rgba(198,201,215,.4);margin-top:1px;}
+    .pcard-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+    .tot-badge{display:inline-flex;align-items:center;padding:3px 11px;border-radius:999px;background:rgba(107,225,227,.11);border:1px solid rgba(107,225,227,.2);color:var(--one-cyan);font-size:12px;font-weight:800;}
+    .btn-split{background:rgba(255,255,255,.05);border:1px solid rgba(198,201,215,.16)!important;color:rgba(198,201,215,.55);padding:5px 12px;border-radius:999px;font-family:var(--font-title);font-size:11px;font-weight:700;cursor:pointer;transition:all .2s;}
+    .btn-split:hover{background:rgba(228,199,106,.1);border-color:rgba(228,199,106,.3)!important;color:var(--one-gold);}
+    .btn-split.on{background:rgba(228,199,106,.14);border-color:rgba(228,199,106,.38)!important;color:var(--one-gold);}
+
+    .pcard-body{padding:12px 16px 14px;}
+    .dias-grid{display:grid;grid-template-columns:repeat(5,1fr) 0.75fr 0.75fr;gap:6px;}
+    @media(max-width:750px){.dias-grid{grid-template-columns:repeat(4,1fr) 0.75fr 0.75fr;}}
+    @media(max-width:440px){.dias-grid{grid-template-columns:repeat(2,1fr) 0.75fr 0.75fr;}}
+
+    /* Sábado y domingo — mismo tamaño, solo label diferente color */
+    .dia-col-fds .dia-lbl{color:rgba(228,199,106,.6);}
+    .dia-col-fds .dia-fecha{color:rgba(228,199,106,.3);}
+
+    .dia-col{display:flex;flex-direction:column;gap:3px;}
+    .dia-lbl{font-size:10px;font-weight:800;color:rgba(198,201,215,.5);text-align:center;text-transform:uppercase;letter-spacing:.05em;}
+    .dia-fecha{font-size:9px;color:rgba(198,201,215,.28);text-align:center;margin-bottom:3px;}
+
+    /* ── CELDA DE HORARIO ── */
+    .dia-cell{position:relative;}
+
+    /* Input hora normal */
+    .ht{background:rgba(255,255,255,.07);border:1px solid rgba(198,201,215,.16);color:var(--one-white);
+      padding:7px 4px;border-radius:8px;font-family:var(--font-title);font-size:14px;font-weight:800;
+      width:100%;text-align:center;transition:border-color .15s,background .15s;}
+    .ht:focus{outline:none;border-color:rgba(107,225,227,.55);background:rgba(107,225,227,.06);}
+    .ht::placeholder{color:rgba(198,201,215,.2);font-weight:400;font-size:11px;}
+    .ht.v{border-color:rgba(107,225,227,.3);color:var(--one-cyan);}
+    .ht.err{border-color:rgba(239,68,68,.5)!important;color:var(--color-danger-text)!important;}
+
+    /* Badge de tipo especial — reemplaza los inputs cuando es flex/guardia */
+    .tipo-badge{width:100%;border-radius:8px;padding:7px 4px;font-family:var(--font-title);
+      font-size:11px;font-weight:800;text-align:center;cursor:pointer;
+      border:none;display:flex;align-items:center;justify-content:center;gap:3px;
+      transition:all .2s;min-height:36px;}
+    .tipo-badge-flex{background:rgba(167,139,250,.18);border:1px solid rgba(167,139,250,.4)!important;color:var(--one-purple);}
+    .tipo-badge-flex:hover{background:rgba(167,139,250,.28);}
+    .tipo-badge-guardia{background:rgba(228,199,106,.18);border:1px solid rgba(228,199,106,.4)!important;color:var(--one-gold);}
+    .tipo-badge-guardia:hover{background:rgba(228,199,106,.28);}
+
+    /* Input de tipo — para editar el tipo del día completo */
+    .tipo-inp{background:rgba(255,255,255,.07);border:1px solid rgba(198,201,215,.16);color:var(--one-white);
+      padding:5px 3px;border-radius:8px;font-family:var(--font-title);font-size:11px;font-weight:800;
+      width:100%;text-align:center;transition:border-color .15s,background .15s;
+      display:none;}/* se usa como fallback */
+
+    .sep{font-size:9px;color:rgba(198,201,215,.22);text-align:center;line-height:1.2;}
+
+    .split-sec{display:none;flex-direction:column;gap:3px;margin-top:5px;padding-top:6px;border-top:1px dashed rgba(228,199,106,.25);}
+    .split-sec.show{display:flex;}
+    .split-lbl{font-size:9px;color:rgba(228,199,106,.55);text-align:center;font-weight:700;letter-spacing:.04em;margin-bottom:1px;}
+
+    .obs-inp{background:rgba(255,255,255,.04);border:1px solid rgba(198,201,215,.1);color:var(--one-white);padding:7px 10px;border-radius:8px;font-family:var(--font-body);font-size:12px;width:100%;margin-top:10px;}
+    .obs-inp:focus{outline:none;border-color:rgba(107,225,227,.3);}
+    .obs-inp::placeholder{color:rgba(198,201,215,.25);}
+
+    .guard-bar{position:fixed;bottom:0;left:0;right:0;z-index:40;background:rgba(10,8,16,.93);backdrop-filter:blur(18px);border-top:1px solid rgba(198,201,215,.1);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+    .ginfo{font-size:12px;color:rgba(198,201,215,.4);}
+    .ginfo strong{color:var(--one-white);}
+    .gstatus{font-size:11px;margin-top:2px;}
+    .btn-save{background:linear-gradient(135deg,rgba(34,197,94,.28),rgba(34,197,94,.13));border:1px solid rgba(34,197,94,.48)!important;color:var(--color-success-text);padding:12px 30px;border-radius:999px;font-family:var(--font-title);font-size:15px;font-weight:800;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:8px;}
+    .btn-save:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(34,197,94,.18);}
+    .btn-save:disabled{opacity:.4;cursor:not-allowed;transform:none;}
+
+    .sp{display:inline-block;width:14px;height:14px;border:2px solid rgba(107,225,227,.3);border-top-color:var(--one-cyan);border-radius:50%;animation:spin .7s linear infinite;}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .no-data{text-align:center;padding:40px;color:rgba(198,201,215,.3);font-size:14px;}
+    #loadOvl{position:fixed;inset:0;z-index:200;background:rgba(10,8,16,.72);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;}
+    #loadOvl.h{display:none;}
+    .lovlsp{width:36px;height:36px;border:3px solid rgba(107,225,227,.2);border-top-color:var(--one-cyan);border-radius:50%;animation:spin .8s linear infinite;}
+  </style>
+</head>
+<body>
+<div class="bg-layer" aria-hidden="true"></div>
+<div class="app-wrap">
+
+<div id="loadOvl"><div class="lovlsp"></div><div style="font-size:13px;color:rgba(198,201,215,.55);">Cargando...</div></div>
+
+<!-- LOGIN -->
+<div id="vLogin" style="display:none;">
+  <div class="login-wrap">
+    <div class="login-card">
+      <div class="lg-brand">
+        <div class="brand-mark"></div>
+        <div>
+          <div style="font-family:var(--font-title);font-weight:800;font-size:17px;">ONE <span class="brand-gc">Horarios</span></div>
+          <span style="font-size:11px;color:rgba(198,201,215,.45);">Panel de líderes de área</span>
+        </div>
+      </div>
+      <div class="fld"><label>Usuario</label>
+        <input class="inp" id="lgU" type="text" placeholder="Tu usuario..." autocapitalize="off"
+          onkeydown="if(event.key==='Enter')document.getElementById('lgP').focus()"/>
+      </div>
+      <div class="fld"><label>Contraseña</label>
+        <input class="inp" id="lgP" type="password" placeholder="Tu contraseña..."
+          onkeydown="if(event.key==='Enter')login()"/>
+      </div>
+      <div id="lgErr" style="display:none;color:var(--color-danger-text);font-size:12px;margin-bottom:12px;padding:8px 12px;background:rgba(239,68,68,.1);border-radius:8px;border:1px solid rgba(239,68,68,.22);">
+        Usuario o contraseña incorrectos.
+      </div>
+      <button class="btn btn-success" style="width:100%;justify-content:center;" onclick="login()">Ingresar →</button>
+      <div style="margin-top:16px;text-align:center;">
+        <a href="Lider.html" style="font-size:12px;color:rgba(198,201,215,.3);">← Actualizar</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PANEL -->
+<div id="vPanel" style="display:none;">
+
+  <!-- SELECTOR DE ÁREA -->
+  <div id="selectorAreaWrap" style="display:none;min-height:100vh;align-items:center;justify-content:center;padding:20px;">
+    <div style="background:rgba(255,255,255,.06);border:1px solid rgba(198,201,215,.15);backdrop-filter:blur(22px);border-radius:22px;padding:36px 30px 30px;width:100%;max-width:420px;animation:fadeUp .4s ease both;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px;">
+        <div class="brand-mark"></div>
+        <div>
+          <div style="font-family:var(--font-title);font-weight:800;font-size:17px;">ONE <span class="brand-gc">Horarios</span></div>
+          <span id="selectorNombre" style="font-size:11px;color:rgba(198,201,215,.45);">Seleccioná el área a cargar</span>
+        </div>
+      </div>
+      <div style="font-size:11px;font-weight:700;color:rgba(198,201,215,.4);text-transform:uppercase;letter-spacing:.07em;margin-bottom:12px;">¿Qué área querés cargar?</div>
+      <div id="selectorAreaBtns" style="display:flex;flex-direction:column;gap:10px;"></div>
+      <div style="margin-top:18px;text-align:center;">
+        <button class="btn btn-ghost" onclick="logout()" style="font-size:12px;padding:6px 16px;opacity:.6;">Salir</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="panelHorarios" style="display:none;">
+  <header class="app-header">
+    <div class="app-header__inner">
+      <div class="app-header__brand">
+        <div class="brand-mark"></div>
+        <div>
+          <div style="font-family:var(--font-title);font-weight:800;font-size:16px;">ONE <span class="brand-gc">Horarios</span></div>
+          <span style="font-size:10px;color:rgba(198,201,215,.45);" id="hdrSub">Panel líderes</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <span id="hdrBadge" class="badge" style="font-size:11px;"></span>
+        <button id="btnCambiarArea" onclick="mostrarSelectorArea()" class="btn btn-ghost" style="display:none;font-size:12px;padding:6px 12px;">⇄ Cambiar área</button>
+        <button class="btn btn-ghost" onclick="logout()" style="font-size:12px;padding:6px 12px;">Salir</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="main-wrap">
+    <!-- SEMANA -->
+    <div class="week-bar">
+      <button class="wnav" onclick="movSem(-1)">‹</button>
+      <div class="week-label" id="wkLabel">—</div>
+      <button class="wnav" onclick="movSem(1)">›</button>
+      <button class="btn btn-ghost" style="font-size:12px;padding:6px 14px;" onclick="goSigSem()">Próx. sem.</button>
+    </div>
+
+    <!-- COPIAR SEMANA ANTERIOR -->
+    <div class="copy-banner" id="copyBanner" style="display:none;">
+      <div>
+        <div style="font-size:13px;font-weight:700;">📋 Hay horarios de la semana anterior guardados</div>
+        <div style="font-size:11px;color:rgba(198,201,215,.45);margin-top:2px;" id="copyBannerSub"></div>
+      </div>
+      <button class="btn-copy" onclick="copiarAnterior()">⟳ Copiar semana anterior</button>
+    </div>
+
+    <!-- LEYENDA DE TIPOS -->
+    <div class="tipo-leyenda">
+      <span>💡 En cada campo podés escribir:</span>
+      <span class="tip-c">09:00 → hora normal</span>
+      <span style="opacity:.3">·</span>
+      <span class="tip-p"><strong>flex</strong> o <strong>f</strong> → Horario flexible</span>
+      <span style="opacity:.3">·</span>
+      <span class="tip-g"><strong>guardia</strong> o <strong>g</strong> → Guardia (1h)</span>
+      <span style="opacity:.3">·</span>
+      <span style="color:rgba(198,201,215,.4);">Click en badge para quitar</span>
+    </div>
+
+    <!-- OBS ÁREA -->
+    <div style="margin-bottom:12px;">
+      <input class="inp" id="obsArea" type="text" placeholder="Observación general del área (opcional)..." style="border-radius:10px;"/>
+    </div>
+
+    <!-- CARDS -->
+    <div class="cards-grid" id="cardsGrid">
+      <div class="no-data"><span class="sp"></span></div>
+    </div>
+  </div>
+
+  <!-- GUARD BAR -->
+  <div class="guard-bar">
+    <div>
+      <div class="ginfo">Área: <strong id="gbArea">—</strong> · Semana <strong id="gbSem">—</strong></div>
+      <div class="gstatus" id="gbSt" style="color:rgba(198,201,215,.35);"></div>
+    </div>
+    <button class="btn-save" id="btnSave" onclick="guardar()">
+      <span id="sIco">✓</span> <span id="sTxt">Guardar horarios</span>
+    </button>
+  </div>
+</div>
+
+</div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ── SUPABASE ── */
+const SUPA_URL='https://qbgihaatifllskqveavg.supabase.co';
+const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFiZ2loYWF0aWZsbHNrcXZlYXZnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NzE1MzcsImV4cCI6MjA4OTM0NzUzN30.x91ZvjEqGxiSuG9B0T_jOLclx2TT8u3VCG7N1KNOYA4';
+const SB=supabase.createClient(SUPA_URL,SUPA_KEY);
+
+/* ── LÍDERES — cargados desde Supabase tabla 'lideres' ── */
+const LIDERES_CACHE = {}; // usuario → {areas, nombre}
+
+async function _cargarLideres() {
+  const { data } = await SB.from('lideres').select('*').eq('activo', true);
+  (data || []).forEach(l => {
+    LIDERES_CACHE[l.usuario.toUpperCase()] = { areas: l.areas || [], nombre: l.nombre, password: l.password || l.usuario };
+  });
+}
+
+function _getLider(usuario) {
+  return LIDERES_CACHE[usuario.toUpperCase()] || null;
+}
+const ACOLOR={
+  'ADMINISTRACION':'#6be1e3','COMERCIAL':'#e17bd7','RECURSOS HUMANOS':'#e4c76a',
+  'MARKETING':'#f472b6','ACADEMICO / GT':'#a78bfa',
+  'INNOVACION Y DESARROLLO':'#34d399','MAESTRANZA':'#fb923c',
+};
+const DIAS=['lunes','martes','miercoles','jueves','viernes','sabado','domingo'];
+const DLAN=['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
+
+/* ── ESTADO ── */
+let sess=null, areaActual='', rows=[], antData=null, rowId=null, semD='', semH='', offSem=0;
+
+/* ── UTILS ── */
+const hoy=()=>{const d=new Date();return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;};
+const getLun=(s,off=0)=>{const d=new Date(s+'T12:00:00');const w=d.getDay();d.setDate(d.getDate()+(w===0?-6:1-w)+off*7);const r=new Date(d);return`${r.getFullYear()}-${String(r.getMonth()+1).padStart(2,'0')}-${String(r.getDate()).padStart(2,'0')}`;};
+const getSab=s=>{const d=new Date(getLun(s)+'T12:00:00');d.setDate(d.getDate()+6);return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;};
+const fmt=s=>{if(!s)return'';const[y,m,d]=s.split('-');return`${d}/${m}`;};
+const fmtL=s=>{if(!s)return'';const[y,m,d]=s.split('-');return`${d}/${m}/${y}`;};
+const calcHs=(e,s)=>{if(!e||!s)return null;const[eh,em]=e.split(':').map(Number);const[sh,sm]=s.split(':').map(Number);const m=(sh*60+sm)-(eh*60+em);return m>0?m/60:null;};
+const fmtHs=h=>{if(!h&&h!==0)return'—';const hr=Math.floor(h),mn=Math.round((h-hr)*60);return mn?`${hr}h ${mn}m`:`${hr}h`;};
+const toast=(msg,t='ok')=>{const el=document.getElementById('toast');el.textContent=msg;el.className=`toast ${t} show`;clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('show'),3200);};
+const ovl=show=>document.getElementById('loadOvl').classList.toggle('h',!show);
+const diasSem=lun=>Array.from({length:7},(_,i)=>{const d=new Date(lun+'T12:00:00');d.setDate(d.getDate()+i);return d.toISOString().slice(0,10);});
+
+/* ── DETECCIÓN DE TIPO ESPECIAL ──
+   Reconoce: flex, f, flexible → 'flex'
+             guardia, g, gdia  → 'guardia'
+   Retorna null si no es tipo especial */
+function detectTipo(raw) {
+  if (!raw) return null;
+  const v = raw.trim().toLowerCase();
+  if (v === 'f' || v === 'flex' || v === 'flexible') return 'flex';
+  if (v === 'g' || v === 'guardia' || v === 'gdia'  || v === 'guard') return 'guardia';
+  return null;
+}
+
+/* ── NORMALIZAR HORA ── */
+const normH = raw => {
+  if (!raw || !raw.trim()) return '';
+  // Si es tipo especial, no normalizar como hora
+  if (detectTipo(raw)) return '';
+  let s = raw.trim().replace(/[.,]/, ':');
+  let h, m;
+  if (s.includes(':')) [h, m] = s.split(':');
+  else if (s.length <= 2) { h = s; m = '0'; }
+  else { h = s.slice(0, s.length - 2); m = s.slice(-2); }
+  h = parseInt(h, 10); m = parseInt(m, 10);
+  if (isNaN(h) || isNaN(m) || h < 0 || h > 23 || m < 0 || m > 59) return '';
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+};
+
+/* ── CALCULAR TOTAL DE HORAS DE UNA PERSONA ──
+   Guardia cuenta como 1h. Flex no cuenta (0). */
+function calcTot(r) {
+  let t = 0;
+  DIAS.forEach(d => {
+    const tipo = r[d + '_tipo'] || 'normal';
+    if (tipo === 'guardia') { t += 1; return; }
+    if (tipo === 'flex')    { return; }
+    const h1 = calcHs(r[d + '_e'], r[d + '_s']);
+    const h2 = calcHs(r[d + '_e2'], r[d + '_s2']);
+    if (h1) t += h1;
+    if (h2) t += h2;
+  });
+  return t;
+}
+
+/* ── LOGIN ── */
+async function login() {
+  const u = (document.getElementById('lgU').value || '').trim().toUpperCase();
+  const p = (document.getElementById('lgP').value || '').trim().toUpperCase();
+
+  // Cargar líderes de Supabase si no están en cache
+  if (!Object.keys(LIDERES_CACHE).length) await _cargarLideres();
+
+  const l = _getLider(u);
+  // Password: se compara en uppercase. Si no tiene password guardado, usa el usuario como password
+  const passOk = l && (p === (l.password || '').toUpperCase() || p === u);
+
+  if (!l || !passOk) {
+    document.getElementById('lgErr').style.display = '';
+    document.getElementById('lgP').value = '';
+    document.getElementById('lgP').focus();
+    return;
+  }
+  document.getElementById('lgErr').style.display = 'none';
+  sess = l;
+  sessionStorage.setItem('ls', JSON.stringify(l));
+  abrirPanel();
+}
+
+function logout() {
+  sessionStorage.removeItem('ls');
+  sess = null; areaActual = ''; rows = []; antData = null; rowId = null;
+  document.getElementById('vPanel').style.display = 'none';
+  document.getElementById('vLogin').style.display = 'block';
+  document.getElementById('lgU').value = '';
+  document.getElementById('lgP').value = '';
+}
+
+/* ── PANEL ── */
+function abrirPanel() {
+  document.getElementById('vLogin').style.display = 'none';
+  document.getElementById('vPanel').style.display = 'block';
+  const { areas, nombre } = sess;
+  document.getElementById('hdrSub').textContent = `Hola, ${nombre} 👋`;
+
+  // Si ya tenemos un área activa restaurada de sesión, usarla directo
+  if (areaActual && areas.includes(areaActual)) {
+    setAreaActual(areaActual);
+    return;
+  }
+
+  if (areas.length === 1) setAreaActual(areas[0]);
+  else mostrarSelectorArea();
+}
+
+function mostrarSelectorArea() {
+  const { areas } = sess;
+  document.getElementById('selectorAreaWrap').style.display = 'flex';
+  document.getElementById('panelHorarios').style.display = 'none';
+  const btnContainer = document.getElementById('selectorAreaBtns');
+  btnContainer.innerHTML = areas.map(a => {
+    const col = ACOLOR[a] || '#a4a8c0';
+    return `<button onclick="setAreaActual('${a}')"
+      style="background:${col}18;border:2px solid ${col}44;color:${col};padding:18px 24px;border-radius:14px;font-family:var(--font-title);font-size:15px;font-weight:800;cursor:pointer;transition:all .2s;text-align:left;width:100%;"
+      onmouseover="this.style.borderColor='${col}';this.style.background='${col}28'"
+      onmouseout="this.style.borderColor='${col}44';this.style.background='${col}18'">${a}</button>`;
+  }).join('');
+}
+
+function setAreaActual(area) {
+  areaActual = area;
+  sessionStorage.setItem('lsArea', area);
+  const col = ACOLOR[area] || '#a4a8c0';
+  const b = document.getElementById('hdrBadge');
+  b.textContent = area;
+  b.style.cssText = `background:${col}22;border:1px solid ${col}44;color:${col};padding:3px 10px;border-radius:999px;font-size:11px;font-weight:800;`;
+  const btnCambiar = document.getElementById('btnCambiarArea');
+  if (btnCambiar) btnCambiar.style.display = sess.areas.length > 1 ? '' : 'none';
+  document.getElementById('selectorAreaWrap').style.display = 'none';
+  document.getElementById('panelHorarios').style.display = '';
+  offSem = 1; // Mostrar semana siguiente por defecto
+  actuSem();
+}
+
+/* ── VENTANA DE CARGA ──
+   Los líderes solo pueden cargar horarios los días:
+   Jueves, Viernes y Sábado hasta las 12:00 del mediodía.
+   Fuera de ese horario el panel es de solo lectura. */
+function verificarVentana() {
+  const ahora = new Date();
+  const dia   = ahora.getDay(); // 0=dom,1=lun,2=mar,3=mie,4=jue,5=vie,6=sab
+  const hora  = ahora.getHours() + ahora.getMinutes() / 60;
+
+  const dentroDeVentana =
+    (dia === 4) ||                    // Jueves (todo el día)
+    (dia === 5) ||                    // Viernes (todo el día)
+    (dia === 6 && hora < 12);         // Sábado antes de las 12:00
+
+  return dentroDeVentana;
+}
+
+function _mostrarBannerFueraVentana() {
+  // Agrega un banner visible si está fuera de la ventana
+  const wrap = document.getElementById('main-wrap') || document.querySelector('.main-wrap');
+  if (!wrap) return;
+  const ya = document.getElementById('bannerFueraVentana');
+  if (ya) return; // ya está
+
+  const ahora = new Date();
+  const dias  = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+  const diaStr = dias[ahora.getDay()];
+
+  const banner = document.createElement('div');
+  banner.id = 'bannerFueraVentana';
+  banner.innerHTML = `
+    <div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.28);border-radius:14px;
+      padding:14px 20px;margin-bottom:12px;display:flex;align-items:center;gap:12px;">
+      <span style="font-size:22px;flex-shrink:0;">🔒</span>
+      <div>
+        <div style="font-size:14px;font-weight:800;color:var(--color-danger-text);">
+          Fuera del horario de carga
+        </div>
+        <div style="font-size:12px;color:rgba(198,201,215,.55);margin-top:3px;">
+          Hoy es <strong>${diaStr}</strong>. Los horarios solo se pueden cargar los 
+          <strong>Jueves</strong>, <strong>Viernes</strong> y 
+          <strong>Sábados hasta las 12:00 hs</strong>. Podés ver los horarios pero no modificarlos.
+        </div>
+      </div>
+    </div>`;
+  wrap.insertBefore(banner, wrap.firstChild);
+
+  // Deshabilitar todos los inputs y botones de edición
+  document.getElementById('btnSave').disabled = true;
+  document.getElementById('btnSave').style.opacity = '0.3';
+  document.getElementById('obsArea').disabled = true;
+}
+
+function _quitarBannerFueraVentana() {
+  const b = document.getElementById('bannerFueraVentana');
+  if (b) b.remove();
+  const btn = document.getElementById('btnSave');
+  if (btn) { btn.disabled = false; btn.style.opacity = ''; }
+  const obs = document.getElementById('obsArea');
+  if (obs) obs.disabled = false;
+}
+
+function actuSem() {
+  semD = getLun(hoy(), offSem);
+  semH = getSab(semD);
+  document.getElementById('wkLabel').textContent = `📅 ${fmt(semD)} al ${fmtL(semH)}`;
+  document.getElementById('gbSem').textContent = `${fmt(semD)} al ${fmt(semH)}`;
+  document.getElementById('gbArea').textContent = areaActual;
+  cargar();
+  // Verificar ventana de carga
+  if (!verificarVentana()) _mostrarBannerFueraVentana();
+  else _quitarBannerFueraVentana();
+}
+function movSem(d) { offSem += d; actuSem(); }
+function goHoy()   { offSem = 0;  actuSem(); }
+function goSigSem(){ offSem = 1;  actuSem(); }
+
+/* ── CARGAR DATOS ── */
+async function cargar() {
+  const area = areaActual;
+  document.getElementById('cardsGrid').innerHTML = '<div class="no-data"><span class="sp"></span></div>';
+  document.getElementById('copyBanner').style.display = 'none';
+  rowId = null; antData = null;
+
+  try {
+  const { data: personal, error: eP } = await SB
+    .from('personal').select('nombre,rol')
+    .eq('area', area).eq('activo', true).order('nombre');
+
+  if (eP || !personal?.length) {
+    document.getElementById('cardsGrid').innerHTML =
+      `<div class="no-data">${eP ? 'Error: ' + eP.message : 'Sin personal activo en el área.'}</div>`;
+    return;
+  }
+
+  const { data: actual } = await SB
+    .from('horarios_semanales').select('*')
+    .eq('area', area).eq('semana_desde', semD)
+    .maybeSingle();
+
+  rowId = actual?.id || null;
+  document.getElementById('obsArea').value = actual?.observaciones || '';
+
+  const lAnt = getLun(semD, -1);
+  const { data: ant } = await SB
+    .from('horarios_semanales').select('*')
+    .eq('area', area).eq('semana_desde', lAnt)
+    .maybeSingle();
+
+  if (ant?.horarios?.length) {
+    antData = ant.horarios;
+    document.getElementById('copyBannerSub').textContent =
+      `Semana ${fmt(lAnt)} al ${fmtL(getSab(lAnt))} · ${ant.horarios.length} persona(s)`;
+    document.getElementById('copyBanner').style.display = 'flex';
+  }
+
+  const savedMap = {};
+  (actual?.horarios || []).forEach(h => savedMap[h.nombre] = h);
+
+  rows = personal.map(p => {
+    const sv = savedMap[p.nombre];
+    const r = { nombre: p.nombre, rol: p.rol || '', obs: sv?.obs || '', split: false };
+    DIAS.forEach(d => {
+      r[d + '_e']    = sv?.[d]?.e    || '';
+      r[d + '_s']    = sv?.[d]?.s    || '';
+      r[d + '_e2']   = sv?.[d]?.e2   || '';
+      r[d + '_s2']   = sv?.[d]?.s2   || '';
+      r[d + '_tipo'] = sv?.[d]?.tipo  || 'normal';
+    });
+    r.split = DIAS.some(d => r[d + '_e2']);
+    return r;
+  });
+
+  renderCards();
+  } catch(err) {
+    console.error('Error en cargar():', err);
+    document.getElementById('cardsGrid').innerHTML =
+      `<div class="no-data">Error al cargar datos: ${err.message}</div>`;
+  } finally {
+    ovl(false);
+  }
+}
+
+/* ── COPIAR SEMANA ANTERIOR ── */
+function copiarAnterior() {
+  if (!antData) return;
+  const antMap = {};
+  antData.forEach(h => antMap[h.nombre] = h);
+  let c = 0;
+  rows.forEach(r => {
+    const a = antMap[r.nombre];
+    if (!a) return;
+    DIAS.forEach(d => {
+      r[d + '_e']    = a[d]?.e    || '';
+      r[d + '_s']    = a[d]?.s    || '';
+      r[d + '_e2']   = a[d]?.e2   || '';
+      r[d + '_s2']   = a[d]?.s2   || '';
+      r[d + '_tipo'] = a[d]?.tipo  || 'normal';
+    });
+    if (a.obs) r.obs = a.obs;
+    r.split = DIAS.some(d => r[d + '_e2']);
+    c++;
+  });
+  renderCards();
+  document.getElementById('copyBanner').style.display = 'none';
+  toast(`✓ ${c} horario(s) copiados — editá lo que cambió`);
+  dirty('Copia aplicada — guardá cuando estés listo');
+}
+
+/* ── RENDER CARDS ── */
+function renderCards() {
+  const fArr = diasSem(semD);
+  const grid = document.getElementById('cardsGrid');
+  if (!rows.length) { grid.innerHTML = '<div class="no-data">Sin personal activo.</div>'; return; }
+
+  grid.innerHTML = rows.map((r, i) => {
+    const tot = calcTot(r);
+    const sp  = r.split;
+
+    const dcols = DIAS.map((d, di) => {
+      const tipo = r[d + '_tipo'] || 'normal';
+      let celda;
+
+      if (tipo === 'flex') {
+        // Celda Flex: muestra badge, click para quitar
+        celda = `
+          <button class="tipo-badge tipo-badge-flex" onclick="quitarTipo(${i},'${d}')" title="Click para quitar Flex">
+            🔄 Flex
+          </button>`;
+      } else if (tipo === 'guardia') {
+        // Celda Guardia: muestra badge, click para quitar
+        celda = `
+          <button class="tipo-badge tipo-badge-guardia" onclick="quitarTipo(${i},'${d}')" title="Click para quitar Guardia">
+            🛡 Guard.
+          </button>`;
+      } else {
+        // Celda normal: inputs de hora
+        celda = `
+          <input class="ht ${r[d+'_e']?'v':''}" type="text" maxlength="8"
+            placeholder="09:00" value="${r[d+'_e']}"
+            oninput="updCelda(${i},'${d}_e',this)"
+            onblur="blurCelda(${i},'${d}',this,'e')"/>
+          <div class="sep">↓</div>
+          <input class="ht ${r[d+'_s']?'v':''}" type="text" maxlength="8"
+            placeholder="17:00" value="${r[d+'_s']}"
+            oninput="updCelda(${i},'${d}_s',this)"
+            onblur="blurCelda(${i},'${d}',this,'s')"/>
+          ${sp ? `
+          <div class="split-sec show" id="sp_${i}_${d}">
+            <div class="split-lbl">2° turno</div>
+            <input class="ht ${r[d+'_e2']?'v':''}" type="text" maxlength="8"
+              placeholder="—" value="${r[d+'_e2']}"
+              oninput="updCelda(${i},'${d}_e2',this)"
+              onblur="blurCelda(${i},'${d}',this,'e2')"/>
+            <div class="sep">↓</div>
+            <input class="ht ${r[d+'_s2']?'v':''}" type="text" maxlength="8"
+              placeholder="—" value="${r[d+'_s2']}"
+              oninput="updCelda(${i},'${d}_s2',this)"
+              onblur="blurCelda(${i},'${d}',this,'s2')"/>
+          </div>` : `<div class="split-sec" id="sp_${i}_${d}"></div>`}`;
+      }
+
+      return `<div class="dia-col${(di>=5)?' dia-col-fds':''}">
+        <div class="dia-lbl">${DLAN[di]}</div>
+        <div class="dia-fecha">${fmt(fArr[di])}</div>
+        ${celda}
+      </div>`;
+    }).join('');
+
+    // Fin de semana incluido — todos los días son editables
+    const fdsHtml = '';
+
+    return `<div class="pcard" id="pc${i}">
+      <div class="pcard-head">
+        <div><div class="pcard-name">${r.nombre}</div><div class="pcard-rol">${r.rol || '—'}</div></div>
+        <div class="pcard-meta">
+          <span class="tot-badge" id="tot${i}">${tot > 0 ? fmtHs(tot) : '—'}</span>
+          <button class="btn-split ${sp ? 'on' : ''}" id="spBtn${i}" onclick="togSplit(${i})">
+            ${sp ? '✂ Partido ON' : '✂ Turno partido'}
+          </button>
+        </div>
+      </div>
+      <div class="pcard-body">
+        <div class="dias-grid">${dcols}${fdsHtml}</div>
+        <input class="obs-inp" type="text"
+          placeholder="Observación de ${r.nombre} (opcional)..."
+          value="${(r.obs || '').replace(/"/g, '&quot;')}"
+          oninput="updObs(${i}, this.value)"/>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ── ACTUALIZACIÓN EN TIEMPO REAL (oninput) ──
+   Detecta si el usuario escribe flex/g/etc. mientras tipea. */
+function updCelda(i, k, inp) {
+  const raw = inp.value;
+  const tipo = detectTipo(raw);
+  if (tipo) {
+    // Ya reconoció un tipo especial — resaltar el input provisionalmente
+    inp.style.color = tipo === 'flex' ? 'var(--one-purple)' : 'var(--one-gold)';
+    inp.style.borderColor = tipo === 'flex' ? 'rgba(167,139,250,.5)' : 'rgba(228,199,106,.5)';
+  } else {
+    inp.style.color = '';
+    inp.style.borderColor = '';
+    rows[i][k] = raw;
+  }
+  updTot(i);
+  dirty();
+}
+
+/* ── BLUR (onblur): normalizar o aplicar tipo ──
+   IMPORTANTE: no llamar renderCards() directamente desde blur
+   porque destruir el DOM dispara más blur events en cascada.
+   Usamos setTimeout 0 para diferir el re-render. */
+function blurCelda(i, d, inp, campo) {
+  const raw = inp.value.trim();
+  const tipo = detectTipo(raw);
+
+  if (tipo) {
+    // Limpiar el input visualmente primero
+    inp.value = '';
+    // Diferir el cambio de tipo para evitar el cascade de blur
+    setTimeout(() => setTipoDia(i, d, tipo), 0);
+    return;
+  }
+
+  // Normalizar como hora normal
+  const k = d + '_' + campo;
+  const n = normH(raw);
+  rows[i][k] = n;
+  inp.value = n;
+  inp.style.color = '';
+  inp.style.borderColor = '';
+  if (raw && !n) inp.classList.add('err');
+  else { inp.classList.remove('err'); inp.classList.toggle('v', !!n); }
+  updTot(i);
+}
+
+/* ── APLICAR TIPO A UN DÍA (flex o guardia) ── */
+function setTipoDia(i, d, tipo) {
+  // Limpiar horas del día y setear tipo
+  rows[i][d + '_e']    = '';
+  rows[i][d + '_s']    = '';
+  rows[i][d + '_e2']   = '';
+  rows[i][d + '_s2']   = '';
+  rows[i][d + '_tipo'] = tipo;
+  updTot(i);
+  dirty();
+  // Re-render solo la card afectada
+  renderCards();
+  toast(`✓ ${tipo === 'flex' ? '🔄 Flex' : '🛡 Guardia'} aplicado a ${rows[i].nombre} — ${d}`);
+}
+
+/* ── QUITAR TIPO ESPECIAL (volver a normal) ── */
+function quitarTipo(i, d) {
+  rows[i][d + '_tipo'] = 'normal';
+  updTot(i);
+  dirty();
+  renderCards();
+}
+
+/* ── TOGGLE TURNO PARTIDO ── */
+function togSplit(i) {
+  rows[i].split = !rows[i].split;
+  const on = rows[i].split;
+  if (!on) {
+    DIAS.forEach(d => { rows[i][d + '_e2'] = ''; rows[i][d + '_s2'] = ''; });
+  }
+  renderCards();
+}
+
+/* ── UPDATES ── */
+function updObs(i, v) { rows[i].obs = v; dirty(); }
+function updTot(i) {
+  const el = document.getElementById('tot' + i);
+  if (el) {
+    const t = calcTot(rows[i]);
+    el.textContent = t > 0 ? fmtHs(t) : '—';
+  }
+}
+function dirty(msg) {
+  const el = document.getElementById('gbSt');
+  el.textContent = msg || '● Cambios sin guardar';
+  el.style.color = msg ? 'rgba(198,201,215,.6)' : 'var(--one-gold)';
+}
+
+/* ── GUARDAR ── */
+async function guardar() {
+  if (!semD || !sess) { toast('Error de sesión', 'err'); return; }
+  // Verificar ventana de carga
+  if (!verificarVentana()) {
+    toast('🔒 Fuera del horario de carga — solo Jue, Vie y Sáb hasta las 12:00 hs', 'err');
+    return;
+  }
+  const btn = document.getElementById('btnSave');
+  btn.disabled = true;
+  document.getElementById('sIco').textContent = '⏳';
+  document.getElementById('sTxt').textContent = 'Guardando...';
+
+  const horarios = rows.map(r => {
+    const obj = { nombre: r.nombre, rol: r.rol, obs: r.obs || '' };
+    DIAS.forEach(d => {
+      obj[d] = {
+        e:    r[d + '_e']    || '',
+        s:    r[d + '_s']    || '',
+        e2:   r[d + '_e2']   || '',
+        s2:   r[d + '_s2']   || '',
+        tipo: r[d + '_tipo'] || 'normal',
+      };
+    });
+    return obj;
+  });
+
+  const payload = {
+    semana_desde: semD,
+    semana_hasta: semH,
+    area:         areaActual,
+    observaciones: document.getElementById('obsArea').value.trim() || null,
+    horarios,
+  };
+
+  let error;
+  if (rowId) {
+    ({ error } = await SB.from('horarios_semanales').update(payload).eq('id', rowId));
+  } else {
+    const res = await SB.from('horarios_semanales').insert(payload).select('id').single();
+    error = res.error;
+    if (!error && res.data?.id) rowId = res.data.id;
+  }
+
+  btn.disabled = false;
+  document.getElementById('sIco').textContent = error ? '⚠' : '✓';
+  document.getElementById('sTxt').textContent  = 'Guardar horarios';
+
+  if (error) {
+    console.error(error);
+    toast('Error al guardar: ' + error.message, 'err');
+    document.getElementById('gbSt').textContent = '⚠ Error al guardar';
+    document.getElementById('gbSt').style.color = 'var(--color-danger-text)';
+  } else {
+    toast('✓ Horarios guardados correctamente');
+    document.getElementById('gbSt').textContent = '✓ Guardado';
+    document.getElementById('gbSt').style.color = 'var(--color-success-text)';
+  }
+}
+
+/* ── INIT ── */
+document.addEventListener('DOMContentLoaded', async () => {
+  // Pre-cargar líderes desde Supabase para que el login sea rápido
+  await _cargarLideres();
+
+  const s = sessionStorage.getItem('ls');
+  if (s) {
+    try {
+      sess = JSON.parse(s);
+      if (sess.area && !sess.areas) sess.areas = [sess.area];
+      // Refrescar desde la BD por si cambió algo
+      const u = Object.keys(LIDERES_CACHE).find(k =>
+        LIDERES_CACHE[k].nombre === sess.nombre
+      );
+      if (u) sess = { ...LIDERES_CACHE[u] };
+      const savedArea = sessionStorage.getItem('lsArea');
+      if (savedArea && sess.areas?.includes(savedArea)) areaActual = savedArea;
+      abrirPanel();
+      return;
+    } catch(e) {
+      sessionStorage.removeItem('ls');
+      sessionStorage.removeItem('lsArea');
+    }
+  }
+  ovl(false);
+  document.getElementById('vLogin').style.display = 'block';
+});
+</script>
+</body>
+</html>
