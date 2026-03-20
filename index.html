@@ -138,9 +138,9 @@ body{-webkit-tap-highlight-color:transparent;}
     </div>
 
     <!-- PLAN INFO -->
-    <div id="lPlanInfo" class="plan-info" style="display:none;"></div>
+    <div id="lPlanInfo" class="plan-info" style="display:none;margin-bottom:11px;"></div>
 
-    <!-- HORAS -->
+    <!-- HORAS TURNO 1 -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
       <div>
         <label class="lbl">Entrada *</label>
@@ -151,6 +151,23 @@ body{-webkit-tap-highlight-color:transparent;}
         <label class="lbl">Salida <span style="font-size:10px;font-weight:400;opacity:.4;">(opc.)</span></label>
         <input class="time-inp" type="time" id="lSal" oninput="updCalc()" onchange="updCalc()"/>
         <div id="lInfoH" style="font-size:11.5px;font-weight:700;margin-top:5px;min-height:16px;"></div>
+      </div>
+    </div>
+
+    <!-- HORAS TURNO 2 (solo si el plan es partido) -->
+    <div id="turno2Wrap" style="display:none;margin-bottom:10px;padding:10px 12px;
+      background:rgba(228,199,106,.06);border:1px solid rgba(228,199,106,.2);border-radius:10px;">
+      <div style="font-size:10px;font-weight:800;color:rgba(228,199,106,.7);letter-spacing:.08em;
+        text-transform:uppercase;margin-bottom:8px;">✂ 2° Turno</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div>
+          <label class="lbl">Entrada 2°</label>
+          <input class="time-inp" type="time" id="lEnt2" oninput="updCalc()" onchange="updCalc()"/>
+        </div>
+        <div>
+          <label class="lbl">Salida 2° <span style="font-size:10px;font-weight:400;opacity:.4;">(opc.)</span></label>
+          <input class="time-inp" type="time" id="lSal2" oninput="updCalc()" onchange="updCalc()"/>
+        </div>
       </div>
     </div>
 
@@ -285,7 +302,7 @@ async function onPersonaChange() {
 
   const el = document.getElementById('lPlanInfo');
   el.className = 'plan-info';
-  el.style.display = '';
+  el.style.display = 'flex'; // forzar visible
 
   if (!plan) {
     el.innerHTML = '<span style="color:rgba(198,201,215,.45);">Sin horario planificado — podés ingresar igualmente.</span>';
@@ -302,9 +319,28 @@ async function onPersonaChange() {
       + '<strong style="color:var(--one-gold);margin-left:5px;">&#x1F6E1; Guardia</strong>'
       + '<span style="font-size:10px;color:rgba(198,201,215,.35);margin-left:4px;">1h computable</span>';
   } else {
-    el.innerHTML = '<span style="color:rgba(198,201,215,.6);">Planificado:</span>'
+    // Horario normal — mostrar horario y si es partido
+    const esCortado = !!(plan.entrada2 || plan.salida2);
+    let html = '<span style="color:rgba(198,201,215,.6);">Planificado:</span>'
       + '<strong style="color:var(--one-cyan);margin-left:5px;">' + plan.entrada + '</strong>'
       + (plan.salida ? '<span style="color:rgba(198,201,215,.4);font-size:11px;"> &#x2192; </span><strong>' + plan.salida + '</strong>' : '');
+    if (esCortado) {
+      html += '<span style="color:rgba(228,199,106,.6);margin-left:8px;font-size:11px;">✂</span>'
+        + '<strong style="color:var(--one-gold);margin-left:4px;font-size:11px;">'
+        + (plan.entrada2 || '?') + (plan.salida2 ? ' → ' + plan.salida2 : '') + '</strong>'
+        + '<span style="font-size:10px;color:rgba(228,199,106,.5);margin-left:4px;">turno partido</span>';
+    }
+    el.innerHTML = html;
+
+    // Mostrar/ocultar bloque de 2° turno
+    const t2 = document.getElementById('turno2Wrap');
+    if (t2) t2.style.display = esCortado ? '' : 'none';
+    if (esCortado && plan.entrada2) {
+      const e2 = document.getElementById('lEnt2');
+      const s2 = document.getElementById('lSal2');
+      if (e2) e2.value = '';
+      if (s2) s2.value = '';
+    }
   }
   updCalc();
 }
@@ -348,6 +384,8 @@ async function guardarRegistro() {
   const opt  = document.getElementById('lNom').selectedOptions[0];
   const ent  = document.getElementById('lEnt').value;
   const sal  = document.getElementById('lSal').value;
+  const ent2 = document.getElementById('lEnt2')?.value || '';
+  const sal2 = document.getElementById('lSal2')?.value || '';
   const obs  = document.getElementById('lObs').value.trim();
   const fecha = getFechaActual();
 
@@ -366,16 +404,28 @@ async function guardarRegistro() {
   const turno = !horarioPlan ? 'Personalizado'
     : horarioPlan.tipo === 'flex'    ? 'Flex'
     : horarioPlan.tipo === 'guardia' ? 'Guardia'
-    : horarioPlan.entrada + (horarioPlan.salida ? ' → ' + horarioPlan.salida : '');
+    : (() => {
+        const esCortado = !!(horarioPlan.entrada2 || horarioPlan.salida2);
+        let t = horarioPlan.entrada + (horarioPlan.salida ? ' → ' + horarioPlan.salida : '');
+        if (esCortado) t += ' | ' + (horarioPlan.entrada2 || '') + (horarioPlan.salida2 ? ' → ' + horarioPlan.salida2 : '');
+        return t;
+      })();
 
   const tardanza = horarioPlan?.tipo === 'normal' && horarioPlan?.entrada
     ? calcTardVsPlan(horarioPlan.entrada, ent) : null;
+
+  // Combinar obs con el 2° turno real si existe
+  let obsFinal = obs || null;
+  if (ent2) {
+    const t2str = ent2 + (sal2 ? ' → ' + sal2 : '');
+    obsFinal = (obs ? obs + ' | ' : '') + '2° turno: ' + t2str;
+  }
 
   const { error } = await SB.from('registros').insert({
     area, nombre, rol, fecha,
     turno, hora_entrada: ent + ':00',
     hora_salida: sal ? sal + ':00' : null,
-    observaciones: obs || null,
+    observaciones: obsFinal,
   });
 
   btn.disabled = false;
@@ -397,6 +447,9 @@ async function guardarRegistro() {
   document.getElementById('lEnt').value = '';
   document.getElementById('lSal').value = '';
   document.getElementById('lObs').value = '';
+  const e2 = document.getElementById('lEnt2'); if (e2) e2.value = '';
+  const s2 = document.getElementById('lSal2'); if (s2) s2.value = '';
+  const t2w = document.getElementById('turno2Wrap'); if (t2w) t2w.style.display = 'none';
   horarioPlan = null; _clearCalc(); _clearPlan();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }

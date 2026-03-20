@@ -214,6 +214,8 @@ const getHorarioPlanificado = async (nombre, fecha) => {
     return {
       entrada: entrada ? entrada.slice(0, 5) : null,
       salida:  salida  ? salida.slice(0, 5)  : null,
+      entrada2: diaData.e2 ? diaData.e2.slice(0, 5) : null,
+      salida2:  diaData.s2 ? diaData.s2.slice(0, 5)  : null,
       tipo:    'normal',
     };
   }

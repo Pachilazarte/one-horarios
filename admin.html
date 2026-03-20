@@ -302,6 +302,21 @@
     <div class="modal-header"><h3 style="font-size:16px;font-weight:800;">Editar Registro</h3><button class="modal-close" onclick="Registros.closeModal()">✕</button></div>
     <input type="hidden" id="erId"/>
     <div style="display:flex;flex-direction:column;gap:12px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px;">
+        <div><label class="lbl">Área *</label>
+          <select class="inp" id="erA" onchange="Registros._onAreaChange(this.value)">
+            <option value="">Seleccionar...</option>
+            <option>ADMINISTRACION</option><option>COMERCIAL</option><option>RECURSOS HUMANOS</option>
+            <option>MARKETING</option><option>ACADEMICO / GT</option><option>INNOVACION Y DESARROLLO</option><option>MAESTRANZA</option>
+          </select>
+        </div>
+        <div><label class="lbl">Nombre *</label>
+          <select class="inp" id="erN">
+            <option value="">Seleccioná área primero</option>
+          </select>
+        </div>
+      </div>
+      <div><label class="lbl">Fecha *</label><input class="inp" type="date" id="erF"/></div>
       <div><label class="lbl">Horario planificado</label><input class="inp" type="text" id="erT" placeholder="Ej: 09:00 → 17:00 / Flex / Guardia"/></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px;">
         <div><label class="lbl">Entrada real</label><input class="time-inp" type="time" id="erE"/></div>

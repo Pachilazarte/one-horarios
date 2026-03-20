@@ -71,24 +71,59 @@ const Registros = (() => {
     }).join('');
   }
 
+  async function _cargarNombresModal(area, nombreActual='') {
+    const sel = document.getElementById('erN');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">Cargando...</option>';
+    const { data } = await SB.from('personal')
+      .select('nombre').eq('area', area).eq('activo', true).order('nombre');
+    sel.innerHTML = '<option value="">Seleccionar...</option>';
+    (data || []).forEach(p => {
+      const o = document.createElement('option');
+      o.value = p.nombre;
+      o.textContent = p.nombre;
+      if (p.nombre === nombreActual) o.selected = true;
+      sel.appendChild(o);
+    });
+    // Si el nombre actual no está en la lista (baja), lo agrega igual
+    if (nombreActual && !(data || []).find(p => p.nombre === nombreActual)) {
+      const o = document.createElement('option');
+      o.value = nombreActual; o.textContent = nombreActual + ' (inactivo)'; o.selected = true;
+      sel.insertBefore(o, sel.children[1]);
+    }
+  }
+
   function openEdit(id){
     const r=allRegs.find(x=>x.id===id);if(!r)return;
     document.getElementById('erId').value=id;
+    document.getElementById('erA').value=r.area||'';
+    document.getElementById('erF').value=r.fecha||'';
     document.getElementById('erT').value=r.turno||'';
     document.getElementById('erE').value=r.hora_entrada?.slice(0,5)||'';
     document.getElementById('erS').value=r.hora_salida?.slice(0,5)||'';
     document.getElementById('erO').value=r.observaciones||'';
     document.getElementById('mReg').style.display='';
+    // Cargar nombres del área
+    _cargarNombresModal(r.area||'', r.nombre||'');
   }
   function closeModal(){document.getElementById('mReg').style.display='none';}
 
+  function _onAreaChange(area) {
+    _cargarNombresModal(area, '');
+  }
+
   async function save(){
     const id=document.getElementById('erId').value;
+    const area=document.getElementById('erA').value;
+    const nombre=document.getElementById('erN').value;
+    const fecha=document.getElementById('erF').value;
     const t=document.getElementById('erT').value;
     const e=document.getElementById('erE').value;
     const s=document.getElementById('erS').value;
     const o=document.getElementById('erO').value;
+    if(!area||!nombre||!fecha){showToast('Área, nombre y fecha son obligatorios','err');return;}
     const{error}=await SB.from('registros').update({
+      area,nombre,fecha,
       turno:t||null,hora_entrada:e?e+':00':null,hora_salida:s?s+':00':null,observaciones:o||null
     }).eq('id',id);
     if(error){showToast('Error','err');return;}
@@ -126,5 +161,5 @@ const Registros = (() => {
     a.click();showToast('CSV descargado ✓');
   }
 
-  return{load,render,changePer,openEdit,closeModal,save,del,exportCSV};
+  return{load,render,changePer,openEdit,closeModal,save,del,exportCSV,_onAreaChange};
 })();

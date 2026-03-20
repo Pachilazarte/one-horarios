@@ -149,7 +149,7 @@
       </div>
       <button class="btn btn-success" style="width:100%;justify-content:center;" onclick="login()">Ingresar →</button>
       <div style="margin-top:16px;text-align:center;">
-        <a href="Lider.html" style="font-size:12px;color:rgba(198,201,215,.3);">← Actualizar</a>
+        <a href="index.html" style="font-size:12px;color:rgba(198,201,215,.3);">← Volver al inicio</a>
       </div>
     </div>
   </div>
@@ -189,6 +189,7 @@
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
         <span id="hdrBadge" class="badge" style="font-size:11px;"></span>
         <button id="btnCambiarArea" onclick="mostrarSelectorArea()" class="btn btn-ghost" style="display:none;font-size:12px;padding:6px 12px;">⇄ Cambiar área</button>
+        <a href="index.html" class="btn btn-ghost" style="font-size:12px;padding:6px 12px;">← Inicio</a>
         <button class="btn btn-ghost" onclick="logout()" style="font-size:12px;padding:6px 12px;">Salir</button>
       </div>
     </div>
@@ -291,7 +292,7 @@ const calcHs=(e,s)=>{if(!e||!s)return null;const[eh,em]=e.split(':').map(Number)
 const fmtHs=h=>{if(!h&&h!==0)return'—';const hr=Math.floor(h),mn=Math.round((h-hr)*60);return mn?`${hr}h ${mn}m`:`${hr}h`;};
 const toast=(msg,t='ok')=>{const el=document.getElementById('toast');el.textContent=msg;el.className=`toast ${t} show`;clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('show'),3200);};
 const ovl=show=>document.getElementById('loadOvl').classList.toggle('h',!show);
-const diasSem=lun=>Array.from({length:7},(_,i)=>{const d=new Date(lun+'T12:00:00');d.setDate(d.getDate()+i);return d.toISOString().slice(0,10);});
+const diasSem=lun=>Array.from({length:7},(_,i)=>{const d=new Date(lun+'T12:00:00');d.setDate(d.getDate()+i);return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;});
 
 /* ── DETECCIÓN DE TIPO ESPECIAL ──
    Reconoce: flex, f, flexible → 'flex'
