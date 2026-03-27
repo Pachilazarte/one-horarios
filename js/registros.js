@@ -26,30 +26,30 @@ const Registros = (() => {
     render();
   }
 
-  function render(){
+function render(){
     const busq=(document.getElementById('fBusq')?.value||'').toLowerCase();
     const rows=allRegs.filter(r=>!busq||r.nombre.toLowerCase().includes(busq)||(r.rol||'').toLowerCase().includes(busq));
     const tbody=document.getElementById('tbR');
     if(!rows.length){tbody.innerHTML=`<tr><td colspan="12" style="text-align:center;padding:40px;color:rgba(198,201,215,.28);">Sin registros</td></tr>`;return;}
 
     tbody.innerHTML=rows.map((r,i)=>{
-      const hs=calcHs(r.hora_entrada?.slice(0,5),r.hora_salida?.slice(0,5));
+      const _hs1=calcHs(r.hora_entrada?.slice(0,5),r.hora_salida?.slice(0,5));
+      const _m2=(r.observaciones||'').match(/2°\s*turno:\s*(\d{2}:\d{2})\s*→\s*(\d{2}:\d{2})/);
+      const _hs2=_m2?calcHs(_m2[1],_m2[2]):null;
+      const hs=(_hs1!==null||_hs2!==null)?(_hs1||0)+(_hs2||0):null;
+      const turno=r.turno||'';
+      const col=areaColor(r.area);
+      const esFlex=turno==='Flex';
+      const esGuardia=turno==='Guardia';
       let diff=null;
-      const turno = r.turno||'';
-      // No calculamos tardanza para flex y guardia
-      const esFlex    = turno==='Flex';
-      const esGuardia = turno==='Guardia';
-      if(!esFlex && !esGuardia && turno.includes(':') && r.hora_entrada){
+      if(!esFlex&&!esGuardia&&turno.includes(':')&&r.hora_entrada){
         const planEnt=turno.split('→')[0].trim();
         if(planEnt.match(/^\d{2}:\d{2}$/)) diff=calcTardVsPlan(planEnt,r.hora_entrada.slice(0,5));
       }
-      const col=areaColor(r.area);
-
-      // Badge especial para flex/guardia
       let tardCell;
-      if(esFlex)    tardCell='<span class="badge badge-purple">🔄 Flex</span>';
+      if(esFlex)         tardCell='<span class="badge badge-purple">🔄 Flex</span>';
       else if(esGuardia) tardCell='<span class="badge badge-gold">🛡 Guardia</span>';
-      else          tardCell=tardBadge(diff);
+      else               tardCell=tardBadge(diff);
 
       return`<tr>
         <td style="color:rgba(198,201,215,.3);font-size:11px;">${i+1}</td>
@@ -152,8 +152,12 @@ const Registros = (() => {
     if(!allRegs.length){showToast('Sin datos','err');return;}
     const cols=['Área','Nombre','Rol','Fecha','Horario planificado','Hora Entrada','Hora Salida','Hs Trabajadas','Min Tardanza','Puntual','Observaciones'];
     const lines=[cols.join(',')];
-    allRegs.forEach(r=>{
-      const hs=calcHs(r.hora_entrada?.slice(0,5),r.hora_salida?.slice(0,5));
+    // ✅ CORRECTO:
+allRegs.forEach(r=>{
+      const _hs1=calcHs(r.hora_entrada?.slice(0,5),r.hora_salida?.slice(0,5));
+      const _m2=(r.observaciones||'').match(/2°\s*turno:\s*(\d{2}:\d{2})\s*→\s*(\d{2}:\d{2})/);
+      const _hs2=_m2?calcHs(_m2[1],_m2[2]):null;
+      const hs=(_hs1!==null||_hs2!==null)?(_hs1||0)+(_hs2||0):null;
       const turno=r.turno||'';
       const esFlex=turno==='Flex', esGuardia=turno==='Guardia';
       let diff=null;
