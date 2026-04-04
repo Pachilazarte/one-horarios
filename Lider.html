@@ -427,6 +427,7 @@ function verificarVentana() {
   const hora  = ahora.getHours() + ahora.getMinutes() / 60;
 
   const dentroDeVentana =
+      (dia === 3) ||                    // Miércoles (todo el día)
     (dia === 4) ||                    // Jueves (todo el día)
     (dia === 5) ||                    // Viernes (todo el día)
     (dia === 6 && hora < 12);         // Sábado antes de las 12:00

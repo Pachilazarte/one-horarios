@@ -246,9 +246,11 @@ body{-webkit-tap-highlight-color:transparent;}
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <script src="js/supabase.js"></script>
 <script src="js/utils.js"></script>
-<script src="js/auth.js"></script>
+<script src="js/auth.js"></script> 
+
 <script>
 /* ═══════════════════════════════════════════════
    REGISTRO — lógica completa inline (sin carga.js)
@@ -519,19 +521,29 @@ function _renderQueue() {
 }
 
 /* ── Admin ── */
+/* ── Admin ── */
 function toggleAdmin() {
   const box = document.getElementById('adminLoginBox');
   const btn = document.getElementById('btnShowAdmin');
-  const v = box.style.display !== 'none';
-  box.style.display = v ? 'none' : '';
-  btn.style.display = v ? '' : 'none';
+  const isVisible = box.style.display === '';
+  box.style.display = isVisible ? 'none' : '';
+  btn.style.display = isVisible ? '' : 'none';
 }
+
 function loginAdmin() {
-  const u = document.getElementById('aU').value.trim();
-  const p = document.getElementById('aP').value.trim();
-  if (Auth.loginAdmin(u, p)) window.location.href = 'admin.html';
-  else showToast('Usuario o contraseña incorrectos', 'err');
-}
+    const u = document.getElementById('aU').value.trim();
+    const p = document.getElementById('aP').value.trim();
+
+    // Ahora Auth.loginAdmin DEBE funcionar porque auth.js ya se cargó arriba
+    if (Auth.loginAdmin(u, p)) {
+      showToast('Acceso concedido', 'ok');
+      setTimeout(() => {
+        window.location.href = 'admin.html';
+      }, 500);
+    } else {
+      showToast('Usuario o contraseña incorrectos', 'err');
+    }
+  }
 
 function mostrarTurno2() {
   document.getElementById('turno2Wrap').style.display = '';
@@ -543,8 +555,6 @@ function ocultarTurno2() {
   const e2 = document.getElementById('lEnt2'); if (e2) e2.value = '';
   const s2 = document.getElementById('lSal2'); if (s2) s2.value = '';
 }
-  const el = document.getElementById('lPlanInfo');
-  if (el) { el.style.display = 'none'; el.innerHTML = ''; }
 
 /* ── Helpers ── */
 function _clearPlan() {
