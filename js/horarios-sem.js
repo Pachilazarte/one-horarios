@@ -15,12 +15,6 @@ const HorariosSem = (() => {
   let editRows  = [];
   let editRowId = null;
 
-  // Tipos de horario disponibles
-  // 'normal' = entrada/salida fija
-  // 'flex'   = sin horario fijo, llega cuando puede
-  // 'guardia'= 1h computabilizada en cualquier momento
-  // 'libre'  = día libre / no trabaja
-
   // ─── INIT ───
   function init() {
     semActual = getLunes(today(), 0);
@@ -75,7 +69,6 @@ const HorariosSem = (() => {
     s('hsKA', areas);
     s('hsKH', totalHs > 0 ? fmtHs(totalHs) : '—');
 
-    // KPI "especiales": personas con al menos un día flex o guardia
     const conEspecial = personas.filter(p =>
       DIAS.some(d => p[d+'_tipo']==='flex' || p[d+'_tipo']==='guardia')
     ).length;
@@ -137,7 +130,7 @@ const HorariosSem = (() => {
     semViendo = lunes; load();
   }
 
-  // ─── FLAT PERSONAS (JSON → array plano) ───
+  // ─── FLAT PERSONAS ───
   function _flatPersonas(data) {
     const out = [];
     data.forEach(row => {
@@ -162,8 +155,8 @@ const HorariosSem = (() => {
     let t=0;
     DIAS.forEach(d=>{
       const tipo = p[d+'_tipo'] || 'normal';
-      if (tipo === 'guardia') { t += 1; return; } // Guardia = 1h fija
-      if (tipo === 'flex')    return;              // Flex = no computable planificado
+      if (tipo === 'guardia') { t += 1; return; }
+      if (tipo === 'flex')    return;
       const h1=calcHs(p[d+'_e'],p[d+'_s']);
       const h2=calcHs(p[d+'_e2'],p[d+'_s2']);
       if(h1)t+=h1; if(h2)t+=h2;
@@ -186,8 +179,7 @@ const HorariosSem = (() => {
       const totalHs  = personas.reduce((a,p) => a+_hsPersona(p), 0);
       const cargado  = !!row;
 
-      // Contar tipos especiales
-      const flexCount = personas.filter(p => DIAS.some(d => p[d+'_tipo']==='flex')).length;
+      const flexCount    = personas.filter(p => DIAS.some(d => p[d+'_tipo']==='flex')).length;
       const guardiaCount = personas.filter(p => DIAS.some(d => p[d+'_tipo']==='guardia')).length;
 
       const persHtml = personas.slice(0,5).map(p => {
@@ -196,7 +188,7 @@ const HorariosSem = (() => {
         const refE = DIAS.map(d=>p[d+'_e']).find(x=>x) || '';
         const refS = DIAS.map(d=>p[d+'_s']).find(x=>x) || '';
         let horStr;
-        if (refTipo==='flex')    horStr = `<span style="font-size:10px;color:var(--one-purple);">🔄 Flex</span>`;
+        if (refTipo==='flex')         horStr = `<span style="font-size:10px;color:var(--one-purple);">🔄 Flex</span>`;
         else if (refTipo==='guardia') horStr = `<span style="font-size:10px;color:var(--one-gold);">🛡 Guardia</span>`;
         else horStr = refE ? `<span style="font-size:10px;color:rgba(198,201,215,.4);">${refE}${refS?' → '+refS:''}</span>` : '';
         return `<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(198,201,215,.05);">
@@ -265,12 +257,12 @@ const HorariosSem = (() => {
       const sv = savedMap[p.nombre];
       const r  = { nombre:p.nombre, rol:p.rol||'', obs:sv?.obs||'', split:false };
       DIAS.forEach(d => {
-        r[d+'_e']    = sv?.[d]?.e    || '';
-        r[d+'_s']    = sv?.[d]?.s    || '';
-        r[d+'_e2']   = sv?.[d]?.e2   || '';
-        r[d+'_s2']   = sv?.[d]?.s2   || '';
-        r[d+'_tipo'] = sv?.[d]?.tipo  || 'normal';
-        r[d+'_split'] = !!(sv?.[d]?.e2 || sv?.[d]?.s2); // activar flag si ya hay 2° turno
+        r[d+'_e']     = sv?.[d]?.e    || '';
+        r[d+'_s']     = sv?.[d]?.s    || '';
+        r[d+'_e2']    = sv?.[d]?.e2   || '';
+        r[d+'_s2']    = sv?.[d]?.s2   || '';
+        r[d+'_tipo']  = sv?.[d]?.tipo  || 'normal';
+        r[d+'_split'] = !!(sv?.[d]?.e2 || sv?.[d]?.s2);
       });
       r.split = DIAS.some(d => r[d+'_e2']);
       return r;
@@ -315,7 +307,6 @@ const HorariosSem = (() => {
     });
   }
 
-  // ─── RENDER MODAL ───
   let _modalView = 'dias';
   let _modalDia  = 0;
 
@@ -324,7 +315,6 @@ const HorariosSem = (() => {
     else                        _renderDiaDetail(_modalDia);
   }
 
-  // VISTA 1 — lista de días
   function _renderDiasList() {
     const cont = document.getElementById('mhPersonasBody');
     if (!cont) return;
@@ -345,13 +335,13 @@ const HorariosSem = (() => {
       } else {
         const tipo0 = primerH[d+'_tipo'] || 'normal';
         let horStr;
-        if (tipo0==='flex')    horStr = `<span style="color:var(--one-purple);font-weight:800;font-size:13px;">🔄 Flex</span>`;
+        if (tipo0==='flex')         horStr = `<span style="color:var(--one-purple);font-weight:800;font-size:13px;">🔄 Flex</span>`;
         else if (tipo0==='guardia') horStr = `<span style="color:var(--one-gold);font-weight:800;font-size:13px;">🛡 Guardia 1h</span>`;
         else horStr = `<span style="font-size:13px;font-weight:800;color:var(--one-cyan);">${primerH[d+'_e']}${primerH[d+'_s']?' → '+primerH[d+'_s']:''}</span>`;
-
         resumen = `${horStr}
-          ${todosIgual ? `<span style="font-size:11px;color:rgba(198,201,215,.4);margin-left:8px;">todos igual</span>` :
-          `<span style="font-size:11px;color:rgba(198,201,215,.4);margin-left:6px;">${conH.length}/${editRows.length} cargados</span>`}`;
+          ${todosIgual
+            ? `<span style="font-size:11px;color:rgba(198,201,215,.4);margin-left:8px;">todos igual</span>`
+            : `<span style="font-size:11px;color:rgba(198,201,215,.4);margin-left:6px;">${conH.length}/${editRows.length} cargados</span>`}`;
       }
 
       const statusDot = conH.length === 0
@@ -379,7 +369,6 @@ const HorariosSem = (() => {
     cont.innerHTML = rows;
   }
 
-  // VISTA 2 — personas del día seleccionado — CON FLEX Y GUARDIA + sidebar días + crossbar miembros
   function _renderDiaDetail(di) {
     const cont = document.getElementById('mhPersonasBody');
     if (!cont) return;
@@ -388,7 +377,7 @@ const HorariosSem = (() => {
 
     const personaRows = editRows.map((r, i) => {
       const tipo  = r[d+'_tipo'] || 'normal';
-      const spDia = !!(r[d+'_split'] || r[d+'_e2'] || r[d+'_s2']); // flag O ya tiene horas
+      const spDia = !!(r[d+'_split'] || r[d+'_e2'] || r[d+'_s2']);
 
       const tipoSelector = `
         <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px;">
@@ -425,7 +414,7 @@ const HorariosSem = (() => {
           <button class="btn-split-sm ${spDia?'on':''}" onclick="HorariosSem._tsDia(${i},'${d}')" style="font-size:11px;margin-top:4px;">
             ${spDia?'✂ Quitar 2° turno':'✂ Agregar 2° turno'}
           </button>`;
-      } // fin else normal
+      }
 
       let hsDay = '—';
       if (tipo === 'guardia') hsDay = '1h';
@@ -449,149 +438,83 @@ const HorariosSem = (() => {
       </div>`;
     }).join('');
 
-    // Sidebar de días (izquierda)
     const daySidebar = DIAS.map((dd, ddi) => {
       const isActive = ddi === di;
       const conH = editRows.filter(r => r[dd+'_e'] || r[dd+'_tipo']==='flex' || r[dd+'_tipo']==='guardia');
-      const dot = conH.length === 0
-        ? 'rgba(239,68,68,.4)'
-        : conH.length === editRows.length
-          ? 'rgba(34,197,94,.55)'
-          : 'rgba(228,199,106,.55)';
+      const dot = conH.length === 0 ? 'rgba(239,68,68,.4)'
+        : conH.length === editRows.length ? 'rgba(34,197,94,.55)' : 'rgba(228,199,106,.55)';
       return `<button onclick="HorariosSem._goDia(${ddi})"
-        style="width:100%;padding:8px 6px;border-radius:8px;border:none;cursor:pointer;
-          transition:all .15s;text-align:center;
+        style="width:100%;padding:8px 6px;border-radius:8px;border:none;cursor:pointer;transition:all .15s;text-align:center;
           background:${isActive?'rgba(167,139,250,.18)':'transparent'};
           border:1px solid ${isActive?'rgba(167,139,250,.45)':'transparent'};">
         <div style="width:6px;height:6px;border-radius:50%;background:${dot};margin:0 auto 4px;"></div>
-        <div style="font-size:9px;font-weight:800;letter-spacing:.05em;
-          color:${isActive?'#a78bfa':'rgba(198,201,215,.45)'};text-transform:uppercase;">
-          ${DIA_CORTO[dd]}
-        </div>
-        <div style="font-size:8px;color:${isActive?'rgba(167,139,250,.7)':'rgba(198,201,215,.25)'};">
-          ${_ddShort(fArr[ddi])}
-        </div>
+        <div style="font-size:9px;font-weight:800;letter-spacing:.05em;color:${isActive?'#a78bfa':'rgba(198,201,215,.45)'};text-transform:uppercase;">${DIA_CORTO[dd]}</div>
+        <div style="font-size:8px;color:${isActive?'rgba(167,139,250,.7)':'rgba(198,201,215,.25)'};">${_ddShort(fArr[ddi])}</div>
       </button>`;
     }).join('');
 
-    // Crossbar de miembros (top)
     const memberBar = editRows.map((r, i) => {
       const tipo = r[d+'_tipo'] || 'normal';
       const tCol = tipo==='flex' ? '#a78bfa' : tipo==='guardia' ? '#e4c76a' : (r[d+'_e'] ? '#6be1e3' : 'rgba(198,201,215,.28)');
       const initials = r.nombre.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
       const firstName = r.nombre.split(' ')[0];
       return `<button onclick="document.getElementById('mh-member-${i}').scrollIntoView({behavior:'smooth',block:'nearest'})"
-        style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:4px;
-          background:none;border:none;cursor:pointer;padding:0;transition:transform .15s;"
-        onmouseover="this.style.transform='translateY(-2px)'"
-        onmouseout="this.style.transform='translateY(0)'">
-        <div style="width:40px;height:40px;border-radius:50%;border:2px solid ${tCol};
-          background:${tCol}18;
-          display:flex;align-items:center;justify-content:center;
-          font-size:12px;font-weight:800;color:${tCol};transition:all .15s;">
-          ${initials}
-        </div>
-        <span style="font-size:9px;color:rgba(198,201,215,.5);white-space:nowrap;max-width:44px;
-          overflow:hidden;text-overflow:ellipsis;">${firstName}</span>
+        style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:4px;background:none;border:none;cursor:pointer;padding:0;transition:transform .15s;"
+        onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+        <div style="width:40px;height:40px;border-radius:50%;border:2px solid ${tCol};background:${tCol}18;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:${tCol};">${initials}</div>
+        <span style="font-size:9px;color:rgba(198,201,215,.5);white-space:nowrap;max-width:44px;overflow:hidden;text-overflow:ellipsis;">${firstName}</span>
       </button>`;
     }).join('');
 
     cont.innerHTML = `
       <style>
-        .tipo-btn{background:rgba(255,255,255,.06);border:1px solid rgba(198,201,215,.18);color:rgba(198,201,215,.6);
-          padding:4px 10px;border-radius:999px;font-family:var(--font-title);font-size:11px;font-weight:700;cursor:pointer;transition:all .18s;}
+        .tipo-btn{background:rgba(255,255,255,.06);border:1px solid rgba(198,201,215,.18);color:rgba(198,201,215,.6);padding:4px 10px;border-radius:999px;font-family:var(--font-title);font-size:11px;font-weight:700;cursor:pointer;transition:all .18s;}
         .tipo-btn:hover{background:rgba(255,255,255,.11);}
         .tipo-active-cyan{background:rgba(107,225,227,.15)!important;border-color:rgba(107,225,227,.45)!important;color:var(--one-cyan)!important;}
         .tipo-active-purple{background:rgba(167,139,250,.15)!important;border-color:rgba(167,139,250,.45)!important;color:var(--one-purple)!important;}
         .tipo-active-gold{background:rgba(228,199,106,.15)!important;border-color:rgba(228,199,106,.45)!important;color:var(--one-gold)!important;}
       </style>
-
-      <!-- Header del día -->
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-        <button onclick="HorariosSem._backDias()"
-          style="background:rgba(255,255,255,.07);border:1px solid rgba(198,201,215,.18);color:rgba(198,201,215,.8);
-            padding:6px 14px;border-radius:999px;font-family:var(--font-title);font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;">
-          ‹ Volver
-        </button>
+        <button onclick="HorariosSem._backDias()" style="background:rgba(255,255,255,.07);border:1px solid rgba(198,201,215,.18);color:rgba(198,201,215,.8);padding:6px 14px;border-radius:999px;font-family:var(--font-title);font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;">‹ Volver</button>
         <div>
           <span style="font-size:16px;font-weight:800;">${DIA_LBL[d]}</span>
           <span style="font-size:13px;color:rgba(198,201,215,.45);margin-left:8px;">${_ddShort(fArr[di])}</span>
         </div>
       </div>
-
-      <!-- Crossbar miembros — scroll horizontal, no se comprime -->
-      <div style="margin-bottom:12px;padding:8px 12px;
-        background:rgba(167,139,250,.06);border:1px solid rgba(167,139,250,.18);
-        border-radius:10px;">
-        <div style="font-size:9px;font-weight:800;letter-spacing:.1em;color:rgba(167,139,250,.55);
-          text-transform:uppercase;margin-bottom:8px;">Miembros del área</div>
-        <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;
-          scrollbar-width:thin;scrollbar-color:rgba(167,139,250,.3) transparent;">
-          ${memberBar}
-        </div>
+      <div style="margin-bottom:12px;padding:8px 12px;background:rgba(167,139,250,.06);border:1px solid rgba(167,139,250,.18);border-radius:10px;">
+        <div style="font-size:9px;font-weight:800;letter-spacing:.1em;color:rgba(167,139,250,.55);text-transform:uppercase;margin-bottom:8px;">Miembros del área</div>
+        <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin;scrollbar-color:rgba(167,139,250,.3) transparent;">${memberBar}</div>
       </div>
-
-      <!-- Layout: sidebar días + contenido personas -->
       <div style="display:flex;gap:8px;">
-
-        <!-- Sidebar días (izquierda) — morado neon sutil -->
-        <div style="display:flex;flex-direction:column;gap:3px;flex-shrink:0;width:48px;
-          padding:8px 4px;background:rgba(167,139,250,.05);
-          border:1px solid rgba(167,139,250,.18);border-radius:10px;">
-          ${daySidebar}
-        </div>
-
-        <!-- Lista de personas -->
-        <div style="flex:1;background:rgba(255,255,255,.03);border:1px solid rgba(198,201,215,.09);border-radius:10px;overflow:hidden;min-width:0;">
-          ${personaRows}
-        </div>
-
-      </div>
-    `;
+        <div style="display:flex;flex-direction:column;gap:3px;flex-shrink:0;width:48px;padding:8px 4px;background:rgba(167,139,250,.05);border:1px solid rgba(167,139,250,.18);border-radius:10px;">${daySidebar}</div>
+        <div style="flex:1;background:rgba(255,255,255,.03);border:1px solid rgba(198,201,215,.09);border-radius:10px;overflow:hidden;min-width:0;">${personaRows}</div>
+      </div>`;
   }
 
   function _setTipo(i, d, tipo) {
     editRows[i][d+'_tipo'] = tipo;
-    // Si cambia a flex o guardia, limpiar horas
     if (tipo !== 'normal') {
-      editRows[i][d+'_e'] = '';
-      editRows[i][d+'_s'] = '';
-      editRows[i][d+'_e2'] = '';
-      editRows[i][d+'_s2'] = '';
+      editRows[i][d+'_e'] = ''; editRows[i][d+'_s'] = '';
+      editRows[i][d+'_e2'] = ''; editRows[i][d+'_s2'] = '';
     }
     _renderEditCards();
   }
 
-  function _goDia(di) {
-    _modalView = 'dia-X';
-    _modalDia  = di;
-    _renderEditCards();
-  }
+  function _goDia(di)   { _modalView = 'dia-X'; _modalDia = di; _renderEditCards(); }
+  function _backDias()  { _modalView = 'dias'; _renderEditCards(); }
+  function _ddShort(s)  { if(!s)return''; const[y,m,d]=s.split('-'); return`${d}/${m}`; }
 
-  function _backDias() {
-    _modalView = 'dias';
-    _renderEditCards();
-  }
-
-  function _ddShort(s) { if(!s)return''; const[y,m,d]=s.split('-'); return`${d}/${m}`; }
-
-  // ─── TOGGLE TURNO PARTIDO POR DÍA ───
-  // Usa flag r[d+'_split'] = true/false independiente de si hay horas cargadas
   function _tsDia(i, d) {
     const activo = editRows[i][d+'_split'];
     if (activo) {
-      // Desactivar: limpiar horas y flag
       editRows[i][d+'_split'] = false;
-      editRows[i][d+'_e2'] = '';
-      editRows[i][d+'_s2'] = '';
+      editRows[i][d+'_e2'] = ''; editRows[i][d+'_s2'] = '';
     } else {
-      // Activar
       editRows[i][d+'_split'] = true;
     }
     _renderEditCards();
   }
 
-  // ─── NORMALIZAR HORA ───
   function _nh(raw) {
     if (!raw||!raw.trim()) return '';
     let s = raw.trim().replace(/[.,]/,':');
@@ -632,7 +555,6 @@ const HorariosSem = (() => {
     return t;
   }
 
-  // ─── COPIAR SEMANA ANTERIOR ───
   function copiarAntModal() {
     const btn=document.getElementById('btnCopiarAnt');
     if(!btn?._antData) return;
@@ -665,11 +587,9 @@ const HorariosSem = (() => {
       const obj={nombre:r.nombre,rol:r.rol,obs:r.obs||''};
       DIAS.forEach(d=>{
         obj[d]={
-          e:    r[d+'_e']    || '',
-          s:    r[d+'_s']    || '',
-          e2:   r[d+'_e2']   || '',
-          s2:   r[d+'_s2']   || '',
-          tipo: r[d+'_tipo'] || 'normal',
+          e:r[d+'_e']||'', s:r[d+'_s']||'',
+          e2:r[d+'_e2']||'', s2:r[d+'_s2']||'',
+          tipo:r[d+'_tipo']||'normal',
         };
       });
       return obj;
@@ -678,7 +598,7 @@ const HorariosSem = (() => {
     const payload={
       semana_desde: semViendo,
       semana_hasta: getSabado(semViendo),
-      area:         editArea,
+      area: editArea,
       observaciones: document.getElementById('mhAreaObs').value.trim()||null,
       horarios,
     };
@@ -695,28 +615,27 @@ const HorariosSem = (() => {
     btn.disabled=false; btn.textContent='✓ Guardar área completa';
     if (error) { showToast('Error: '+error.message,'err'); return; }
 
-    // Sincronizar turno en registros existentes de esta semana
     await _sincronizarRegistros(editArea, semViendo, horarios);
-
     showToast(`✓ Horarios de ${editArea} guardados`);
+
+    const fuera = esFueraDeTerm(semViendo);
+    await logActividad(
+      'horario_semanal_guardado', editArea, null,
+      `Horario semanal ${editRowId?'actualizado':'creado'} para ${editArea} — semana ${semViendo}`,
+      { semana:semViendo, personas:editRows.length, accion:editRowId?'actualizado':'creado' },
+      fuera
+    );
+
     closeModal();
     load();
   }
 
   // ─── SINCRONIZAR TURNO EN REGISTROS ───
-  // Actualiza el campo "turno" en la tabla registros para todos los registros
-  // de esa semana/área que ya estén cargados, usando el nuevo horario planificado.
   async function _sincronizarRegistros(area, semDesde, horarios) {
-    // Calcular semana_hasta (domingo)
     const semHasta = getSabado(semDesde);
-
-    // Traer registros de esa semana y área
-    const { data: regs } = await SB
-      .from('registros')
+    const { data: regs } = await SB.from('registros')
       .select('id, nombre, fecha, turno')
-      .eq('area', area)
-      .gte('fecha', semDesde)
-      .lte('fecha', semHasta);
+      .eq('area', area).gte('fecha', semDesde).lte('fecha', semHasta);
 
     if (!regs?.length) return;
 
@@ -724,36 +643,27 @@ const HorariosSem = (() => {
     const horariosMap = {};
     horarios.forEach(h => horariosMap[h.nombre] = h);
 
-    // Por cada registro, calcular el turno correcto del nuevo horario
     const updates = [];
     regs.forEach(reg => {
       const p = horariosMap[reg.nombre];
       if (!p) return;
-
       const dKey = DIAS_SEM[new Date(reg.fecha + 'T12:00:00').getDay()];
       const dia  = p[dKey];
       if (!dia) return;
-
       const tipo = dia.tipo || 'normal';
       let nuevoTurno;
-      if (tipo === 'flex')    nuevoTurno = 'Flex';
+      if (tipo === 'flex')         nuevoTurno = 'Flex';
       else if (tipo === 'guardia') nuevoTurno = 'Guardia';
       else {
-        if (!dia.e) return; // sin horario para ese día, no tocar
+        if (!dia.e) return;
         nuevoTurno = dia.e + (dia.s ? ' → ' + dia.s : '');
         if (dia.e2) nuevoTurno += ' | ' + dia.e2 + (dia.s2 ? ' → ' + dia.s2 : '');
       }
-
-      if (reg.turno !== nuevoTurno) {
-        updates.push({ id: reg.id, turno: nuevoTurno });
-      }
+      if (reg.turno !== nuevoTurno) updates.push({ id: reg.id, turno: nuevoTurno });
     });
 
-    // Ejecutar updates en paralelo
     if (updates.length) {
-      await Promise.all(
-        updates.map(u => SB.from('registros').update({ turno: u.turno }).eq('id', u.id))
-      );
+      await Promise.all(updates.map(u => SB.from('registros').update({ turno: u.turno }).eq('id', u.id)));
       showToast(`✓ Horarios guardados · ${updates.length} registro(s) sincronizado(s)`);
     }
   }
@@ -763,12 +673,21 @@ const HorariosSem = (() => {
     editArea=null; editRows=[]; editRowId=null;
   }
 
+  // ─── ELIMINAR ÁREA ───
   async function delArea() {
     if (!editRowId) { showToast('No hay datos para eliminar','err'); return; }
     if (!confirm(`¿Eliminar los horarios de "${editArea}" para esta semana?`)) return;
     const{error}=await SB.from('horarios_semanales').delete().eq('id',editRowId);
     if(error){showToast('Error','err');return;}
     showToast(`Horarios de ${editArea} eliminados`);
+
+    await logActividad(
+      'horario_semanal_eliminado', editArea, null,
+      `Horario semanal eliminado para ${editArea} — semana ${semViendo}`,
+      { semana:semViendo, personas:editRows.length },
+      esFueraDeTerm(semViendo)
+    );
+
     closeModal(); load();
   }
 
@@ -778,7 +697,7 @@ const HorariosSem = (() => {
     if(!tbody) return;
     const personas=_flatPersonas(allData);
     if(!personas.length){
-      tbody.innerHTML=`<tr><td colspan="11" style="text-align:center;padding:30px;color:rgba(198,201,215,.3);">No hay horarios para esta semana</td></tr>`;
+      tbody.innerHTML=`<tr><td colspan="12" style="text-align:center;padding:30px;color:rgba(198,201,215,.3);">No hay horarios para esta semana</td></tr>`;
       return;
     }
     tbody.innerHTML=personas.map(p=>{
@@ -795,15 +714,154 @@ const HorariosSem = (() => {
         return s?`<b style="font-size:12px;">${e}</b><span style="color:rgba(198,201,215,.35);font-size:10px;"> → ${s}</span>`
                 :`<b style="font-size:12px;">${e}</b>`;
       };
+
+      let obsCell;
+      if (p.obs) {
+        const preview = p.obs.length > 18 ? p.obs.slice(0,18)+'…' : p.obs;
+        const safe    = p.obs.replace(/\\/g,'\\\\').replace(/`/g,'\\`');
+        obsCell = `<div style="display:flex;align-items:center;gap:5px;">
+          <span style="font-size:11px;color:rgba(198,201,215,.45);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:90px;">${preview}</span>
+          <button onclick="HorariosSem._showObs(\`${safe}\`)" title="Ver completo"
+            style="flex-shrink:0;background:rgba(107,225,227,.12);border:1px solid rgba(107,225,227,.25);color:#6be1e3;border-radius:6px;padding:2px 7px;font-size:10px;cursor:pointer;font-weight:700;line-height:1.5;">👁</button>
+        </div>`;
+      } else {
+        obsCell = `<span style="color:rgba(198,201,215,.2);font-size:11px;">—</span>`;
+      }
+
       return`<tr>
         <td><span style="color:${col};font-weight:800;font-size:11px;">${p.area.split(' ')[0]}</span></td>
         <td style="font-weight:700;white-space:nowrap;">${p.nombre}${eb}</td>
         ${DIAS.map(d=>`<td style="font-size:12px;line-height:1.6;">${fd(p[d+'_e'],p[d+'_s'],p[d+'_tipo'])}${p[d+'_e2']?'<br/>'+fd(p[d+'_e2'],p[d+'_s2'],'normal'):''}</td>`).join('')}
         <td><span class="badge badge-cyan" style="font-size:10px;">${tp>0?fmtHs(tp):'—'}</span></td>
-        <td style="color:rgba(198,201,215,.45);font-size:11px;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.obs||'—'}</td>
+        <td>${obsCell}</td>
         <td class="no-print"><button class="btn btn-ghost" style="padding:4px 8px;font-size:11px;" onclick="HorariosSem.openAreaModal('${p.area}')">✏</button></td>
       </tr>`;
     }).join('');
+  }
+
+  // ─── POPUP OBSERVACIÓN ───
+  function _showObs(text) {
+    document.getElementById('hsemObsPopup')?.remove();
+    const overlay = document.createElement('div');
+    overlay.id = 'hsemObsPopup';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.72);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:16px;';
+    overlay.innerHTML = `
+      <div style="background:#13111c;border:1px solid rgba(107,225,227,.22);border-radius:16px;padding:24px;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.6);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+          <div style="font-size:12px;font-weight:700;color:rgba(107,225,227,.7);text-transform:uppercase;letter-spacing:.07em;">💬 Observación</div>
+          <button onclick="document.getElementById('hsemObsPopup').remove()" style="background:none;border:none;color:rgba(198,201,215,.5);font-size:20px;cursor:pointer;">✕</button>
+        </div>
+        <div style="background:rgba(255,255,255,.05);border:1px solid rgba(198,201,215,.1);border-radius:10px;padding:14px 16px;font-size:14px;line-height:1.7;color:rgba(255,255,255,.88);word-break:break-word;">${text}</div>
+        <button onclick="document.getElementById('hsemObsPopup').remove()" style="margin-top:14px;width:100%;padding:10px;border-radius:10px;background:rgba(107,225,227,.12);border:1px solid rgba(107,225,227,.28);color:#6be1e3;font-weight:700;font-size:13px;cursor:pointer;">Cerrar</button>
+      </div>`;
+    overlay.addEventListener('click', e => { if(e.target===overlay) overlay.remove(); });
+    document.body.appendChild(overlay);
+  }
+
+  // ─── DESCARGAR IMAGEN ───
+  function descargarImagen() {
+    const personas = _flatPersonas(allData);
+    if (!personas.length) { showToast('Sin datos para generar imagen','err'); return; }
+
+    const desde = semViendo;
+    const DLAN  = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
+
+    const fd = (e,s,tipo) => {
+      if (tipo==='flex')    return 'Flex';
+      if (tipo==='guardia') return '1h';
+      if (!e) return '—';
+      return s ? `${e}→${s}` : e;
+    };
+
+    const filas = personas.map(p => {
+      const tp  = _hsPersona(p);
+      const dias = DIAS.map(d => {
+        let txt = fd(p[d+'_e'], p[d+'_s'], p[d+'_tipo']);
+        if (p[d+'_e2']) txt += ` / ${fd(p[d+'_e2'], p[d+'_s2'], 'normal')}`;
+        return txt;
+      });
+      return { area:p.area, nombre:p.nombre, dias, hs:tp>0?fmtHs(tp):'—', obs:p.obs||'' };
+    });
+
+    const colW=108, col0=88, col1=155, colHs=56, colObs=130, rowH=34, headH=42, pad=18;
+    const totalW = pad*2 + col0 + col1 + colW*7 + colHs + colObs;
+    const totalH = pad*2 + headH*2 + rowH*filas.length + 46;
+
+    const canvas = document.createElement('canvas');
+    const scale  = 2;
+    canvas.width  = totalW*scale;
+    canvas.height = totalH*scale;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(scale, scale);
+
+    const ACOLORS = {
+      'ADMINISTRACION':'#6be1e3','COMERCIAL':'#e17bd7','RECURSOS HUMANOS':'#e4c76a',
+      'MARKETING':'#f472b6','ACADEMICO / GT':'#a78bfa','INNOVACION Y DESARROLLO':'#34d399','MAESTRANZA':'#fb923c',
+    };
+
+    ctx.fillStyle='#1a181d'; ctx.fillRect(0,0,totalW,totalH);
+
+    ctx.fillStyle='#ffffff'; ctx.font=`bold 14px "Segoe UI",sans-serif`;
+    ctx.fillText(`ONE Horarios · Semana ${_dd(desde)} al ${_dd(getSabado(desde))}`, pad, pad+14);
+    ctx.fillStyle='rgba(198,201,215,.4)'; ctx.font=`11px "Segoe UI",sans-serif`;
+    ctx.fillText('Escencial Consultora', pad, pad+30);
+
+    const hY = pad+headH;
+    const cols = [
+      {lbl:'ÁREA',   x:pad},
+      {lbl:'NOMBRE', x:pad+col0},
+      ...DLAN.map((d,i)=>({lbl:d, x:pad+col0+col1+colW*i})),
+      {lbl:'HS/SEM', x:pad+col0+col1+colW*7},
+      {lbl:'OBS',    x:pad+col0+col1+colW*7+colHs},
+    ];
+
+    ctx.fillStyle='rgba(255,255,255,.06)';
+    ctx.fillRect(pad, hY-rowH+6, totalW-pad*2, rowH);
+    ctx.fillStyle='rgba(198,201,215,.45)'; ctx.font=`bold 10px "Segoe UI",sans-serif`;
+    cols.forEach(c => ctx.fillText(c.lbl, c.x+7, hY-8));
+
+    ctx.strokeStyle='rgba(198,201,215,.12)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(pad,hY+3); ctx.lineTo(totalW-pad,hY+3); ctx.stroke();
+
+    filas.forEach((row,ri) => {
+      const y = hY+3+rowH*ri;
+      if (ri%2===0) { ctx.fillStyle='rgba(255,255,255,.02)'; ctx.fillRect(pad,y,totalW-pad*2,rowH); }
+
+      const ac = ACOLORS[row.area]||'#a4a8c0';
+      ctx.fillStyle=ac; ctx.font=`bold 10px "Segoe UI",sans-serif`;
+      ctx.fillText(row.area.split(' ')[0], pad+7, y+rowH*.62);
+
+      ctx.fillStyle='#ffffff'; ctx.font=`bold 12px "Segoe UI",sans-serif`;
+      ctx.fillText(row.nombre, pad+col0+7, y+rowH*.62);
+
+      ctx.font=`11px "Segoe UI",sans-serif`;
+      row.dias.forEach((txt,di) => {
+        const isEsp = txt==='Flex'||txt==='1h';
+        ctx.fillStyle = isEsp ? (txt==='Flex'?'#a78bfa':'#e4c76a') : (txt==='—'?'rgba(198,201,215,.25)':'#6be1e3');
+        ctx.fillText(txt, pad+col0+col1+colW*di+7, y+rowH*.62);
+      });
+
+      ctx.fillStyle='#6be1e3'; ctx.font=`bold 11px "Segoe UI",sans-serif`;
+      ctx.fillText(row.hs, pad+col0+col1+colW*7+7, y+rowH*.62);
+
+      if (row.obs) {
+        ctx.fillStyle='rgba(198,201,215,.5)'; ctx.font=`10px "Segoe UI",sans-serif`;
+        ctx.fillText(row.obs.length>18?row.obs.slice(0,18)+'…':row.obs, pad+col0+col1+colW*7+colHs+7, y+rowH*.62);
+      }
+
+      ctx.strokeStyle='rgba(198,201,215,.06)'; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(pad,y+rowH); ctx.lineTo(totalW-pad,y+rowH); ctx.stroke();
+    });
+
+    const fy = hY+3+rowH*filas.length+16;
+    ctx.fillStyle='rgba(198,201,215,.28)'; ctx.font=`10px "Segoe UI",sans-serif`;
+    ctx.fillText(`ONE Horarios · Escencial Consultora · ${new Date().toLocaleDateString('es-AR')}`, pad, fy);
+
+    const a = document.createElement('a');
+    a.download = `ONE_horarios_${semViendo}.png`;
+    a.href = canvas.toDataURL('image/png');
+    a.click();
+    showToast('✓ Imagen descargada');
   }
 
   // ─── EXPORT CSV ───
@@ -833,7 +891,7 @@ const HorariosSem = (() => {
   return {
     init, load, movSem, irSemana, irFecha,
     openAreaModal, copiarAntModal, closeModal, saveArea, delArea,
-    exportCSV, _renderTabla,
+    exportCSV, _renderTabla, _showObs, descargarImagen,
     _uf, _ff, _uo, _tsDia, _goDia, _backDias, _setTipo,
   };
 

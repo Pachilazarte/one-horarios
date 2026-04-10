@@ -65,9 +65,14 @@
     <div style="display:flex;gap:5px;flex-wrap:wrap;">
       <button class="tab-btn active" id="at-dash"  onclick="switchTab('dash')">📊 Dashboard</button>
       <button class="tab-btn"        id="at-reg"   onclick="switchTab('reg')">📋 Registros</button>
+      
       <button class="tab-btn"        id="at-per"   onclick="switchTab('per')">👥 Personal</button>
       <button class="tab-btn"        id="at-lid"   onclick="switchTab('lid')">🔑 Líderes</button>
       <button class="tab-btn"        id="at-hsem"  onclick="switchTab('hsem')">📅 Horarios Semanales</button>
+      <button class="tab-btn" id="at-act" onclick="switchTab('act'); Actividad.start();">
+        🔔 Actividad
+        <span id="actBadge" style="display:none;background:#e17bd7;color:#fff;border-radius:99px;font-size:9px;font-weight:800;padding:1px 6px;margin-left:4px;vertical-align:middle;"></span>
+      </button>
     </div>
     <div style="display:flex;gap:6px;">
       <div id="btnCsvWrap" style="display:none;">
@@ -248,9 +253,11 @@
     <div class="glass no-print" style="padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;" id="hsemNavBar"></div>
     <div class="areas-grid" id="hsemAreaGrid"></div>
     <div style="margin-top:16px;">
-      <button class="btn btn-ghost" style="font-size:12px;padding:6px 16px;" onclick="toggleTabla()">
-        <span id="btnTablaLbl">📋 Ver tabla detallada</span>
-      </button>
+<button class="btn btn-ghost" style="font-size:12px;padding:6px 16px;" onclick="toggleTabla()">
+  <span id="btnTablaLbl">📋 Ver tabla detallada</span>
+</button>
+<button class="btn btn-gold" style="font-size:12px;padding:6px 16px;display:none;" id="btnDescImg"
+  onclick="HorariosSem.descargarImagen()">📸 Descargar imagen</button>
       <div id="hsemTablaWrap" style="display:none;margin-top:10px;">
         <div class="glass tbl-wrap">
           <table class="tbl">
@@ -262,7 +269,32 @@
     </div>
   </div>
 
+   <!-- ══════ TAB: ACTIVIDAD ══════ -->
+  <div id="tab-act" style="display:none;">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <h3 style="font-size:17px;font-weight:800;">Actividad <span style="background:linear-gradient(90deg,#e17bd7,#f0a8e8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">en tiempo real</span></h3>
+        <div style="display:flex;align-items:center;gap:5px;background:rgba(255,255,255,.05);border:1px solid rgba(198,201,215,.12);border-radius:99px;padding:4px 10px;">
+          <span id="actDot" style="width:7px;height:7px;border-radius:50%;background:#fca5a5;transition:background .4s;"></span>
+          <span id="actStatus" style="font-size:11px;font-weight:700;color:rgba(198,201,215,.55);">Conectando...</span>
+        </div>
+      </div>
+      <button onclick="Actividad.clear()" style="background:rgba(255,255,255,.055);border:1px solid rgba(198,201,215,.14);color:rgba(198,201,215,.6);padding:7px 14px;border-radius:99px;font-size:12px;font-weight:700;cursor:pointer;">🗑 Limpiar vista</button>
+    </div>
+    <div style="background:rgba(107,225,227,.06);border:1px solid rgba(107,225,227,.14);border-radius:12px;padding:12px 16px;margin-bottom:16px;font-size:12px;color:rgba(198,201,215,.62);line-height:1.6;">
+      📡 <strong style="color:rgba(107,225,227,.8);">Actualización automática</strong> —
+      Cuando cualquier admin guarda, edita o elimina un registro, aparece aquí al instante para todos los admins conectados.
+    </div>
+    <div id="actFeed" style="display:flex;flex-direction:column;gap:8px;">
+      <div style="text-align:center;padding:48px 16px;color:rgba(198,201,215,.3);">
+        <div style="font-size:32px;margin-bottom:10px;">🔔</div>
+        <div style="font-size:13px;">Hacé click en la pestaña para ver la actividad.</div>
+      </div>
+    </div>
+  </div>
+
 </main>
+
 
 <footer class="app-footer no-print">
   <img src="img/one-logoletra.png" alt="ONE" class="footer-logo" onerror="this.replaceWith(document.createTextNode('ONE'))"/>
@@ -272,6 +304,8 @@
   </span>
 </footer>
 </div>
+
+
 
 <!-- MODAL PERSONAL -->
 <div class="modal-overlay" id="mPers" style="display:none;" onclick="if(event.target===this)Personal.closeModal()">
@@ -411,8 +445,9 @@
 <script src="js/registros.js"></script>
 <script src="js/dashboard.js"></script>
 <script src="js/horarios-sem.js"></script>
+<script src="js/actividad.js"></script>
 <script>
-const TABS = ['dash','reg','per','lid','hsem'];
+const TABS = ['dash', 'reg', 'per', 'lid', 'hsem', 'act'];
 let _hsemOk = false;
 
 function switchTab(t) {
@@ -431,8 +466,10 @@ function switchTab(t) {
 function toggleTabla() {
   const w   = document.getElementById('hsemTablaWrap');
   const lbl = document.getElementById('btnTablaLbl');
+  const img = document.getElementById('btnDescImg');
   const show = w.style.display === 'none';
   w.style.display = show ? '' : 'none';
+  if (img) img.style.display = show ? '' : 'none';
   lbl.textContent = show ? '🔼 Ocultar tabla' : '📋 Ver tabla detallada';
   if (show) HorariosSem._renderTabla();
 }

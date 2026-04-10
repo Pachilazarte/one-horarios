@@ -56,25 +56,74 @@ const Personal = (() => {
   function closeModal(){document.getElementById('mPers').style.display='none';}
 
   async function save(){
-    const id=document.getElementById('mpId').value;
-    const nombre=document.getElementById('mpN').value.trim();
-    const rol=document.getElementById('mpR').value.trim();
-    const area=document.getElementById('mpA').value;
-    const activo=document.getElementById('mpAc').checked;
+    const id     = document.getElementById('mpId').value;
+    const nombre = document.getElementById('mpN').value.trim();
+    const rol    = document.getElementById('mpR').value.trim();
+    const area   = document.getElementById('mpA').value;
+    const activo = document.getElementById('mpAc').checked;
     if(!nombre||!area){showToast('Nombre y área obligatorios','err');return;}
+
+    // Guardar referencia al estado anterior para detectar cambios
+    const anterior = id ? all.find(x=>x.id===id) : null;
+
     let err;
     if(id)({error:err}=await SB.from('personal').update({nombre,rol,area,activo}).eq('id',id));
     else  ({error:err}=await SB.from('personal').insert({nombre,rol,area,activo}));
     if(err){showToast('Error: '+err.message,'err');return;}
     showToast(id?'Actualizado':'Persona agregada');
-    closeModal();load();
+    closeModal();
+
+    // ── LOG DE AUDITORÍA ──
+    if (!id) {
+      // Nueva persona
+      await logActividad(
+        'personal_nuevo', area, nombre,
+        `Nueva persona agregada: ${nombre} (${rol||'sin rol'}) en ${area}`,
+        { rol, activo }
+      );
+    } else if (anterior) {
+      const esTraspaso = anterior.area !== area;
+      const camposEditados = [];
+      if (anterior.nombre !== nombre) camposEditados.push('nombre');
+      if (anterior.rol    !== rol)    camposEditados.push('rol');
+      if (anterior.area   !== area)   camposEditados.push('área');
+      if (anterior.activo !== activo) camposEditados.push('estado');
+
+      if (esTraspaso) {
+        await logActividad(
+          'personal_traspaso', area, nombre,
+          `Traspaso de ${anterior.area.split(' ')[0]} a ${area.split(' ')[0]}: ${nombre}`,
+          { area_anterior: anterior.area, area_nueva: area, rol }
+        );
+      } else if (camposEditados.length) {
+        await logActividad(
+          'personal_editado', area, nombre,
+          `Datos editados: ${nombre}`,
+          { campos: camposEditados.join(', '), rol_anterior: anterior.rol, rol_nuevo: rol, activo }
+        );
+      }
+    }
+
+    load();
   }
 
   async function del(id){
-    if(!confirm('¿Eliminar esta persona?'))return;
+    const p = all.find(x=>x.id===id);
+    if(!confirm(`¿Eliminar a ${p?.nombre||'esta persona'}?`))return;
     const{error}=await SB.from('personal').delete().eq('id',id);
     if(error){showToast('Error','err');return;}
-    showToast('Eliminado');load();
+    showToast('Eliminado');
+
+    // ── LOG DE AUDITORÍA ──
+    if (p) {
+      await logActividad(
+        'personal_eliminado', p.area, p.nombre,
+        `Persona eliminada: ${p.nombre} (${p.rol||'sin rol'}) de ${p.area}`,
+        { rol: p.rol, area: p.area, activo: p.activo }
+      );
+    }
+
+    load();
   }
 
   return{load,filterArea,render,openNew,openEdit,closeModal,save,del};

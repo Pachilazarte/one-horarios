@@ -222,3 +222,67 @@ const getHorarioPlanificado = async (nombre, fecha) => {
 
   return null; // persona no encontrada o sin horario esta semana
 };
+
+// ══════════════════════════════════════════════════════════════
+// ── SISTEMA DE AUDITORÍA — funciones compartidas ──
+// ══════════════════════════════════════════════════════════════
+
+/**
+ * Obtiene el usuario actual (admin o líder) para el log de auditoría.
+ * Admin: usa localStorage (admin_user)
+ * Líder: usa sessionStorage (ls → JSON con nombre)
+ */
+const _getLogUser = () => {
+  const adminUser = localStorage.getItem('admin_user');
+  if (adminUser) return { nombre: adminUser, tipo: 'admin' };
+
+  try {
+    const ls = JSON.parse(sessionStorage.getItem('ls') || '{}');
+    if (ls.nombre) return { nombre: ls.nombre, tipo: 'lider' };
+  } catch {}
+
+  return { nombre: 'desconocido', tipo: 'admin' };
+};
+
+/**
+ * Detecta si un cambio de horario semanal es "fuera de término".
+ * Fuera de término = la semana ya comenzó (lunes pasó) y se está modificando.
+ * @param {string} semDesde - Fecha YYYY-MM-DD del lunes de la semana
+ */
+const esFueraDeTerm = (semDesde) => {
+  if (!semDesde) return false;
+  const hoy       = today();
+  const lunesHoy  = getLunes(hoy, 0);
+  // Si semDesde es la semana actual y hoy no es lunes → mid-week change
+  // Si semDesde es una semana anterior → ya pasó
+  return semDesde <= hoy && hoy > lunesHoy;
+};
+
+/**
+ * Registra una acción manual en el log de auditoría (tabla actividad_log).
+ *
+ * @param {string}  tipo          - Tipo de evento (ej: 'personal_eliminado')
+ * @param {string}  area          - Área afectada (puede ser null)
+ * @param {string}  targetNombre  - Persona/entidad afectada (puede ser null)
+ * @param {string}  descripcion   - Descripción legible del cambio
+ * @param {object}  detalle       - Objeto JSON con datos extra (semana, campos, etc.)
+ * @param {boolean} fueraDeTerm   - Si el cambio es fuera del período normal
+ */
+const logActividad = async (tipo, area, targetNombre, descripcion, detalle = {}, fueraDeTerm = false) => {
+  try {
+    const { nombre, tipo: usuarioTipo } = _getLogUser();
+    await SB.from('actividad_log').insert({
+      usuario:          nombre,
+      usuario_tipo:     usuarioTipo,
+      tipo,
+      area:             area         || null,
+      target_nombre:    targetNombre || null,
+      descripcion,
+      detalle,
+      fuera_de_termino: fueraDeTerm,
+    });
+  } catch(e) {
+    // El log nunca debe interrumpir la operación principal
+    console.warn('[logActividad] error silenciado:', e?.message);
+  }
+};

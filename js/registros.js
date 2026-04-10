@@ -26,7 +26,7 @@ const Registros = (() => {
     render();
   }
 
-function render(){
+  function render(){
     const busq=(document.getElementById('fBusq')?.value||'').toLowerCase();
     const rows=allRegs.filter(r=>!busq||r.nombre.toLowerCase().includes(busq)||(r.rol||'').toLowerCase().includes(busq));
     const tbody=document.getElementById('tbR');
@@ -51,6 +51,20 @@ function render(){
       else if(esGuardia) tardCell='<span class="badge badge-gold">🛡 Guardia</span>';
       else               tardCell=tardBadge(diff);
 
+      // ── CELDA OBSERVACIONES: preview + botón 👁 ──
+      let obsCell;
+      if(r.observaciones){
+        const preview=r.observaciones.length>22?r.observaciones.slice(0,22)+'…':r.observaciones;
+        const safeObs=r.observaciones.replace(/\\/g,'\\\\').replace(/`/g,'\\`');
+        obsCell=`<div style="display:flex;align-items:center;gap:5px;">
+          <span style="color:rgba(198,201,215,.55);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:80px;">${preview}</span>
+          <button onclick="Registros.showObs(\`${safeObs}\`)" title="Ver completo"
+            style="flex-shrink:0;background:rgba(107,225,227,.12);border:1px solid rgba(107,225,227,.25);color:#6be1e3;border-radius:6px;padding:2px 6px;font-size:10px;cursor:pointer;font-weight:700;line-height:1.4;">👁</button>
+        </div>`;
+      } else {
+        obsCell=`<span style="color:rgba(198,201,215,.25);">—</span>`;
+      }
+
       return`<tr>
         <td style="color:rgba(198,201,215,.3);font-size:11px;">${i+1}</td>
         <td><span style="color:${col};font-weight:800;font-size:11px;">${r.area.split(' / ')[0]}</span></td>
@@ -62,13 +76,32 @@ function render(){
         <td style="color:rgba(198,201,215,.62);">${r.hora_salida?.slice(0,5)||'—'}</td>
         <td><span class="badge badge-cyan">${hs!==null?fmtHs(hs):'—'}</span></td>
         <td>${tardCell}</td>
-        <td class="hide-mobile" style="color:rgba(198,201,215,.42);font-size:12px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.observaciones||'—'}</td>
+        <td class="hide-mobile">${obsCell}</td>
         <td class="no-print"><div style="display:flex;gap:4px;">
           <button class="btn btn-ghost" style="padding:4px 8px;font-size:11px;" onclick="Registros.openEdit('${r.id}')">✏</button>
           <button class="btn btn-danger" onclick="Registros.del('${r.id}')">✕</button>
         </div></td>
       </tr>`;
     }).join('');
+  }
+
+  // ── POPUP OBSERVACIÓN COMPLETA ──
+  function showObs(text){
+    document.getElementById('obsPopup')?.remove();
+    const overlay=document.createElement('div');
+    overlay.id='obsPopup';
+    overlay.style.cssText='position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:16px;';
+    overlay.innerHTML=`
+      <div style="background:#13111c;border:1px solid rgba(107,225,227,.22);border-radius:16px;padding:24px;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.6);animation:fu .2s ease both;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px;">
+          <div style="font-size:12px;font-weight:700;color:rgba(107,225,227,.7);text-transform:uppercase;letter-spacing:.07em;">💬 Observación completa</div>
+          <button onclick="document.getElementById('obsPopup').remove()" style="background:none;border:none;color:rgba(198,201,215,.5);font-size:20px;cursor:pointer;line-height:1;">✕</button>
+        </div>
+        <div style="background:rgba(255,255,255,.05);border:1px solid rgba(198,201,215,.1);border-radius:10px;padding:14px 16px;font-size:14px;line-height:1.6;color:rgba(255,255,255,.88);word-break:break-word;">${text}</div>
+        <button onclick="document.getElementById('obsPopup').remove()" style="margin-top:16px;width:100%;padding:10px;border-radius:10px;background:rgba(107,225,227,.12);border:1px solid rgba(107,225,227,.28);color:#6be1e3;font-weight:700;font-size:13px;cursor:pointer;">Cerrar</button>
+      </div>`;
+    overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.remove();});
+    document.body.appendChild(overlay);
   }
 
   async function _cargarNombresModal(area, nombreActual='') {
@@ -85,7 +118,6 @@ function render(){
       if (p.nombre === nombreActual) o.selected = true;
       sel.appendChild(o);
     });
-    // Si el nombre actual no está en la lista (baja), lo agrega igual
     if (nombreActual && !(data || []).find(p => p.nombre === nombreActual)) {
       const o = document.createElement('option');
       o.value = nombreActual; o.textContent = nombreActual + ' (inactivo)'; o.selected = true;
@@ -102,7 +134,6 @@ function render(){
     document.getElementById('erE').value=r.hora_entrada?.slice(0,5)||'';
     document.getElementById('erS').value=r.hora_salida?.slice(0,5)||'';
     document.getElementById('erO').value=r.observaciones||'';
-    // Extraer 2° turno de observaciones si existe "2° turno: HH:MM → HH:MM"
     const match = (r.observaciones||'').match(/2° turno:\s*(\d{2}:\d{2})(?:\s*→\s*(\d{2}:\d{2}))?/);
     document.getElementById('erE2').value = match?.[1] || '';
     document.getElementById('erS2').value = match?.[2] || '';
@@ -116,18 +147,21 @@ function render(){
   }
 
   async function save(){
-    const id=document.getElementById('erId').value;
-    const area=document.getElementById('erA').value;
-    const nombre=document.getElementById('erN').value;
-    const fecha=document.getElementById('erF').value;
-    const t=document.getElementById('erT').value;
-    const e=document.getElementById('erE').value;
-    const s=document.getElementById('erS').value;
-    const e2=document.getElementById('erE2').value;
-    const s2=document.getElementById('erS2').value;
-    const o=document.getElementById('erO').value.replace(/\s*\|\s*2° turno:.*$/,'').trim(); // limpiar 2° turno viejo
+    const id    = document.getElementById('erId').value;
+    const area  = document.getElementById('erA').value;
+    const nombre= document.getElementById('erN').value;
+    const fecha = document.getElementById('erF').value;
+    const t     = document.getElementById('erT').value;
+    const e     = document.getElementById('erE').value;
+    const s     = document.getElementById('erS').value;
+    const e2    = document.getElementById('erE2').value;
+    const s2    = document.getElementById('erS2').value;
+    const o     = document.getElementById('erO').value.replace(/\s*\|\s*2° turno:.*$/,'').trim();
     if(!area||!nombre||!fecha){showToast('Área, nombre y fecha son obligatorios','err');return;}
-    // Reconstruir observaciones con 2° turno si existe
+
+    // Guardar original para el log
+    const original = allRegs.find(x=>x.id===id);
+
     let obsFinal = o || null;
     if(e2){
       const t2str = e2 + (s2 ? ' → ' + s2 : '');
@@ -138,22 +172,60 @@ function render(){
       turno:t||null,hora_entrada:e?e+':00':null,hora_salida:s?s+':00':null,observaciones:obsFinal
     }).eq('id',id);
     if(error){showToast('Error','err');return;}
-    showToast('Actualizado');closeModal();load();
+    showToast('Actualizado');
+    closeModal();
+
+    // ── LOG DE AUDITORÍA ──
+    const hoy = today();
+    const fueraDeTerm = fecha < hoy; // edición de fecha pasada = siempre fuera de término
+    const cambios = [];
+    if (original) {
+      if (original.hora_entrada?.slice(0,5) !== e) cambios.push(`entrada: ${original.hora_entrada?.slice(0,5)||'—'} → ${e||'—'}`);
+      if (original.hora_salida?.slice(0,5)  !== s) cambios.push(`salida: ${original.hora_salida?.slice(0,5)||'—'} → ${s||'—'}`);
+      if (original.fecha !== fecha)                cambios.push(`fecha: ${original.fecha} → ${fecha}`);
+      if (original.turno !== t)                    cambios.push(`turno: ${original.turno||'—'} → ${t||'—'}`);
+    }
+    await logActividad(
+      'registro_editado', area, nombre,
+      `Registro del ${fecha} editado para ${nombre}`,
+      {
+        fecha,
+        turno: t,
+        entrada: e, salida: s,
+        cambios: cambios.length ? cambios.join(' | ') : 'campos actualizados',
+      },
+      fueraDeTerm
+    );
+
+    load();
   }
 
   async function del(id){
-    if(!confirm('¿Eliminar?'))return;
+    const r = allRegs.find(x=>x.id===id);
+    if(!confirm(`¿Eliminar registro de ${r?.nombre||'?'} del ${r?.fecha||'?'}?`))return;
     const{error}=await SB.from('registros').delete().eq('id',id);
     if(error){showToast('Error','err');return;}
-    showToast('Eliminado');load();
+    showToast('Eliminado');
+
+    // ── LOG DE AUDITORÍA ──
+    if (r) {
+      const hoy = today();
+      await logActividad(
+        'registro_eliminado', r.area, r.nombre,
+        `Registro del ${r.fecha} eliminado (${r.hora_entrada?.slice(0,5)||'—'} → ${r.hora_salida?.slice(0,5)||'—'})`,
+        { fecha: r.fecha, turno: r.turno, entrada: r.hora_entrada?.slice(0,5), salida: r.hora_salida?.slice(0,5) },
+        r.fecha < hoy // si la fecha del registro es pasada = fuera de término
+      );
+    }
+
+    load();
   }
 
   function exportCSV(){
     if(!allRegs.length){showToast('Sin datos','err');return;}
     const cols=['Área','Nombre','Rol','Fecha','Horario planificado','Hora Entrada','Hora Salida','Hs Trabajadas','Min Tardanza','Puntual','Observaciones'];
     const lines=[cols.join(',')];
-    // ✅ CORRECTO:
-allRegs.forEach(r=>{
+    allRegs.forEach(r=>{
       const _hs1=calcHs(r.hora_entrada?.slice(0,5),r.hora_salida?.slice(0,5));
       const _m2=(r.observaciones||'').match(/2°\s*turno:\s*(\d{2}:\d{2})\s*→\s*(\d{2}:\d{2})/);
       const _hs2=_m2?calcHs(_m2[1],_m2[2]):null;
@@ -176,5 +248,5 @@ allRegs.forEach(r=>{
     a.click();showToast('CSV descargado ✓');
   }
 
-  return{load,render,changePer,openEdit,closeModal,save,del,exportCSV,_onAreaChange};
+  return{load,render,changePer,openEdit,closeModal,save,del,exportCSV,_onAreaChange,showObs};
 })();

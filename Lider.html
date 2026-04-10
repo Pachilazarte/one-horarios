@@ -243,9 +243,12 @@
       <div class="ginfo">Área: <strong id="gbArea">—</strong> · Semana <strong id="gbSem">—</strong></div>
       <div class="gstatus" id="gbSt" style="color:rgba(198,201,215,.35);"></div>
     </div>
-    <button class="btn-save" id="btnSave" onclick="guardar()">
-      <span id="sIco">✓</span> <span id="sTxt">Guardar horarios</span>
-    </button>
+<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <button onclick="descargarImagen()" style="background:rgba(228,199,106,.15);border:1px solid rgba(228,199,106,.35)!important;color:var(--one-gold);padding:12px 20px;border-radius:999px;font-family:var(--font-title);font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap;">📸 Imagen</button>
+      <button class="btn-save" id="btnSave" onclick="guardar()">
+        <span id="sIco">✓</span> <span id="sTxt">Guardar horarios</span>
+      </button>
+    </div>
   </div>
 </div>
 
@@ -873,6 +876,184 @@ async function _sincronizarRegistros(area, semDesde, horarios) {
   return updates.length;
 }
 
+
+
+/* ── DESCARGAR IMAGEN DE TABLA ── */
+/* ── DESCARGAR IMAGEN DE TABLA ── */
+function descargarImagen() {
+  if (!rows.length) { toast('Sin datos para generar imagen', 'err'); return; }
+
+  const DLAN = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
+  const ACOLORS = {
+    'ADMINISTRACION':'#6be1e3','COMERCIAL':'#e17bd7','RECURSOS HUMANOS':'#e4c76a',
+    'MARKETING':'#f472b6','ACADEMICO / GT':'#a78bfa','INNOVACION Y DESARROLLO':'#34d399','MAESTRANZA':'#fb923c',
+  };
+
+  const fd = (e,s,tipo) => {
+    if (tipo==='flex')    return 'Flex';
+    if (tipo==='guardia') return '1h Guard.';
+    if (!e) return '—';
+    return s ? `${e} → ${s}` : e;
+  };
+
+  const filas = rows.map(r => {
+    const tp  = calcTot(r);
+    const dias = DIAS.map(d => {
+      let txt = fd(r[d+'_e'], r[d+'_s'], r[d+'_tipo'] || 'normal');
+      if (r[d+'_e2']) txt += ` / ${fd(r[d+'_e2'], r[d+'_s2'], 'normal')}`;
+      return txt;
+    });
+    return { nombre: r.nombre, rol: r.rol||'', dias, hs: tp > 0 ? fmtHs(tp) : '—', obs: r.obs || '' };
+  });
+
+  // ── Dimensiones ──
+  const scale   = 2;
+  const pad     = 24;
+  const colN    = 170;   // nombre
+  const colD    = 112;   // cada día
+  const colHs   = 62;    // hs/sem
+  const colObs  = 145;   // obs
+  const rowH    = 38;
+  const titleH  = 64;    // zona título
+  const hdrH    = 32;    // fila de headers
+  const footH   = 32;
+
+  const totalW  = pad*2 + colN + colD*7 + colHs + colObs;
+  const totalH  = titleH + hdrH + rowH * filas.length + footH + pad;
+
+  const canvas  = document.createElement('canvas');
+  canvas.width  = totalW * scale;
+  canvas.height = totalH * scale;
+  const ctx     = canvas.getContext('2d');
+  ctx.scale(scale, scale);
+
+  const ac = ACOLORS[areaActual] || '#6be1e3';
+
+  // ── Fondo ──
+  ctx.fillStyle = '#13111c';
+  ctx.fillRect(0, 0, totalW, totalH);
+
+  // ── Barra de color del área (izquierda) ──
+  ctx.fillStyle = ac;
+  ctx.fillRect(0, 0, 4, totalH);
+
+  // ── Zona título ──
+  ctx.fillStyle = 'rgba(255,255,255,.04)';
+  ctx.fillRect(0, 0, totalW, titleH);
+
+  // Título principal
+  ctx.fillStyle = ac;
+  ctx.font = `bold 15px "Segoe UI", system-ui, sans-serif`;
+  ctx.fillText(`${areaActual}`, pad, 24);
+
+  // Subtítulo
+  ctx.fillStyle = 'rgba(198,201,215,.55)';
+  ctx.font = `13px "Segoe UI", system-ui, sans-serif`;
+  ctx.fillText(`Semana ${fmt(semD)} al ${fmtL(semH)}`, pad, 44);
+
+  // Logo derecho
+  ctx.fillStyle = 'rgba(198,201,215,.3)';
+  ctx.font = `bold 11px "Segoe UI", system-ui, sans-serif`;
+  ctx.textAlign = 'right';
+  ctx.fillText('ONE Horarios · Escencial Consultora', totalW - pad, 24);
+  ctx.textAlign = 'left';
+
+  // Separador título / tabla
+  ctx.strokeStyle = ac + '44';
+  ctx.lineWidth   = 1;
+  ctx.beginPath(); ctx.moveTo(pad, titleH - 1); ctx.lineTo(totalW - pad, titleH - 1); ctx.stroke();
+
+  // ── Fila de headers ──
+  const hdrY = titleH;
+  ctx.fillStyle = 'rgba(255,255,255,.07)';
+  ctx.fillRect(0, hdrY, totalW, hdrH);
+
+  const hdrCols = [
+    { lbl:'NOMBRE',  x: pad },
+    ...DLAN.map((d,i) => ({ lbl: d, x: pad + colN + colD*i })),
+    { lbl:'HS/SEM',  x: pad + colN + colD*7 },
+    { lbl:'OBS',     x: pad + colN + colD*7 + colHs },
+  ];
+
+  ctx.fillStyle = 'rgba(198,201,215,.5)';
+  ctx.font = `bold 10px "Segoe UI", system-ui, sans-serif`;
+  ctx.letterSpacing = '0.06em';
+  hdrCols.forEach(c => ctx.fillText(c.lbl, c.x + 8, hdrY + hdrH*0.65));
+  ctx.letterSpacing = '0';
+
+  // Línea bajo headers
+  ctx.strokeStyle = 'rgba(198,201,215,.12)';
+  ctx.lineWidth   = 1;
+  ctx.beginPath(); ctx.moveTo(0, hdrY + hdrH); ctx.lineTo(totalW, hdrY + hdrH); ctx.stroke();
+
+  // ── Filas de datos ──
+  const dataY0 = titleH + hdrH;
+
+  filas.forEach((row, ri) => {
+    const y = dataY0 + rowH * ri;
+
+    // Fondo alterno
+    ctx.fillStyle = ri % 2 === 0 ? 'rgba(255,255,255,.025)' : 'rgba(0,0,0,.0)';
+    ctx.fillRect(0, y, totalW, rowH);
+
+    // Nombre
+    ctx.fillStyle = '#ffffff';
+    ctx.font = `bold 12px "Segoe UI", system-ui, sans-serif`;
+    ctx.fillText(row.nombre, pad + 8, y + rowH * 0.62);
+
+    // Días
+    ctx.font = `11px "Segoe UI", system-ui, sans-serif`;
+    row.dias.forEach((txt, di) => {
+      const isEsp  = txt === 'Flex' || txt === '1h Guard.';
+      const isDash = txt === '—';
+      ctx.fillStyle = isEsp
+        ? (txt === 'Flex' ? '#a78bfa' : '#e4c76a')
+        : isDash ? 'rgba(198,201,215,.22)' : '#6be1e3';
+      ctx.fillText(txt, pad + colN + colD * di + 8, y + rowH * 0.62);
+    });
+
+    // Hs/sem
+    ctx.fillStyle = '#6be1e3';
+    ctx.font = `bold 12px "Segoe UI", system-ui, sans-serif`;
+    ctx.fillText(row.hs, pad + colN + colD*7 + 8, y + rowH * 0.62);
+
+    // Obs
+    if (row.obs) {
+      ctx.fillStyle = 'rgba(198,201,215,.48)';
+      ctx.font = `10px "Segoe UI", system-ui, sans-serif`;
+      const obsT = row.obs.length > 18 ? row.obs.slice(0,18) + '…' : row.obs;
+      ctx.fillText(obsT, pad + colN + colD*7 + colHs + 8, y + rowH * 0.62);
+    }
+
+    // Línea divisora
+    ctx.strokeStyle = 'rgba(198,201,215,.07)';
+    ctx.lineWidth   = 1;
+    ctx.beginPath(); ctx.moveTo(pad, y + rowH); ctx.lineTo(totalW - pad, y + rowH); ctx.stroke();
+  });
+
+  // ── Líneas verticales de columnas ──
+  ctx.strokeStyle = 'rgba(198,201,215,.06)';
+  ctx.lineWidth   = 1;
+  [pad + colN, ...Array.from({length:7},(_,i)=> pad+colN+colD*(i+1)), pad+colN+colD*7+colHs].forEach(x => {
+    ctx.beginPath(); ctx.moveTo(x, titleH); ctx.lineTo(x, dataY0 + rowH * filas.length); ctx.stroke();
+  });
+
+  // ── Footer ──
+  const fy = dataY0 + rowH * filas.length;
+  ctx.fillStyle = 'rgba(255,255,255,.03)';
+  ctx.fillRect(0, fy, totalW, footH + pad);
+
+  ctx.fillStyle = 'rgba(198,201,215,.3)';
+  ctx.font = `10px "Segoe UI", system-ui, sans-serif`;
+  ctx.fillText(`ONE Horarios · Escencial Consultora · ${new Date().toLocaleDateString('es-AR')}`, pad + 8, fy + footH * 0.65);
+
+  // ── Descargar ──
+  const a = document.createElement('a');
+  a.download = `ONE_horarios_${areaActual}_${semD}.png`;
+  a.href = canvas.toDataURL('image/png');
+  a.click();
+  toast('✓ Imagen descargada');
+}
 /* ── INIT ── */
 document.addEventListener('DOMContentLoaded', async () => {
   // Pre-cargar líderes desde Supabase para que el login sea rápido
