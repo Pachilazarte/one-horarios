@@ -1,4 +1,4 @@
-/* ── V. 0.0.5 (Footer)── */
+/* ── V. 0.0.7 (Footer)── */
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -238,7 +238,7 @@ body{-webkit-tap-highlight-color:transparent;}
   </span>
 
   <div style="position: absolute; bottom: 12px; right: 20px; font-size: 9px; opacity: 0.15; font-family: 'Exo 2', sans-serif; letter-spacing: 1px;">
-    V. 0.0.5
+    V. 0.0.7
   </div>
 </footer>
 
@@ -258,6 +258,7 @@ body{-webkit-tap-highlight-color:transparent;}
 
 let horarioPlan  = null;
 let sessionQueue = [];
+let registroActualId = null;
 
 /* ── Fecha ── */
 const _DIAS  = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
@@ -323,6 +324,11 @@ async function onPersonaChange() {
 
   const plan = await getHorarioPlanificado(nombre, getFechaActual());
   horarioPlan = plan;
+  const { data: regReal } = await SB.from('registros')
+    .select('*')
+    .eq('nombre', nombre)
+    .eq('fecha', getFechaActual())
+    .maybeSingle();
 
   const el = document.getElementById('lPlanInfo');
   el.className = 'plan-info';
@@ -379,6 +385,29 @@ async function onPersonaChange() {
       if (btn2) btn2.style.display = ''; // mostrar botón manual
     }
   }
+
+  // Rellenar inputs si ya había cargado algo hoy
+// Rellenar inputs si ya había cargado algo hoy
+  registroActualId = regReal ? regReal.id : null;
+  if (regReal) {
+    document.getElementById('lEnt').value = regReal.hora_entrada ? regReal.hora_entrada.substring(0, 5) : '';
+    document.getElementById('lSal').value = regReal.hora_salida ? regReal.hora_salida.substring(0, 5) : '';
+    document.getElementById('lObs').value = regReal.observaciones || '';
+
+    // Leer los horarios REALES del segundo turno, no el planificado
+    if (regReal.hora_entrada2 || regReal.hora_salida2) {
+      if (document.getElementById('lEnt2')) document.getElementById('lEnt2').value = regReal.hora_entrada2 ? regReal.hora_entrada2.substring(0, 5) : '';
+      if (document.getElementById('lSal2')) document.getElementById('lSal2').value = regReal.hora_salida2 ? regReal.hora_salida2.substring(0, 5) : '';
+      mostrarTurno2();
+    }
+  } else {
+    document.getElementById('lEnt').value = '';
+    document.getElementById('lSal').value = '';
+    document.getElementById('lObs').value = '';
+    if (document.getElementById('lEnt2')) document.getElementById('lEnt2').value = '';
+    if (document.getElementById('lSal2')) document.getElementById('lSal2').value = '';
+  }
+
   updCalc();
 }
 
@@ -452,18 +481,26 @@ async function guardarRegistro() {
     ? calcTardVsPlan(horarioPlan.entrada, ent) : null;
 
   // Combinar obs con el 2° turno real si existe
-  let obsFinal = obs || null;
-  if (ent2) {
-    const t2str = ent2 + (sal2 ? ' → ' + sal2 : '');
-    obsFinal = (obs ? obs + ' | ' : '') + '2° turno: ' + t2str;
-  }
+const obsFinal = obs || null;
 
-  const { error } = await SB.from('registros').insert({
+const payload = {
     area, nombre, rol, fecha,
-    turno, hora_entrada: ent + ':00',
+    turno, 
+    hora_entrada: ent + ':00',
     hora_salida: sal ? sal + ':00' : null,
+    hora_entrada2: ent2 ? ent2 + ':00' : null,
+    hora_salida2: sal2 ? sal2 + ':00' : null,
     observaciones: obsFinal,
-  });
+  };
+
+  let error;
+  if (registroActualId) {
+    const { error: errUpd } = await SB.from('registros').update(payload).eq('id', registroActualId);
+    error = errUpd;
+  } else {
+    const { error: errIns } = await SB.from('registros').insert(payload);
+    error = errIns;
+  }
 
   btn.disabled = false;
   document.getElementById('lBIco').textContent = '✅';
@@ -487,7 +524,7 @@ async function guardarRegistro() {
   const e2 = document.getElementById('lEnt2'); if (e2) e2.value = '';
   const s2 = document.getElementById('lSal2'); if (s2) s2.value = '';
   const t2w = document.getElementById('turno2Wrap'); if (t2w) t2w.style.display = 'none';
-  horarioPlan = null; _clearCalc(); _clearPlan();
+  horarioPlan = null; registroActualId = null; _clearCalc(); _clearPlan();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 

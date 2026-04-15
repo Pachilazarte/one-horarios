@@ -145,24 +145,28 @@ const HorariosSem = (() => {
           p[d+'_s2']   = h[d]?.s2   || '';
           p[d+'_tipo'] = h[d]?.tipo  || 'normal';
         });
+      p.vacaciones    = h.vacaciones    || false;  // ← agregar
+      p.vacaciones_hs = h.vacaciones_hs || 0;     // ← agregar
         out.push(p);
       });
     });
     return out;
   }
 
-  function _hsPersona(p) {
-    let t=0;
-    DIAS.forEach(d=>{
-      const tipo = p[d+'_tipo'] || 'normal';
-      if (tipo === 'guardia') { t += 1; return; }
-      if (tipo === 'flex')    return;
-      const h1=calcHs(p[d+'_e'],p[d+'_s']);
-      const h2=calcHs(p[d+'_e2'],p[d+'_s2']);
-      if(h1)t+=h1; if(h2)t+=h2;
-    });
-    return t;
-  }
+function _hsPersona(p) {
+  if (p.vacaciones) return p.vacaciones_hs || 0;
+  let t=0;
+  DIAS.forEach(d=>{
+    const tipo = p[d+'_tipo'] || 'normal';
+    if (tipo === 'guardia') { t += 1; return; }
+    if (tipo === 'flex') return;
+    const h1=calcHs(p[d+'_e'],p[d+'_s']);
+    const h2=calcHs(p[d+'_e2'],p[d+'_s2']);
+    if(h1)t+=h1; if(h2)t+=h2;
+  });
+  return t;
+}
+
 
   // ─── GRID DE ÁREAS ───
   function _renderAreaGrid() {
@@ -179,8 +183,9 @@ const HorariosSem = (() => {
       const totalHs  = personas.reduce((a,p) => a+_hsPersona(p), 0);
       const cargado  = !!row;
 
-      const flexCount    = personas.filter(p => DIAS.some(d => p[d+'_tipo']==='flex')).length;
-      const guardiaCount = personas.filter(p => DIAS.some(d => p[d+'_tipo']==='guardia')).length;
+const flexCount    = personas.filter(p => DIAS.some(d => p[d+'_tipo']==='flex')).length;
+const guardiaCount = personas.filter(p => DIAS.some(d => p[d+'_tipo']==='guardia')).length;
+const vacCount     = personas.filter(p => p.vacaciones).length;  // ← agregar
 
       const persHtml = personas.slice(0,5).map(p => {
         const hs = _hsPersona(p);
@@ -207,10 +212,11 @@ const HorariosSem = (() => {
         ? `<span style="background:rgba(34,197,94,.14);border:1px solid rgba(34,197,94,.3);color:var(--color-success-text);padding:2px 9px;border-radius:999px;font-size:10px;font-weight:800;">✓ ${personas.length} personas</span>`
         : `<span style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.22);color:var(--color-danger-text);padding:2px 9px;border-radius:999px;font-size:10px;font-weight:800;">Sin cargar</span>`;
 
-      const extraBadges = [
-        flexCount    ? `<span style="background:rgba(167,139,250,.14);border:1px solid rgba(167,139,250,.24);color:var(--one-purple);padding:2px 8px;border-radius:999px;font-size:9px;font-weight:800;">🔄 ${flexCount} Flex</span>` : '',
-        guardiaCount ? `<span style="background:rgba(228,199,106,.14);border:1px solid rgba(228,199,106,.24);color:var(--one-gold);padding:2px 8px;border-radius:999px;font-size:9px;font-weight:800;">🛡 ${guardiaCount} Guardia</span>` : '',
-      ].filter(Boolean).join(' ');
+const extraBadges = [
+  flexCount    ? `<span style="background:rgba(167,139,250,.14);border:1px solid rgba(167,139,250,.24);color:var(--one-purple);padding:2px 8px;border-radius:999px;font-size:9px;font-weight:800;">🔄 ${flexCount} Flex</span>` : '',
+  guardiaCount ? `<span style="background:rgba(228,199,106,.14);border:1px solid rgba(228,199,106,.24);color:var(--one-gold);padding:2px 8px;border-radius:999px;font-size:9px;font-weight:800;">🛡 ${guardiaCount} Guardia</span>` : '',
+  vacCount     ? `<span style="background:rgba(34,197,94,.14);border:1px solid rgba(34,197,94,.24);color:var(--color-success-text);padding:2px 8px;border-radius:999px;font-size:9px;font-weight:800;">🏖 ${vacCount} Vac.</span>` : '',
+].filter(Boolean).join(' ');
 
       return `<div class="area-card" onclick="HorariosSem.openAreaModal('${area}')">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px;gap:8px;">
@@ -264,7 +270,9 @@ const HorariosSem = (() => {
         r[d+'_tipo']  = sv?.[d]?.tipo  || 'normal';
         r[d+'_split'] = !!(sv?.[d]?.e2 || sv?.[d]?.s2);
       });
-      r.split = DIAS.some(d => r[d+'_e2']);
+      r.vacaciones    = sv?.vacaciones    || false;  // ← agregar
+    r.vacaciones_hs = sv?.vacaciones_hs || 0;      // ← agregar
+    r.split = DIAS.some(d => r[d+'_e2']);
       return r;
     });
 
@@ -425,17 +433,23 @@ const HorariosSem = (() => {
         hsDay = tot > 0 ? fmtHs(tot) : '—';
       }
 
-      return `<div id="mh-member-${i}" style="padding:12px 16px;border-bottom:1px solid rgba(198,201,215,.06);">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-          <div>
-            <span style="font-size:13px;font-weight:800;">${r.nombre}</span>
-            <span style="font-size:11px;color:rgba(198,201,215,.4);margin-left:6px;">${r.rol||''}</span>
-          </div>
-          <span style="font-size:12px;font-weight:800;color:var(--one-cyan);">${hsDay}</span>
-        </div>
-        ${tipoSelector}
-        ${contenido}
-      </div>`;
+return `<div id="mh-member-${i}" style="padding:12px 16px;border-bottom:1px solid rgba(198,201,215,.06);">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+    <div>
+      <span style="font-size:13px;font-weight:800;">${r.nombre}</span>
+      <span style="font-size:11px;color:rgba(198,201,215,.4);margin-left:6px;">${r.rol||''}</span>
+    </div>
+    <span style="font-size:12px;font-weight:800;color:var(--one-cyan);">${hsDay}</span>
+  </div>
+  ${tipoSelector}
+  ${contenido}
+  <input type="text" placeholder="Observación de ${r.nombre} (opcional)..."
+    value="${(r.obs||'').replace(/"/g,'&quot;')}"
+    oninput="HorariosSem._uo(${i}, this.value)"
+    style="margin-top:8px;background:rgba(255,255,255,.05);border:1px solid rgba(198,201,215,.12);
+      color:rgba(198,201,215,.7);padding:6px 10px;border-radius:8px;
+      font-family:var(--font-body);font-size:12px;width:100%;"/>
+</div>`;
     }).join('');
 
     const daySidebar = DIAS.map((dd, ddi) => {
@@ -584,7 +598,11 @@ const HorariosSem = (() => {
     btn.disabled=true; btn.textContent='Guardando...';
 
     const horarios=editRows.map(r=>{
-      const obj={nombre:r.nombre,rol:r.rol,obs:r.obs||''};
+      const obj={
+  nombre:r.nombre, rol:r.rol, obs:r.obs||'',
+  vacaciones: r.vacaciones || false,
+  vacaciones_hs: r.vacaciones_hs || 0,
+};
       DIAS.forEach(d=>{
         obj[d]={
           e:r[d+'_e']||'', s:r[d+'_s']||'',
@@ -644,9 +662,13 @@ const HorariosSem = (() => {
     horarios.forEach(h => horariosMap[h.nombre] = h);
 
     const updates = [];
-    regs.forEach(reg => {
+regs.forEach(reg => {
       const p = horariosMap[reg.nombre];
       if (!p) return;
+      if (p.vacaciones) {
+        if (reg.turno !== 'Vacaciones') updates.push({ id: reg.id, turno: 'Vacaciones' });
+        return;
+      }
       const dKey = DIAS_SEM[new Date(reg.fecha + 'T12:00:00').getDay()];
       const dia  = p[dKey];
       if (!dia) return;
@@ -895,7 +917,116 @@ const HorariosSem = (() => {
     _uf, _ff, _uo, _tsDia, _goDia, _backDias, _setTipo,
   };
 
+  
 })();
+
+
+const CfgVentana = (() => {
+  const DIAS_CFG = [
+    { key:'lunes',     label:'Lunes' },
+    { key:'martes',    label:'Martes' },
+    { key:'miercoles', label:'Miércoles' },
+    { key:'jueves',    label:'Jueves' },
+    { key:'viernes',   label:'Viernes' },
+    { key:'sabado',    label:'Sábado' },
+    { key:'domingo',   label:'Domingo' },
+  ];
+
+  let _cfg = {};
+
+  async function load() {
+    const { data } = await SB.from('configuracion')
+      .select('valor').eq('id','ventana_carga').maybeSingle();
+    _cfg = data?.valor || {};
+    _render();
+  }
+
+function _render() {
+    const wrap = document.getElementById('cfgDias');
+    if (!wrap) return;
+
+    wrap.innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:12px;">
+        ${DIAS_CFG.map(d => {
+          const activo = (_cfg[d.key]||{}).activo;
+          return `<button onclick="CfgVentana._toggle('${d.key}', ${!activo})"
+            style="padding:10px 4px;border-radius:12px;font-family:var(--font-title);
+              font-size:12px;font-weight:800;cursor:pointer;transition:all .2s;
+              border:2px solid ${activo?'rgba(107,225,227,.6)':'rgba(198,201,215,.14)'};
+              background:${activo?'rgba(107,225,227,.15)':'rgba(255,255,255,.03)'};
+              color:${activo?'var(--one-cyan)':'rgba(198,201,215,.28)'};
+              text-align:center;">
+            ${d.label.slice(0,3)}
+            <div style="font-size:8px;margin-top:3px;color:${activo?'rgba(107,225,227,.6)':'rgba(198,201,215,.2)'};">
+              ${activo?'✓ ON':'OFF'}
+            </div>
+          </button>`;
+        }).join('')}
+      </div>
+      ${DIAS_CFG.some(d => (_cfg[d.key]||{}).activo) ? `
+        <div style="font-size:10px;font-weight:700;color:rgba(198,201,215,.35);
+          text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">
+          Hora límite por día (vacío = todo el día)
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          ${DIAS_CFG.filter(d => (_cfg[d.key]||{}).activo).map(d => {
+            const hasta = _cfg[d.key]?.hasta ?? '';
+            return `<div style="display:flex;align-items:center;gap:10px;
+              background:rgba(107,225,227,.05);border:1px solid rgba(107,225,227,.12);
+              border-radius:9px;padding:7px 14px;">
+              <span style="font-size:12px;font-weight:800;color:var(--one-cyan);
+                min-width:28px;">${d.label.slice(0,3)}</span>
+              <div style="flex:1;height:1px;background:rgba(198,201,215,.07);"></div>
+              <input type="number" min="0" max="23" placeholder="Sin límite"
+                value="${hasta}"
+                onchange="CfgVentana._setHasta('${d.key}', this.value)"
+                style="background:rgba(255,255,255,.07);border:1px solid rgba(107,225,227,.25);
+                  color:var(--one-cyan);padding:4px 8px;border-radius:7px;
+                  font-family:var(--font-title);font-size:13px;font-weight:800;
+                  width:80px;text-align:center;"/>
+              <span style="font-size:11px;color:rgba(198,201,215,.3);">hs</span>
+            </div>`;
+          }).join('')}
+        </div>` :
+        `<div style="font-size:12px;color:rgba(198,201,215,.25);text-align:center;padding:8px 0;">
+          Activá al menos un día para configurar la hora límite
+        </div>`
+      }`;
+  }
+
+  function _toggle(key, activo) {
+    if (!_cfg[key]) _cfg[key] = { activo: false, hasta: null };
+    _cfg[key].activo = activo;
+    _render();
+  }
+
+  function _setHasta(key, val) {
+    if (!_cfg[key]) _cfg[key] = { activo: true, hasta: null };
+    const n = parseInt(val);
+    _cfg[key].hasta = isNaN(n) || val === '' ? null : n;
+  }
+
+  async function guardar() {
+    const st = document.getElementById('cfgStatus');
+    st.textContent = '⏳ Guardando...';
+    st.style.color = 'rgba(198,201,215,.5)';
+    const { error } = await SB.from('configuracion')
+      .upsert({ id: 'ventana_carga', valor: _cfg });
+    if (error) {
+      st.textContent = '⚠ Error: ' + error.message;
+      st.style.color = 'var(--color-danger-text)';
+    } else {
+      st.textContent = '✓ Guardado';
+      st.style.color = 'var(--color-success-text)';
+      showToast('✓ Ventana de carga actualizada');
+    }
+  }
+
+  return { load, guardar, _toggle, _setHasta };
+})();
+
+
+
 
 window.loadHsem      = () => HorariosSem.load();
 window.exportHsemCSV = () => HorariosSem.exportCSV();

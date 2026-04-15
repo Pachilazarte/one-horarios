@@ -214,6 +214,7 @@
   </div>
 
   <!-- ══ LÍDERES ══ -->
+
   <div id="tab-lid" style="display:none;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:13px;flex-wrap:wrap;gap:8px;">
       <div>
@@ -222,6 +223,26 @@
       </div>
       <button class="btn btn-primary no-print" onclick="Lideres.openNew()">+ Agregar líder</button>
     </div>
+<!-- VENTANA DE CARGA -->
+<div class="glass" style="padding:20px;margin-bottom:18px;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+    <div>
+      <div style="font-size:15px;font-weight:800;">🗓 Ventana de carga de líderes</div>
+      <div style="font-size:12px;color:rgba(198,201,215,.45);margin-top:3px;">
+        Días habilitados para que los líderes guarden horarios. Sin tilde = solo lectura.
+      </div>
+    </div>
+    <button onclick="CfgVentana.guardar()"
+      style="background:linear-gradient(135deg,rgba(107,225,227,.22),rgba(107,225,227,.1));
+        border:1px solid rgba(107,225,227,.4)!important;color:var(--one-cyan);
+        padding:8px 20px;border-radius:999px;font-family:var(--font-title);
+        font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap;">
+      ✓ Guardar
+    </button>
+  </div>
+  <div id="cfgDias" style="display:block;"></div>
+  <div id="cfgStatus" style="margin-top:10px;font-size:12px;color:rgba(198,201,215,.4);"></div>
+</div>
     <div class="glass tbl-wrap">
       <table class="tbl">
         <thead><tr><th>#</th><th>Nombre</th><th>Usuario</th><th>Áreas asignadas</th><th>Estado</th><th class="no-print"></th></tr></thead>
@@ -460,7 +481,7 @@ function switchTab(t) {
   if (btnPdf) btnPdf.style.display = t==='dash' ? '' : 'none';
   if (btnCsv) btnCsv.style.display = t==='reg'  ? '' : 'none';
   if (t === 'hsem' && !_hsemOk) { _hsemOk = true; HorariosSem.init(); }
-  if (t === 'lid') Lideres.load();
+if (t === 'lid') { Lideres.load(); CfgVentana.load(); }
 }
 
 function toggleTabla() {
@@ -505,7 +526,7 @@ const Lideres = (() => {
     _render();
   }
 
-  function _render() {
+function _render() {
     const tbody = document.getElementById('tbLid');
     if (!tbody) return;
     if (!_data.length) {
@@ -534,7 +555,7 @@ const Lideres = (() => {
       </tr>`;
     }).join('');
   }
-
+  
   function openNew() {
     _editId = null;
     document.getElementById('mLidT').textContent = 'Agregar Líder';
@@ -613,6 +634,8 @@ document.addEventListener('DOMContentLoaded', () => {
   Registros.load();
   Personal.load();
 });
+
+
 </script>
 </body>
 </html>

@@ -78,11 +78,17 @@ const Carga = (() => {
         <span style="font-size:11px;color:rgba(198,201,215,.6);">Horario planificado hoy:</span>
         <span style="font-weight:800;color:var(--one-gold);margin-left:6px;">🛡 Guardia</span>
         <span style="font-size:10px;color:rgba(198,201,215,.35);margin-left:6px;">1h computable en cualquier horario</span>`;
-    } else {
-      infoEl.innerHTML = `
-        <span style="font-size:11px;color:rgba(198,201,215,.6);">Horario planificado hoy:</span>
-        <span style="font-weight:800;color:var(--one-cyan);margin-left:6px;">${plan.entrada}</span>
-        ${plan.salida ? `<span style="color:rgba(198,201,215,.45);font-size:11px;"> → </span><span style="font-weight:700;">${plan.salida}</span>` : ''}`;
+} else {
+  infoEl.innerHTML = `
+    <span style="font-size:11px;color:rgba(198,201,215,.6);">Planificado hoy:</span>
+    <span style="font-weight:800;color:var(--one-cyan);margin-left:6px;">${plan.entrada}</span>
+    ${plan.salida ? `<span style="color:rgba(198,201,215,.45);font-size:11px;"> → </span><span style="font-weight:700;">${plan.salida}</span>` : ''}
+    ${plan.entrada2 ? `
+      <span style="color:rgba(228,199,106,.5);font-size:11px;margin-left:8px;">✂</span>
+      <span style="font-weight:800;color:var(--one-gold);margin-left:6px;">${plan.entrada2}</span>
+      ${plan.salida2 ? `<span style="color:rgba(198,201,215,.45);font-size:11px;"> → </span><span style="font-weight:700;">${plan.salida2}</span>` : ''}
+      <span style="font-size:10px;color:rgba(228,199,106,.4);margin-left:4px;">turno partido</span>
+    ` : ''}`;
     }
 
     updCalc();
@@ -173,10 +179,13 @@ const Carga = (() => {
     } else if (horarioPlan.tipo === 'guardia') {
       turnoStr = 'Guardia';
     } else {
-      // Normal: "09:00 → 17:00" o solo "09:00"
-      turnoStr = horarioPlan.entrada
-        + (horarioPlan.salida ? ' → ' + horarioPlan.salida : '');
-    }
+// Normal: incluir turno partido si existe
+turnoStr = horarioPlan.entrada
+  + (horarioPlan.salida ? ' → ' + horarioPlan.salida : '');
+if (horarioPlan.entrada2) {
+  turnoStr += ' | ' + horarioPlan.entrada2
+    + (horarioPlan.salida2 ? ' → ' + horarioPlan.salida2 : '');
+}
 
     // Tardanza: solo aplica para horario normal
     const tardanza = (horarioPlan?.tipo === 'normal' && horarioPlan?.entrada)

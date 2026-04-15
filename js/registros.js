@@ -33,10 +33,11 @@ const Registros = (() => {
     if(!rows.length){tbody.innerHTML=`<tr><td colspan="12" style="text-align:center;padding:40px;color:rgba(198,201,215,.28);">Sin registros</td></tr>`;return;}
 
     tbody.innerHTML=rows.map((r,i)=>{
-      const _hs1=calcHs(r.hora_entrada?.slice(0,5),r.hora_salida?.slice(0,5));
-      const _m2=(r.observaciones||'').match(/2°\s*turno:\s*(\d{2}:\d{2})\s*→\s*(\d{2}:\d{2})/);
-      const _hs2=_m2?calcHs(_m2[1],_m2[2]):null;
-      const hs=(_hs1!==null||_hs2!==null)?(_hs1||0)+(_hs2||0):null;
+      // CALCULAR HORAS REALES (SUMANDO TURNO 1 Y TURNO 2 SI EXISTEN)
+      const _hs1 = calcHs(r.hora_entrada?.slice(0,5), r.hora_salida?.slice(0,5));
+      const _hs2 = calcHs(r.hora_entrada2?.slice(0,5), r.hora_salida2?.slice(0,5));
+      const hs = (_hs1 !== null || _hs2 !== null) ? (_hs1 || 0) + (_hs2 || 0) : null;
+      
       const turno=r.turno||'';
       const col=areaColor(r.area);
       const esFlex=turno==='Flex';
@@ -134,9 +135,11 @@ const Registros = (() => {
     document.getElementById('erE').value=r.hora_entrada?.slice(0,5)||'';
     document.getElementById('erS').value=r.hora_salida?.slice(0,5)||'';
     document.getElementById('erO').value=r.observaciones||'';
-    const match = (r.observaciones||'').match(/2° turno:\s*(\d{2}:\d{2})(?:\s*→\s*(\d{2}:\d{2}))?/);
-    document.getElementById('erE2').value = match?.[1] || '';
-    document.getElementById('erS2').value = match?.[2] || '';
+    
+    // CARGAR LOS DATOS REALES DE LAS NUEVAS COLUMNAS AL EDITAR
+    document.getElementById('erE2').value = r.hora_entrada2?.slice(0,5) || '';
+    document.getElementById('erS2').value = r.hora_salida2?.slice(0,5) || '';
+    
     document.getElementById('mReg').style.display='';
     _cargarNombresModal(r.area||'', r.nombre||'');
   }
@@ -156,21 +159,23 @@ const Registros = (() => {
     const s     = document.getElementById('erS').value;
     const e2    = document.getElementById('erE2').value;
     const s2    = document.getElementById('erS2').value;
-    const o     = document.getElementById('erO').value.replace(/\s*\|\s*2° turno:.*$/,'').trim();
+    const o     = document.getElementById('erO').value.trim();
     if(!area||!nombre||!fecha){showToast('Área, nombre y fecha son obligatorios','err');return;}
 
     // Guardar original para el log
     const original = allRegs.find(x=>x.id===id);
 
-    let obsFinal = o || null;
-    if(e2){
-      const t2str = e2 + (s2 ? ' → ' + s2 : '');
-      obsFinal = (o ? o + ' | ' : '') + '2° turno: ' + t2str;
-    }
+    // ACA MANDAMOS A GUARDAR A LAS NUEVAS COLUMNAS SIN ENSUCIAR OBSERVACIONES
     const{error}=await SB.from('registros').update({
       area,nombre,fecha,
-      turno:t||null,hora_entrada:e?e+':00':null,hora_salida:s?s+':00':null,observaciones:obsFinal
+      turno:t||null,
+      hora_entrada:e?e+':00':null,
+      hora_salida:s?s+':00':null,
+      hora_entrada2:e2?e2+':00':null,
+      hora_salida2:s2?s2+':00':null,
+      observaciones:o||null
     }).eq('id',id);
+    
     if(error){showToast('Error','err');return;}
     showToast('Actualizado');
     closeModal();
@@ -223,13 +228,13 @@ const Registros = (() => {
 
   function exportCSV(){
     if(!allRegs.length){showToast('Sin datos','err');return;}
-    const cols=['Área','Nombre','Rol','Fecha','Horario planificado','Hora Entrada','Hora Salida','Hs Trabajadas','Min Tardanza','Puntual','Observaciones'];
+    const cols=['Área','Nombre','Rol','Fecha','Horario planificado','Hora Entrada','Hora Salida', 'Hora Entrada 2', 'Hora Salida 2', 'Hs Trabajadas','Min Tardanza','Puntual','Observaciones'];
     const lines=[cols.join(',')];
     allRegs.forEach(r=>{
-      const _hs1=calcHs(r.hora_entrada?.slice(0,5),r.hora_salida?.slice(0,5));
-      const _m2=(r.observaciones||'').match(/2°\s*turno:\s*(\d{2}:\d{2})\s*→\s*(\d{2}:\d{2})/);
-      const _hs2=_m2?calcHs(_m2[1],_m2[2]):null;
-      const hs=(_hs1!==null||_hs2!==null)?(_hs1||0)+(_hs2||0):null;
+      const _hs1 = calcHs(r.hora_entrada?.slice(0,5), r.hora_salida?.slice(0,5));
+      const _hs2 = calcHs(r.hora_entrada2?.slice(0,5), r.hora_salida2?.slice(0,5));
+      const hs = (_hs1 !== null || _hs2 !== null) ? (_hs1 || 0) + (_hs2 || 0) : null;
+      
       const turno=r.turno||'';
       const esFlex=turno==='Flex', esGuardia=turno==='Guardia';
       let diff=null;
@@ -240,6 +245,7 @@ const Registros = (() => {
       const puntual = esFlex||esGuardia ? 'N/A' : (diff!==null?(diff<=0?'SÍ':'NO'):'');
       lines.push([`"${r.area}"`,`"${r.nombre}"`,`"${r.rol||''}"`,`"${r.fecha}"`,`"${turno}"`,
         `"${r.hora_entrada?.slice(0,5)||''}"`,`"${r.hora_salida?.slice(0,5)||''}"`,
+        `"${r.hora_entrada2?.slice(0,5)||''}"`,`"${r.hora_salida2?.slice(0,5)||''}"`,
         hs!==null?hs.toFixed(2):'',diff!==null?diff:'',puntual,`"${r.observaciones||''}"`].join(','));
     });
     const a=document.createElement('a');

@@ -186,7 +186,7 @@ const DashboardReportPro = (() => {
     const inc   = registros.filter(r=>(r.hora_entrada&&!r.hora_salida)||(!r.hora_entrada&&r.hora_salida)).map(r=>({fecha:r.fecha||'',area:r.area||'',nombre:r.nombre||'',ent:_hm(r.hora_entrada),sal:_hm(r.hora_salida)})).slice(0,20);
     const desf  = people.filter(p=>Math.abs(p.dif)>0.05||p.tard>0||p.inc>0).sort((a,b)=>{const aw=Math.abs(a.dif)+(a.promT&&a.promT>0?a.promT/60:0);const bw=Math.abs(b.dif)+(b.promT&&b.promT>0?b.promT/60:0);return bw-aw;}).slice(0,16);
     const sinP  = people.filter(p=>p.regs>0&&p.planH<=0).slice(0,14);
-    const sinR  = people.filter(p=>p.planH>0&&p.regs<=0).slice(0,14);
+    const sinR  = people.filter(p=>p.planH>0&&p.regs<=0&&!p.vacaciones).slice(0,14);
 
     const mejorA = [...aStats].filter(a=>a.registros>0).sort((a,b)=>b.punt-a.punt)[0]||null;
     const peorA  = [...aStats].filter(a=>a.registros>0).sort((a,b)=>a.punt-b.punt)[0]||null;
@@ -225,14 +225,20 @@ const DashboardReportPro = (() => {
     return {fp,ct,cs,fort,aler,acc};
   }
 
-  function _normPlan(rows) {
+function _normPlan(rows) {
     const out=[];
     (rows||[]).forEach(row=>{
       (Array.isArray(row?.horarios)?row.horarios:[]).forEach(p=>{
-        let h=0;
-        const item={area:row.area||'',nombre:p?.nombre||'',rol:p?.rol||'',planH:0};
-        DIAS.forEach(d=>{const e=p?.[d]?.e||'',s=p?.[d]?.s||'',e2=p?.[d]?.e2||'',s2=p?.[d]?.s2||'';item[`${d}_e`]=e;item[`${d}_s`]=s;const h1=calcHs(e,s),h2=calcHs(e2,s2);if(h1)h+=h1;if(h2)h+=h2;});
-        item.planH=h; out.push(item);
+        const item={area:row.area||'',nombre:p?.nombre||'',rol:p?.rol||'',planH:0,vacaciones:false};
+        if (p?.vacaciones) {
+          item.planH      = p.vacaciones_hs || 0;
+          item.vacaciones = true;
+        } else {
+          let h=0;
+          DIAS.forEach(d=>{const e=p?.[d]?.e||'',s=p?.[d]?.s||'',e2=p?.[d]?.e2||'',s2=p?.[d]?.s2||'';item[`${d}_e`]=e;item[`${d}_s`]=s;const h1=calcHs(e,s),h2=calcHs(e2,s2);if(h1)h+=h1;if(h2)h+=h2;});
+          item.planH=h;
+        }
+        out.push(item);
       });
     });
     return out;
@@ -244,7 +250,7 @@ const DashboardReportPro = (() => {
     (personal||[]).forEach(p=>touch(p.area,p.nombre,p.rol));
     (planRows||[]).forEach(p=>touch(p.area,p.nombre,p.rol));
     (registros||[]).forEach(r=>touch(r.area,r.nombre,r.rol));
-    (planRows||[]).forEach(p=>{const it=touch(p.area,p.nombre,p.rol);if(it)it.planH+=p.planH||0;});
+    (planRows||[]).forEach(p=>{const it=touch(p.area,p.nombre,p.rol);if(it){it.planH+=p.planH||0;if(p.vacaciones)it.vacaciones=true;}});
     const tb=new Map();
     (registros||[]).forEach(r=>{
       const it=touch(r.area,r.nombre,r.rol);if(!it)return;
