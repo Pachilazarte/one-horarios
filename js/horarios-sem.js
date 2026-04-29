@@ -817,9 +817,10 @@ regs.forEach(reg => {
     ctx.scale(scale, scale);
 
     const ACOLORS = {
-      'ADMINISTRACION':'#6be1e3','COMERCIAL':'#e17bd7','RECURSOS HUMANOS':'#e4c76a',
-      'MARKETING':'#f472b6','ACADEMICO / GT':'#a78bfa','INNOVACION Y DESARROLLO':'#34d399','MAESTRANZA':'#fb923c',
-    };
+    'ADMINISTRACION':'#6be1e3','COMERCIAL':'#e17bd7','RECURSOS HUMANOS':'#e4c76a',
+    'MARKETING':'#f472b6','ACADEMICO / GT':'#a78bfa',
+    'INNOVACION Y DESARROLLO':'#34d399','MAESTRANZA':'#fb923c','PASANTIAS':'#60a5fa',
+  };
 
     ctx.fillStyle='#1a181d'; ctx.fillRect(0,0,totalW,totalH);
 

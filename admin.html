@@ -105,12 +105,13 @@
         <div id="dCDiaEsp" style="display:none;flex:1;min-width:135px;">
           <label class="lbl">Elegir día</label>
           <input class="inp" type="date" id="dDiaEsp" onchange="Dashboard.load()"/>
-        </div>
-        <div style="flex:1;min-width:135px;"><label class="lbl">Área</label>
+<div style="flex:1;min-width:135px;"><label class="lbl">Área</label>
           <select class="inp" id="dArea" onchange="Dashboard.load()">
             <option value="">Todas</option>
             <option>ADMINISTRACION</option><option>COMERCIAL</option><option>RECURSOS HUMANOS</option>
-            <option>MARKETING</option><option>ACADEMICO / GT</option><option>INNOVACION Y DESARROLLO</option><option>MAESTRANZA</option>
+            <option>MARKETING</option><option>ACADEMICO / GT</option><option>INNOVACION Y DESARROLLO</option><option>MAESTRANZA</option><option>PASANTIAS</option>
+          </select>
+        </div>
           </select>
         </div>
       </div>
@@ -173,11 +174,11 @@
         <div id="fCDiaEsp" style="display:none;"><label class="lbl">Elegir día</label><input class="inp" type="date" id="fDiaEsp" onchange="Registros.load()"/></div>
         <div id="fCDes" style="display:none;"><label class="lbl">Desde</label><input class="inp" type="date" id="fDes" onchange="Registros.load()"/></div>
         <div id="fCHas" style="display:none;"><label class="lbl">Hasta</label><input class="inp" type="date" id="fHas" onchange="Registros.load()"/></div>
-        <div><label class="lbl">Área</label>
+<div><label class="lbl">Área</label>
           <select class="inp" id="fArea" onchange="Registros.load()">
             <option value="">Todas</option>
             <option>ADMINISTRACION</option><option>COMERCIAL</option><option>RECURSOS HUMANOS</option>
-            <option>MARKETING</option><option>ACADEMICO / GT</option><option>INNOVACION Y DESARROLLO</option><option>MAESTRANZA</option>
+            <option>MARKETING</option><option>ACADEMICO / GT</option><option>INNOVACION Y DESARROLLO</option><option>MAESTRANZA</option><option>PASANTIAS</option>
           </select>
         </div>
         <div><label class="lbl">Buscar</label><input class="inp" type="text" id="fBusq" placeholder="Nombre..." oninput="Registros.render()"/></div>
@@ -206,6 +207,7 @@
       <button class="tab-btn" id="pb-ACADEMICO / GT" onclick="filtPA('ACADEMICO / GT')">Académico</button>
       <button class="tab-btn" id="pb-INNOVACION Y DESARROLLO" onclick="filtPA('INNOVACION Y DESARROLLO')">Innovación</button>
       <button class="tab-btn" id="pb-MAESTRANZA" onclick="filtPA('MAESTRANZA')">Maestranza</button>
+<button class="tab-btn" id="pb-PASANTIAS" onclick="filtPA('PASANTIAS')">Pasantías</button>
     </div>
     <div class="glass tbl-wrap">
       <table class="tbl"><thead><tr><th>#</th><th>Nombre</th><th>Rol</th><th>Área</th><th>Estado</th><th class="no-print"></th></tr></thead>
@@ -336,10 +338,10 @@
     <div style="display:flex;flex-direction:column;gap:11px;">
       <div><label class="lbl">Nombre completo *</label><input class="inp" type="text" id="mpN" placeholder="Nombre y apellido"/></div>
       <div><label class="lbl">Rol / Cargo</label><input class="inp" type="text" id="mpR" placeholder="Ej: Coordinador..."/></div>
-      <div><label class="lbl">Área *</label>
+<div><label class="lbl">Área *</label>
         <select class="inp" id="mpA"><option value="">Seleccionar...</option>
           <option>ADMINISTRACION</option><option>COMERCIAL</option><option>RECURSOS HUMANOS</option>
-          <option>MARKETING</option><option>ACADEMICO / GT</option><option>INNOVACION Y DESARROLLO</option><option>MAESTRANZA</option>
+          <option>MARKETING</option><option>ACADEMICO / GT</option><option>INNOVACION Y DESARROLLO</option><option>MAESTRANZA</option><option>PASANTIAS</option>
         </select>
       </div>
       <div style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="mpAc" checked style="width:15px;height:15px;cursor:pointer;accent-color:var(--one-cyan);"/><label for="mpAc" style="font-size:14px;cursor:pointer;">Persona activa</label></div>
@@ -358,11 +360,11 @@
     <input type="hidden" id="erId"/>
     <div style="display:flex;flex-direction:column;gap:12px;">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px;">
-        <div><label class="lbl">Área *</label>
+<div><label class="lbl">Área *</label>
           <select class="inp" id="erA" onchange="Registros._onAreaChange(this.value)">
             <option value="">Seleccionar...</option>
             <option>ADMINISTRACION</option><option>COMERCIAL</option><option>RECURSOS HUMANOS</option>
-            <option>MARKETING</option><option>ACADEMICO / GT</option><option>INNOVACION Y DESARROLLO</option><option>MAESTRANZA</option>
+            <option>MARKETING</option><option>ACADEMICO / GT</option><option>INNOVACION Y DESARROLLO</option><option>MAESTRANZA</option><option>PASANTIAS</option>
           </select>
         </div>
         <div><label class="lbl">Nombre *</label>
@@ -444,6 +446,7 @@
           <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;"><input type="checkbox" value="ACADEMICO / GT" style="accent-color:var(--one-cyan);width:15px;height:15px;"/> ACADEMICO / GT</label>
           <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;"><input type="checkbox" value="INNOVACION Y DESARROLLO" style="accent-color:var(--one-cyan);width:15px;height:15px;"/> INNOVACION Y DESARROLLO</label>
           <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;"><input type="checkbox" value="MAESTRANZA" style="accent-color:var(--one-cyan);width:15px;height:15px;"/> MAESTRANZA</label>
+<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;"><input type="checkbox" value="PASANTIAS" style="accent-color:var(--one-cyan);width:15px;height:15px;"/> PASANTIAS</label>
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="mlActivo" checked style="width:15px;height:15px;cursor:pointer;accent-color:var(--one-cyan);"/><label for="mlActivo" style="font-size:14px;cursor:pointer;">Líder activo</label></div>
@@ -508,10 +511,10 @@ const Lideres = (() => {
   let _data = [];
   let _editId = null;
 
-  const ACOLOR = {
+const ACOLOR = {
     'ADMINISTRACION':'#6be1e3','COMERCIAL':'#e17bd7','RECURSOS HUMANOS':'#e4c76a',
     'MARKETING':'#f472b6','ACADEMICO / GT':'#a78bfa',
-    'INNOVACION Y DESARROLLO':'#34d399','MAESTRANZA':'#fb923c',
+    'INNOVACION Y DESARROLLO':'#34d399','MAESTRANZA':'#fb923c','PASANTIAS':'#60a5fa',
   };
 
   async function load() {

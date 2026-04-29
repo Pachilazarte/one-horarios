@@ -961,9 +961,10 @@ function descargarImagen() {
   if (!rows.length) { toast('Sin datos para generar imagen', 'err'); return; }
 
   const DLAN = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
-  const ACOLORS = {
+const ACOLOR = {
     'ADMINISTRACION':'#6be1e3','COMERCIAL':'#e17bd7','RECURSOS HUMANOS':'#e4c76a',
-    'MARKETING':'#f472b6','ACADEMICO / GT':'#a78bfa','INNOVACION Y DESARROLLO':'#34d399','MAESTRANZA':'#fb923c',
+    'MARKETING':'#f472b6','ACADEMICO / GT':'#a78bfa',
+    'INNOVACION Y DESARROLLO':'#34d399','MAESTRANZA':'#fb923c','PASANTIAS':'#60a5fa',
   };
 
   const fd = (e,s,tipo) => {

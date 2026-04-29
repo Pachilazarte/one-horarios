@@ -1,616 +1,762 @@
-/* ── V. 0.0.7 (Footer)── */
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>ONE — Registrar Horario</title>
-<link rel="icon" type="image/png" href="img/favicon.png"/>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/brand.css"/>
-<link rel="stylesheet" href="css/main.css"/>
-<style>
-body{-webkit-tap-highlight-color:transparent;}
-
-/* ── Fecha nav ── */
-.fecha-nav{display:flex;align-items:center;justify-content:center;gap:12px;
-  padding:13px 14px;background:rgba(255,255,255,.04);
-  border:1px solid rgba(198,201,215,.1);border-radius:14px;margin-bottom:14px;}
-.fecha-arr{background:rgba(255,255,255,.08);border:1px solid rgba(198,201,215,.2);
-  color:rgba(198,201,215,.9);width:42px;height:42px;border-radius:50%;font-size:22px;
-  cursor:pointer;display:flex;align-items:center;justify-content:center;
-  transition:all .18s;flex-shrink:0;-webkit-tap-highlight-color:transparent;
-  user-select:none;}
-.fecha-arr:hover,.fecha-arr:active{background:rgba(107,225,227,.18);
-  border-color:rgba(107,225,227,.45);color:var(--one-cyan);}
-.fecha-center{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;}
-.fecha-dia-txt{font-size:16px;font-weight:800;color:#fff;text-align:center;}
-.fecha-num-txt{font-size:12px;color:rgba(198,201,215,.5);text-align:center;}
-.fecha-hoy-btn{margin-top:2px;font-size:10px;font-weight:700;letter-spacing:.07em;
-  text-transform:uppercase;color:rgba(107,225,227,.65);background:none;border:none;
-  cursor:pointer;padding:2px 8px;font-family:var(--font-title);transition:color .15s;}
-.fecha-hoy-btn:hover{color:var(--one-cyan);}
-.fecha-hoy-btn.hide{visibility:hidden;pointer-events:none;}
-
-/* ── Plan info ── */
-.plan-info{margin-bottom:11px;padding:10px 13px;border-radius:10px;
-  background:rgba(107,225,227,.06);border:1px solid rgba(107,225,227,.2);
-  display:flex;align-items:center;flex-wrap:wrap;gap:5px;font-size:12px;}
-.plan-flex{background:rgba(167,139,250,.07)!important;border-color:rgba(167,139,250,.28)!important;}
-.plan-guardia{background:rgba(228,199,106,.07)!important;border-color:rgba(228,199,106,.28)!important;}
-
-/* ── Inputs mobile-friendly ── */
-.inp{min-height:46px;font-size:16px!important;}
-.time-inp{font-size:22px!important;min-height:56px;}
-.btn-success{min-height:54px;font-size:16px!important;border-radius:14px!important;}
-
-/* ── Cola ── */
-.queue-row{background:rgba(107,225,227,.05);border:1px solid rgba(107,225,227,.12);
-  border-radius:11px;padding:10px 14px;display:flex;align-items:center;
-  justify-content:space-between;gap:10px;animation:fadeUp .25s ease both;}
-
-@media(max-width:380px){
-  .fecha-dia-txt{font-size:14px;}
-  .time-inp{font-size:20px!important;}
-}
-</style>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ONE — Admin · Horarios</title>
+  <link rel="icon" type="image/png" href="img/favicon.png"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/brand.css"/>
+  <link rel="stylesheet" href="css/main.css"/>
+  <style>
+    .wnav-sm{background:rgba(255,255,255,.07);border:1px solid rgba(198,201,215,.18);color:var(--one-white);width:30px;height:30px;border-radius:50%;font-size:16px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:all .2s;}
+    .wnav-sm:hover:not([disabled]){background:rgba(107,225,227,.15);border-color:rgba(107,225,227,.35);}
+    .wnav-sm[disabled]{opacity:.28;cursor:not-allowed;}
+    .op30{opacity:.28;}
+    .week-pill{background:rgba(107,225,227,.1);border:1px solid rgba(107,225,227,.22);color:var(--one-cyan);padding:5px 15px;border-radius:999px;font-size:13px;font-weight:800;white-space:nowrap;}
+    .areas-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px;}
+    .area-card{background:rgba(255,255,255,.048);border:1px solid rgba(198,201,215,.1);border-radius:14px;padding:14px 16px;cursor:pointer;transition:border-color .2s,transform .15s,box-shadow .15s;}
+    .area-card:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(0,0,0,.22);}
+    .edit-pcard{background:rgba(255,255,255,.04);border:1px solid rgba(198,201,215,.09);border-radius:12px;overflow:hidden;margin-bottom:8px;}
+    .ht-edit{background:rgba(255,255,255,.07);border:1px solid rgba(198,201,215,.15);color:var(--one-white);padding:6px 3px;border-radius:7px;font-family:var(--font-title);font-size:13px;font-weight:800;width:100%;text-align:center;transition:border-color .15s,background .15s;}
+    .ht-edit:focus{outline:none;border-color:rgba(107,225,227,.55);background:rgba(107,225,227,.05);}
+    .ht-edit::placeholder{color:rgba(198,201,215,.18);font-weight:400;font-size:10px;}
+    .ht-edit.v{border-color:rgba(107,225,227,.3);color:var(--one-cyan);}
+    .ht-gold{border-color:rgba(228,199,106,.2)!important;}
+    .ht-gold.v{border-color:rgba(228,199,106,.4)!important;color:var(--one-gold)!important;}
+    .sp-block{display:none;flex-direction:column;gap:3px;margin-top:4px;padding-top:5px;border-top:1px dashed rgba(228,199,106,.2);}
+    .sp-block.sp-show{display:flex;}
+    .btn-split-sm{background:rgba(255,255,255,.05);border:1px solid rgba(198,201,215,.15)!important;color:rgba(198,201,215,.5);padding:4px 11px;border-radius:999px;font-family:var(--font-title);font-size:11px;font-weight:700;cursor:pointer;transition:all .2s;}
+    .btn-split-sm:hover{background:rgba(228,199,106,.1);border-color:rgba(228,199,106,.28)!important;color:var(--one-gold);}
+    .btn-split-sm.on{background:rgba(228,199,106,.13);border-color:rgba(228,199,106,.35)!important;color:var(--one-gold);}
+    .btn-ant{background:linear-gradient(135deg,rgba(107,225,227,.18),rgba(228,199,106,.12));border:1px solid rgba(107,225,227,.3)!important;color:var(--one-cyan);padding:7px 16px;border-radius:999px;font-family:var(--font-title);font-size:12px;font-weight:800;cursor:pointer;transition:all .2s;}
+    .btn-ant:hover{transform:translateY(-1px);box-shadow:0 5px 16px rgba(107,225,227,.14);}
+    .sp{display:inline-block;width:12px;height:12px;border:2px solid rgba(107,225,227,.28);border-top-color:var(--one-cyan);border-radius:50%;animation:spin .7s linear infinite;}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    @media(max-width:640px){.areas-grid{grid-template-columns:1fr;}}
+  </style>
 </head>
 <body>
 <div class="bg-layer" aria-hidden="true"></div>
 <div class="app-wrap">
 
-<header class="app-header">
+<header class="app-header no-print">
   <div class="app-header__inner">
     <div class="app-header__brand">
       <div class="brand-mark"></div>
       <div>
         <div class="brand-name">ONE <span class="brand-gc">Horarios</span></div>
-        <span class="brand-sub">Panel de registro</span>
+        <span class="brand-sub">Panel administrador</span>
       </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:7px;">
+      <span class="badge badge-pink">🔐 Admin</span>
+      <a href="index.html" class="btn btn-ghost" style="font-size:12px;padding:6px 12px;">← Inicio</a>
+      <button class="btn btn-ghost" onclick="Auth.logout();window.location.href='index.html';" style="font-size:12px;padding:6px 12px;">Salir</button>
     </div>
   </div>
 </header>
 
-<main style="max-width:520px;margin:0 auto;padding:20px 14px 80px;">
+<main style="max-width:1280px;margin:0 auto;padding:20px 16px 80px;">
 
-  <!-- LOGO -->
-  <div style="text-align:center;margin-bottom:20px;">
-    <img src="img/one-logocolor.png" alt="ONE"
-      style="height:80px;margin:0 auto 8px;display:block;"
-      onerror="this.style.display='none'"/>
-    <p style="color:rgba(198,201,215,.4);font-size:12px;letter-spacing:.03em;">Escencial Consultora</p>
-  </div>
-
-  <!-- BANNER OK -->
-  <div id="lOkBanner" style="display:none;margin-bottom:14px;" class="ok-banner">
-    <div style="font-size:24px;margin-bottom:4px;">&#x2705;</div>
-    <div style="font-size:15px;font-weight:800;color:var(--color-success-text);" id="lOkMsg">&#xa1;Registrado!</div>
-    <div style="font-size:12px;color:rgba(134,239,172,.55);margin-top:3px;">Para cargar otro, complet&#225; el formulario y guard&#225; de nuevo.</div>
-  </div>
-
-  <!-- COLA -->
-  <div id="lQSec" style="display:none;margin-bottom:14px;">
-    <div style="font-size:11px;font-weight:700;color:rgba(198,201,215,.38);text-transform:uppercase;letter-spacing:.07em;margin-bottom:7px;">
-      Esta sesi&#243;n &mdash; <span id="lQCnt">0</span>
-    </div>
-    <div id="lQList" style="display:flex;flex-direction:column;gap:6px;"></div>
-  </div>
-
-  <!-- FORM -->
-  <div class="glass" style="padding:20px;margin-bottom:14px;">
-    <h2 style="font-size:19px;font-weight:800;margin-bottom:14px;">
-      Registrar <span class="brand-gc">horario</span>
-    </h2>
-
-    <!-- FECHA NAV -->
-    <div class="fecha-nav">
-      <button class="fecha-arr" onclick="cambiarFecha(-1)">&#8249;</button>
-      <div class="fecha-center">
-        <div class="fecha-dia-txt" id="fechaDia">&#x2014;</div>
-        <div class="fecha-num-txt" id="fechaNum">&#x2014;</div>
-        <button class="fecha-hoy-btn hide" id="btnHoy" onclick="irAHoy()">&#x21a9; Hoy</button>
-      </div>
-      <button class="fecha-arr" onclick="cambiarFecha(+1)">&#8250;</button>
-    </div>
-    <input type="hidden" id="lFecha"/>
-
-    <!-- AREA + NOMBRE -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
-      <div>
-        <label class="lbl">&#193;rea *</label>
-        <select class="inp" id="lArea" onchange="loadPersonal()">
-          <option value="">Seleccionar...</option>
-          <option>ADMINISTRACION</option>
-          <option>COMERCIAL</option>
-          <option>RECURSOS HUMANOS</option>
-          <option>MARKETING</option>
-          <option>ACADEMICO / GT</option>
-          <option>INNOVACION Y DESARROLLO</option>
-          <option>MAESTRANZA</option>
-        </select>
-      </div>
-      <div>
-        <label class="lbl">Nombre *</label>
-        <select class="inp" id="lNom" onchange="onPersonaChange()">
-          <option value="">Seleccion&#225; &#225;rea primero</option>
-        </select>
-      </div>
-    </div>
-
-    <!-- PLAN INFO -->
-    <div id="lPlanInfo" class="plan-info" style="display:none;margin-bottom:11px;"></div>
-
-    <!-- HORAS TURNO 1 -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
-      <div>
-        <label class="lbl">Entrada *</label>
-        <input class="time-inp" type="time" id="lEnt" oninput="updCalc()" onchange="updCalc()"/>
-        <div id="lInfoT" style="font-size:11.5px;font-weight:700;margin-top:5px;min-height:16px;"></div>
-      </div>
-      <div>
-        <label class="lbl">Salida <span style="font-size:10px;font-weight:400;opacity:.4;">(opc.)</span></label>
-        <input class="time-inp" type="time" id="lSal" oninput="updCalc()" onchange="updCalc()"/>
-        <div id="lInfoH" style="font-size:11.5px;font-weight:700;margin-top:5px;min-height:16px;"></div>
-      </div>
-    </div>
-
-    <!-- HORAS TURNO 2 (si el plan es partido O si el usuario lo activa) -->
-    <div id="turno2Wrap" style="display:none;margin-bottom:10px;padding:10px 12px;
-      background:rgba(228,199,106,.06);border:1px solid rgba(228,199,106,.2);border-radius:10px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-        <div style="font-size:10px;font-weight:800;color:rgba(228,199,106,.7);letter-spacing:.08em;text-transform:uppercase;">✂ 2° Turno</div>
-        <button onclick="ocultarTurno2()" style="background:none;border:none;cursor:pointer;font-size:11px;color:rgba(228,199,106,.5);font-weight:700;">✕ Quitar</button>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-        <div>
-          <label class="lbl">Entrada 2°</label>
-          <input class="time-inp" type="time" id="lEnt2" oninput="updCalc()" onchange="updCalc()"/>
-        </div>
-        <div>
-          <label class="lbl">Salida 2° <span style="font-size:10px;font-weight:400;opacity:.4;">(opc.)</span></label>
-          <input class="time-inp" type="time" id="lSal2" oninput="updCalc()" onchange="updCalc()"/>
-        </div>
-      </div>
-    </div>
-
-    <!-- Botón para agregar 2° turno manualmente -->
-    <div id="btnAgregar2do" style="margin-bottom:10px;display:none;">
-      <button onclick="mostrarTurno2()"
-        style="background:rgba(228,199,106,.08);border:1px dashed rgba(228,199,106,.3);
-          color:rgba(228,199,106,.6);padding:8px 14px;border-radius:8px;
-          font-family:var(--font-title);font-size:12px;font-weight:700;cursor:pointer;width:100%;">
-        ✂ Agregar 2° turno
+  <!-- TABS -->
+  <div style="display:flex;gap:5px;margin-bottom:18px;flex-wrap:wrap;align-items:center;justify-content:space-between;" class="no-print">
+    <div style="display:flex;gap:5px;flex-wrap:wrap;">
+      <button class="tab-btn active" id="at-dash"  onclick="switchTab('dash')">📊 Dashboard</button>
+      <button class="tab-btn"        id="at-reg"   onclick="switchTab('reg')">📋 Registros</button>
+      
+      <button class="tab-btn"        id="at-per"   onclick="switchTab('per')">👥 Personal</button>
+      <button class="tab-btn"        id="at-lid"   onclick="switchTab('lid')">🔑 Líderes</button>
+      <button class="tab-btn"        id="at-hsem"  onclick="switchTab('hsem')">📅 Horarios Semanales</button>
+      <button class="tab-btn" id="at-act" onclick="switchTab('act'); Actividad.start();">
+        🔔 Actividad
+        <span id="actBadge" style="display:none;background:#e17bd7;color:#fff;border-radius:99px;font-size:9px;font-weight:800;padding:1px 6px;margin-left:4px;vertical-align:middle;"></span>
       </button>
     </div>
-
-    <!-- OBS -->
-    <div style="margin-bottom:16px;">
-      <label class="lbl">Observaciones <span style="font-size:10px;font-weight:400;opacity:.4;">(opcional)</span></label>
-      <input class="inp" type="text" id="lObs" placeholder="Notas opcionales..." style="font-size:15px;"/>
+    <div style="display:flex;gap:6px;">
+      <div id="btnCsvWrap" style="display:none;">
+        <button class="btn btn-gold" onclick="Registros.exportCSV()">⬇ CSV</button>
+      </div>
+      <div id="btnPdfWrap">
+        <button class="btn btn-primary" onclick="abrirInforme()" style="background:linear-gradient(135deg,rgba(167,139,250,.28),rgba(107,225,227,.15));border-color:rgba(167,139,250,.5)!important;">📄 PDF</button>
+      </div>
     </div>
-
-    <button class="btn btn-success" id="lBtnG" onclick="guardarRegistro()">
-      <span id="lBIco">&#x2705;</span>&nbsp;<span id="lBTxt">Guardar registro</span>
-    </button>
   </div>
 
-  <!-- ADMIN -->
-  <div style="text-align:center;padding-bottom:10px;">
-    <button class="btn btn-ghost" id="btnShowAdmin" onclick="toggleAdmin()"
-      style="font-size:12px;padding:7px 18px;opacity:.55;">
-      &#x1F510; Acceder como administrador
-    </button>
-    <div id="adminLoginBox" style="display:none;margin-top:10px;" class="glass fade-in"
-      style="border-radius:14px;overflow:hidden;">
-      <div style="padding:16px 18px;">
-        <div style="font-size:12px;font-weight:700;margin-bottom:10px;color:rgba(198,201,215,.55);">Panel Administrador</div>
-        <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:9px;">
-          <input class="inp" type="text" id="aU" placeholder="Usuario"
-            style="flex:1;min-width:90px;font-size:15px;"
-            onkeydown="if(event.key==='Enter')document.getElementById('aP').focus()"/>
-          <input class="inp" type="password" id="aP" placeholder="Contrase&#241;a"
-            style="flex:1;min-width:90px;font-size:15px;"
-            onkeydown="if(event.key==='Enter')loginAdmin()"/>
+  <!-- ══ DASHBOARD ══ -->
+  <div id="tab-dash" class="fade-in">
+    <div class="glass no-print" style="padding:13px 17px;margin-bottom:14px;">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end;">
+        <div style="flex:1;min-width:135px;">
+          <label class="lbl">Período</label>
+          <select class="inp" id="dPer" onchange="Dashboard._changeDPer()">
+            <option value="hoy">Hoy</option>
+            <option value="ayer">Ayer</option>
+            <option value="semana" selected>Esta semana</option>
+            <option value="semana_ant">Semana anterior</option>
+            <option value="mes">Este mes</option>
+            <option value="mes_ant">Mes anterior</option>
+            <option value="anio">Este año</option>
+            <option value="dia_especifico">Día específico...</option>
+            <option value="todos">Todos</option>
+          </select>
         </div>
-        <button class="btn btn-primary" onclick="loginAdmin()"
-          style="width:100%;justify-content:center;padding:11px;font-size:15px;">
-          Ingresar &rarr;
-        </button>
+        <div id="dCDiaEsp" style="display:none;flex:1;min-width:135px;">
+          <label class="lbl">Elegir día</label>
+          <input class="inp" type="date" id="dDiaEsp" onchange="Dashboard.load()"/>
+        </div>
+        <div style="flex:1;min-width:135px;"><label class="lbl">Área</label>
+          <select class="inp" id="dArea" onchange="Dashboard.load()">
+            <option value="">Todas</option>
+            <option>ADMINISTRACION</option><option>COMERCIAL</option><option>RECURSOS HUMANOS</option>
+            <option>MARKETING</option><option>ACADEMICO / GT</option><option>INNOVACION Y DESARROLLO</option><option>MAESTRANZA</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- KPIs -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:10px;margin-bottom:14px;">
+      <div class="stat-card-lg"><div style="font-size:10px;color:rgba(198,201,215,.5);text-transform:uppercase;letter-spacing:.06em;">Total registros</div><div style="font-size:32px;font-weight:800;margin-top:4px;" class="brand-gc" id="kT">—</div></div>
+      <div class="stat-card-lg"><div style="font-size:10px;color:rgba(198,201,215,.5);text-transform:uppercase;letter-spacing:.06em;">Personas</div><div style="font-size:32px;font-weight:800;margin-top:4px;color:var(--one-purple);" id="kP">—</div></div>
+      <div class="stat-card-lg"><div style="font-size:10px;color:rgba(198,201,215,.5);text-transform:uppercase;letter-spacing:.06em;">Prom. tardanza</div><div style="font-size:32px;font-weight:800;margin-top:4px;" id="kTd">—</div><div style="font-size:10px;color:rgba(198,201,215,.4);margin-top:2px;" id="kTdSub"></div></div>
+      <div class="stat-card-lg"><div style="font-size:10px;color:rgba(198,201,215,.5);text-transform:uppercase;letter-spacing:.06em;">Prom. Hs/día</div><div style="font-size:32px;font-weight:800;margin-top:4px;" class="brand-gg" id="kH">—</div></div>
+      <div class="stat-card-lg"><div style="font-size:10px;color:rgba(198,201,215,.5);text-transform:uppercase;letter-spacing:.06em;">Puntuales</div><div style="font-size:32px;font-weight:800;margin-top:4px;color:var(--color-success-text);" id="kPunt">—</div></div>
+      <div class="stat-card-lg"><div style="font-size:10px;color:rgba(198,201,215,.5);text-transform:uppercase;letter-spacing:.06em;">Con tardanza</div><div style="font-size:32px;font-weight:800;margin-top:4px;color:var(--color-danger-text);" id="kTarde">—</div></div>
+      <div class="stat-card-lg"><div style="font-size:10px;color:rgba(198,201,215,.5);text-transform:uppercase;letter-spacing:.06em;">Con hs extra</div><div style="font-size:32px;font-weight:800;margin-top:4px;color:var(--one-gold);" id="kExtra">—</div></div>
+    </div>
+
+    <!-- Charts -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:13px;margin-bottom:13px;">
+      <div class="glass" style="padding:17px 19px;"><div style="font-size:13px;font-weight:700;margin-bottom:13px;color:rgba(198,201,215,.8);">Registros por área</div><div class="chart-wrap"><canvas id="chartArea"></canvas></div></div>
+      <div class="glass" style="padding:17px 19px;"><div style="font-size:13px;font-weight:700;margin-bottom:13px;color:rgba(198,201,215,.8);">Puntualidad por área</div><div class="chart-wrap"><canvas id="chartPunt"></canvas></div></div>
+      <div class="glass" style="padding:17px 19px;"><div style="font-size:13px;font-weight:700;margin-bottom:13px;color:rgba(198,201,215,.8);">Registros por día</div><div class="chart-wrap"><canvas id="chartDia"></canvas></div></div>
+    </div>
+
+    <!-- TOP TARDANZAS + TOP EXTRA side by side -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:13px;margin-bottom:13px;">
+      <div class="glass" style="padding:17px 19px;">
+        <div style="font-size:13px;font-weight:700;margin-bottom:13px;color:rgba(198,201,215,.8);">🕐 Top tardanzas</div>
+        <div id="topTard" style="display:flex;flex-direction:column;gap:7px;"></div>
+      </div>
+      <div class="glass" style="padding:17px 19px;">
+        <div style="font-size:13px;font-weight:700;margin-bottom:13px;color:rgba(198,201,215,.8);">⏰ Top horas extra post-salida</div>
+        <div id="topExtra" style="display:flex;flex-direction:column;gap:7px;"></div>
+      </div>
+      <div class="glass" style="padding:17px 19px;">
+        <div style="font-size:13px;font-weight:700;margin-bottom:13px;color:rgba(198,201,215,.8);">Resumen por área</div>
+        <div style="overflow-x:auto;"><table class="tbl" style="font-size:12px;"><thead><tr><th>Área</th><th>Reg.</th><th>Prom. tard.</th><th>Puntuales</th></tr></thead><tbody id="tbArea"></tbody></table></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══ REGISTROS ══ -->
+  <div id="tab-reg" style="display:none;">
+    <div class="glass no-print" style="padding:13px 15px;margin-bottom:13px;">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;align-items:end;">
+        <div><label class="lbl">Período</label>
+          <select class="inp" id="fPer" onchange="Registros.changePer()">
+            <option value="hoy">Hoy</option>
+            <option value="ayer">Ayer</option>
+            <option value="semana">Esta semana</option>
+            <option value="semana_ant">Semana anterior</option>
+            <option value="mes" selected>Este mes</option>
+            <option value="mes_ant">Mes anterior</option>
+            <option value="anio">Este año</option>
+            <option value="dia_especifico">Día específico...</option>
+            <option value="custom">Personalizado</option>
+            <option value="todos">Todos</option>
+          </select>
+        </div>
+        <div id="fCDiaEsp" style="display:none;"><label class="lbl">Elegir día</label><input class="inp" type="date" id="fDiaEsp" onchange="Registros.load()"/></div>
+        <div id="fCDes" style="display:none;"><label class="lbl">Desde</label><input class="inp" type="date" id="fDes" onchange="Registros.load()"/></div>
+        <div id="fCHas" style="display:none;"><label class="lbl">Hasta</label><input class="inp" type="date" id="fHas" onchange="Registros.load()"/></div>
+<div><label class="lbl">Área</label>
+          <select class="inp" id="fArea" onchange="Registros.load()">
+            <option value="">Todas</option>
+            <option>ADMINISTRACION</option><option>COMERCIAL</option><option>RECURSOS HUMANOS</option>
+            <option>MARKETING</option><option>ACADEMICO / GT</option><option>INNOVACION Y DESARROLLO</option><option>MAESTRANZA</option><option>PASANTIAS</option>
+          </select>
+        </div>
+        <div><label class="lbl">Buscar</label><input class="inp" type="text" id="fBusq" placeholder="Nombre..." oninput="Registros.render()"/></div>
+      </div>
+    </div>
+    <div class="glass tbl-wrap">
+      <table class="tbl">
+        <thead><tr><th>#</th><th>Área</th><th>Nombre</th><th class="hide-mobile">Rol</th><th>Fecha</th><th class="hide-mobile">Horario plan.</th><th>Entrada</th><th>Salida</th><th>Hs.</th><th>Tardanza</th><th class="hide-mobile">Obs.</th><th class="no-print"></th></tr></thead>
+        <tbody id="tbR"><tr><td colspan="12" style="text-align:center;padding:40px;color:rgba(198,201,215,.28);">Cargando...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ══ PERSONAL ══ -->
+  <div id="tab-per" style="display:none;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:13px;flex-wrap:wrap;gap:8px;">
+      <div><h3 style="font-size:17px;font-weight:800;">Personal <span class="brand-gp">registrado</span></h3><p style="font-size:12px;color:rgba(198,201,215,.45);margin-top:1px;" id="pCnt"></p></div>
+      <button class="btn btn-primary no-print" onclick="Personal.openNew()">+ Agregar persona</button>
+    </div>
+    <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:11px;" class="no-print">
+      <button class="tab-btn active" id="pb-" onclick="filtPA('')">Todos</button>
+      <button class="tab-btn" id="pb-ADMINISTRACION" onclick="filtPA('ADMINISTRACION')">Administ.</button>
+      <button class="tab-btn" id="pb-COMERCIAL" onclick="filtPA('COMERCIAL')">Comercial</button>
+      <button class="tab-btn" id="pb-RECURSOS HUMANOS" onclick="filtPA('RECURSOS HUMANOS')">RR.HH.</button>
+      <button class="tab-btn" id="pb-MARKETING" onclick="filtPA('MARKETING')">Marketing</button>
+      <button class="tab-btn" id="pb-ACADEMICO / GT" onclick="filtPA('ACADEMICO / GT')">Académico</button>
+      <button class="tab-btn" id="pb-INNOVACION Y DESARROLLO" onclick="filtPA('INNOVACION Y DESARROLLO')">Innovación</button>
+      <button class="tab-btn" id="pb-MAESTRANZA" onclick="filtPA('MAESTRANZA')">Maestranza</button>
+      <button class="tab-btn" id="pb-PASANTIAS" onclick="filtPA('PASANTIAS')">Pasantías</button>
+    </div>
+    </div>
+    <div class="glass tbl-wrap">
+      <table class="tbl"><thead><tr><th>#</th><th>Nombre</th><th>Rol</th><th>Área</th><th>Estado</th><th class="no-print"></th></tr></thead>
+      <tbody id="tbP"></tbody></table>
+    </div>
+  </div>
+
+  <!-- ══ LÍDERES ══ -->
+
+  <div id="tab-lid" style="display:none;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:13px;flex-wrap:wrap;gap:8px;">
+      <div>
+        <h3 style="font-size:17px;font-weight:800;">Líderes <span class="brand-gc">de área</span></h3>
+        <p style="font-size:12px;color:rgba(198,201,215,.45);margin-top:1px;">Usuarios que pueden acceder al panel Lider.html para cargar horarios semanales</p>
+      </div>
+      <button class="btn btn-primary no-print" onclick="Lideres.openNew()">+ Agregar líder</button>
+    </div>
+<!-- VENTANA DE CARGA -->
+<div class="glass" style="padding:20px;margin-bottom:18px;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+    <div>
+      <div style="font-size:15px;font-weight:800;">🗓 Ventana de carga de líderes</div>
+      <div style="font-size:12px;color:rgba(198,201,215,.45);margin-top:3px;">
+        Días habilitados para que los líderes guarden horarios. Sin tilde = solo lectura.
+      </div>
+    </div>
+    <button onclick="CfgVentana.guardar()"
+      style="background:linear-gradient(135deg,rgba(107,225,227,.22),rgba(107,225,227,.1));
+        border:1px solid rgba(107,225,227,.4)!important;color:var(--one-cyan);
+        padding:8px 20px;border-radius:999px;font-family:var(--font-title);
+        font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap;">
+      ✓ Guardar
+    </button>
+  </div>
+  <div id="cfgDias" style="display:block;"></div>
+  <div id="cfgStatus" style="margin-top:10px;font-size:12px;color:rgba(198,201,215,.4);"></div>
+</div>
+    <div class="glass tbl-wrap">
+      <table class="tbl">
+        <thead><tr><th>#</th><th>Nombre</th><th>Usuario</th><th>Áreas asignadas</th><th>Estado</th><th class="no-print"></th></tr></thead>
+        <tbody id="tbLid"><tr><td colspan="6" style="text-align:center;padding:40px;color:rgba(198,201,215,.28);">Cargando...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ══ HORARIOS SEMANALES ══ -->
+  <div id="tab-hsem" style="display:none;">
+    <div style="display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px;">
+      <div>
+        <h3 style="font-size:17px;font-weight:800;">Horarios <span class="brand-gc">Semanales</span></h3>
+        <div style="font-size:12px;color:rgba(198,201,215,.45);margin-top:2px;" id="hsemTitulo"></div>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+        <span style="font-size:11px;color:rgba(198,201,215,.4);">Tipos:</span>
+        <span style="background:rgba(107,225,227,.1);border:1px solid rgba(107,225,227,.22);color:var(--one-cyan);padding:2px 9px;border-radius:999px;font-size:10px;font-weight:800;">🕐 Fijo</span>
+        <span style="background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.22);color:var(--one-purple);padding:2px 9px;border-radius:999px;font-size:10px;font-weight:800;">🔄 Flex</span>
+        <span style="background:rgba(228,199,106,.1);border:1px solid rgba(228,199,106,.22);color:var(--one-gold);padding:2px 9px;border-radius:999px;font-size:10px;font-weight:800;">🛡 Guardia 1h</span>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;">
+      <div class="stat-card-lg"><div style="font-size:10px;color:rgba(198,201,215,.5);text-transform:uppercase;letter-spacing:.06em;">Personas plan.</div><div style="font-size:30px;font-weight:800;margin-top:4px;" class="brand-gc" id="hsKP">—</div></div>
+      <div class="stat-card-lg"><div style="font-size:10px;color:rgba(198,201,215,.5);text-transform:uppercase;letter-spacing:.06em;">Áreas activas</div><div style="font-size:30px;font-weight:800;margin-top:4px;color:var(--one-purple);" id="hsKA">—</div></div>
+      <div class="stat-card-lg"><div style="font-size:10px;color:rgba(198,201,215,.5);text-transform:uppercase;letter-spacing:.06em;">Flex / Guardia</div><div style="font-size:30px;font-weight:800;margin-top:4px;color:var(--one-gold);" id="hsKE">—</div><div style="font-size:10px;color:rgba(198,201,215,.3);margin-top:2px;">personas esta sem.</div></div>
+      <div class="stat-card-lg"><div style="font-size:10px;color:rgba(198,201,215,.5);text-transform:uppercase;letter-spacing:.06em;">Total hs plan.</div><div style="font-size:30px;font-weight:800;margin-top:4px;color:var(--color-success-text);" id="hsKH">—</div></div>
+    </div>
+    <div class="glass no-print" style="padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;" id="hsemNavBar"></div>
+    <div class="areas-grid" id="hsemAreaGrid"></div>
+    <div style="margin-top:16px;">
+<button class="btn btn-ghost" style="font-size:12px;padding:6px 16px;" onclick="toggleTabla()">
+  <span id="btnTablaLbl">📋 Ver tabla detallada</span>
+</button>
+<button class="btn btn-gold" style="font-size:12px;padding:6px 16px;display:none;" id="btnDescImg"
+  onclick="HorariosSem.descargarImagen()">📸 Descargar imagen</button>
+      <div id="hsemTablaWrap" style="display:none;margin-top:10px;">
+        <div class="glass tbl-wrap">
+          <table class="tbl">
+            <thead><tr><th>Área</th><th>Nombre</th><th>Lun</th><th>Mar</th><th>Mié</th><th>Jue</th><th>Vie</th><th>Sáb</th><th>Dom</th><th>Hs/sem</th><th class="hide-mobile">Obs</th><th class="no-print"></th></tr></thead>
+            <tbody id="tbHsem"><tr><td colspan="11" style="text-align:center;padding:30px;color:rgba(198,201,215,.28);">—</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+   <!-- ══════ TAB: ACTIVIDAD ══════ -->
+  <div id="tab-act" style="display:none;">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <h3 style="font-size:17px;font-weight:800;">Actividad <span style="background:linear-gradient(90deg,#e17bd7,#f0a8e8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">en tiempo real</span></h3>
+        <div style="display:flex;align-items:center;gap:5px;background:rgba(255,255,255,.05);border:1px solid rgba(198,201,215,.12);border-radius:99px;padding:4px 10px;">
+          <span id="actDot" style="width:7px;height:7px;border-radius:50%;background:#fca5a5;transition:background .4s;"></span>
+          <span id="actStatus" style="font-size:11px;font-weight:700;color:rgba(198,201,215,.55);">Conectando...</span>
+        </div>
+      </div>
+      <button onclick="Actividad.clear()" style="background:rgba(255,255,255,.055);border:1px solid rgba(198,201,215,.14);color:rgba(198,201,215,.6);padding:7px 14px;border-radius:99px;font-size:12px;font-weight:700;cursor:pointer;">🗑 Limpiar vista</button>
+    </div>
+    <div style="background:rgba(107,225,227,.06);border:1px solid rgba(107,225,227,.14);border-radius:12px;padding:12px 16px;margin-bottom:16px;font-size:12px;color:rgba(198,201,215,.62);line-height:1.6;">
+      📡 <strong style="color:rgba(107,225,227,.8);">Actualización automática</strong> —
+      Cuando cualquier admin guarda, edita o elimina un registro, aparece aquí al instante para todos los admins conectados.
+    </div>
+    <div id="actFeed" style="display:flex;flex-direction:column;gap:8px;">
+      <div style="text-align:center;padding:48px 16px;color:rgba(198,201,215,.3);">
+        <div style="font-size:32px;margin-bottom:10px;">🔔</div>
+        <div style="font-size:13px;">Hacé click en la pestaña para ver la actividad.</div>
       </div>
     </div>
   </div>
 
 </main>
 
-<footer class="app-footer" style="position: relative; padding: 25px 0;">
-  <img src="img/one-logoletra.png" alt="ONE" class="footer-logo" 
-       style="height: 14px; opacity: 0.5;"
-       onerror="this.replaceWith(document.createTextNode('ONE'))"/>
-  
-  <span style="opacity:.2; margin: 0 8px;">&middot;</span>
-  
-  <span style="display:inline-flex; align-items:center; gap:8px; font-size: 11px; opacity: 0.6;">
-    Desarrollado por
-    <img src="img/escencial-logoblanco.png" alt="Escencial" 
-         style="height: 40px; width: auto; display: block; filter: brightness(1.2);" 
-         onerror="this.replaceWith(document.createTextNode('Escencial'))"/>
+
+<footer class="app-footer no-print">
+  <img src="img/one-logoletra.png" alt="ONE" class="footer-logo" onerror="this.replaceWith(document.createTextNode('ONE'))"/>
+  <span style="opacity:.3;">·</span><span>© 2026</span><span style="opacity:.3;">·</span>
+  <span style="display:flex;align-items:center;gap:5px;">Desarrollado por
+    <img src="img/escencial-logoblanco.png" alt="Escencial" class="footer-logo" onerror="this.replaceWith(document.createTextNode('Escencial'))"/>
   </span>
-
-  <div style="position: absolute; bottom: 12px; right: 20px; font-size: 9px; opacity: 0.15; font-family: 'Exo 2', sans-serif; letter-spacing: 1px;">
-    V. 0.0.7
-  </div>
 </footer>
-
 </div>
+
+
+
+<!-- MODAL PERSONAL -->
+<div class="modal-overlay" id="mPers" style="display:none;" onclick="if(event.target===this)Personal.closeModal()">
+  <div class="modal-box">
+    <div class="modal-header"><h3 style="font-size:16px;font-weight:800;" id="mPT">Agregar Persona</h3><button class="modal-close" onclick="Personal.closeModal()">✕</button></div>
+    <input type="hidden" id="mpId"/>
+    <div style="display:flex;flex-direction:column;gap:11px;">
+      <div><label class="lbl">Nombre completo *</label><input class="inp" type="text" id="mpN" placeholder="Nombre y apellido"/></div>
+      <div><label class="lbl">Rol / Cargo</label><input class="inp" type="text" id="mpR" placeholder="Ej: Coordinador..."/></div>
+<div><label class="lbl">Área *</label>
+        <select class="inp" id="mpA"><option value="">Seleccionar...</option>
+          <option>ADMINISTRACION</option><option>COMERCIAL</option><option>RECURSOS HUMANOS</option>
+          <option>MARKETING</option><option>ACADEMICO / GT</option><option>INNOVACION Y DESARROLLO</option><option>MAESTRANZA</option><option>PASANTIAS</option>
+        </select>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="mpAc" checked style="width:15px;height:15px;cursor:pointer;accent-color:var(--one-cyan);"/><label for="mpAc" style="font-size:14px;cursor:pointer;">Persona activa</label></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:18px;">
+      <button class="btn btn-ghost" onclick="Personal.closeModal()" style="flex:1;">Cancelar</button>
+      <button class="btn btn-primary" onclick="Personal.save()" style="flex:1;justify-content:center;padding:10px;" id="btnSP">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EDITAR REGISTRO -->
+<div class="modal-overlay" id="mReg" style="display:none;" onclick="if(event.target===this)Registros.closeModal()">
+  <div class="modal-box">
+    <div class="modal-header"><h3 style="font-size:16px;font-weight:800;">Editar Registro</h3><button class="modal-close" onclick="Registros.closeModal()">✕</button></div>
+    <input type="hidden" id="erId"/>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px;">
+<div><label class="lbl">Área *</label>
+          <select class="inp" id="erA" onchange="Registros._onAreaChange(this.value)">
+            <option value="">Seleccionar...</option>
+            <option>ADMINISTRACION</option><option>COMERCIAL</option><option>RECURSOS HUMANOS</option>
+            <option>MARKETING</option><option>ACADEMICO / GT</option><option>INNOVACION Y DESARROLLO</option><option>MAESTRANZA</option><option>PASANTIAS</option>
+          </select>
+        </div>
+        <div><label class="lbl">Nombre *</label>
+          <select class="inp" id="erN">
+            <option value="">Seleccioná área primero</option>
+          </select>
+        </div>
+      </div>
+      <div><label class="lbl">Fecha *</label><input class="inp" type="date" id="erF"/></div>
+      <div><label class="lbl">Horario planificado</label><input class="inp" type="text" id="erT" placeholder="Ej: 09:00 → 17:00 / Flex / Guardia"/></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px;">
+        <div><label class="lbl">Entrada real</label><input class="time-inp" type="time" id="erE"/></div>
+        <div><label class="lbl">Salida real</label><input class="time-inp" type="time" id="erS"/></div>
+      </div>
+      <!-- 2° turno -->
+      <div style="padding:10px 12px;background:rgba(228,199,106,.06);border:1px solid rgba(228,199,106,.2);border-radius:10px;">
+        <div style="font-size:9px;font-weight:800;color:rgba(228,199,106,.7);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;">✂ 2° Turno (opcional)</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px;">
+          <div><label class="lbl">Entrada 2°</label><input class="time-inp" type="time" id="erE2"/></div>
+          <div><label class="lbl">Salida 2°</label><input class="time-inp" type="time" id="erS2"/></div>
+        </div>
+      </div>
+      <div><label class="lbl">Observaciones</label><input class="inp" type="text" id="erO" placeholder="Notas..."/></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:18px;">
+      <button class="btn btn-ghost" onclick="Registros.closeModal()" style="flex:1;">Cancelar</button>
+      <button class="btn btn-primary" onclick="Registros.save()" style="flex:1;justify-content:center;padding:10px;">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EDITOR HORARIOS POR ÁREA -->
+<div class="modal-overlay" id="mHsem" style="display:none;" onclick="if(event.target===this)HorariosSem.closeModal()">
+  <div class="modal-box-lg" style="max-width:1000px;">
+    <div class="modal-header">
+      <div>
+        <h3 style="font-size:16px;font-weight:800;">Horarios <span class="brand-gc">— </span><span id="mhAreaTitle">—</span></h3>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:6px;flex-wrap:wrap;">
+          <span class="badge badge-cyan" style="font-size:12px;" id="mhSemLabel"></span>
+          <button class="btn-ant" id="btnCopiarAnt" onclick="HorariosSem.copiarAntModal()" style="display:none;">⟳ Copiar semana anterior</button>
+        </div>
+      </div>
+      <button class="modal-close" onclick="HorariosSem.closeModal()">✕</button>
+    </div>
+    <div style="margin-bottom:13px;">
+      <label class="lbl">Observación general del área (opcional)</label>
+      <input class="inp" id="mhAreaObs" type="text" placeholder="Notas de la semana..."/>
+    </div>
+    <div id="mhPersonasBody" style="max-height:58vh;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding-right:2px;">
+      <div style="text-align:center;padding:30px;color:rgba(198,201,215,.3);"><span class="sp"></span></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;">
+      <button class="btn btn-danger" onclick="HorariosSem.delArea()" style="flex-shrink:0;">🗑 Eliminar semana</button>
+      <button class="btn btn-ghost" onclick="HorariosSem.closeModal()" style="flex:1;">Cancelar</button>
+      <button class="btn btn-primary" onclick="HorariosSem.saveArea()" id="btnSHsem" style="flex:2;justify-content:center;padding:12px;font-size:15px;">✓ Guardar área completa</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL LÍDERES -->
+<div class="modal-overlay" id="mLid" style="display:none;" onclick="if(event.target===this)Lideres.closeModal()">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3 style="font-size:16px;font-weight:800;" id="mLidT">Agregar Líder</h3>
+      <button class="modal-close" onclick="Lideres.closeModal()">✕</button>
+    </div>
+    <input type="hidden" id="mlId"/>
+    <div style="display:flex;flex-direction:column;gap:11px;">
+      <div><label class="lbl">Nombre completo *</label><input class="inp" type="text" id="mlNombre" placeholder="Ej: Marcela González"/></div>
+      <div><label class="lbl">Usuario (para login en Lider.html) *</label><input class="inp" type="text" id="mlUsuario" placeholder="Ej: MARCELA" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()"/></div>
+      <div><label class="lbl">Contraseña *</label><input class="inp" type="text" id="mlPassword" placeholder="Ej: MARCELA (por defecto igual al usuario)"/></div>
+      
+      <!-- SECCIÓN CREAR NUEVA ÁREA -->
+      <div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+          <label class="lbl" style="margin:0;">Áreas asignadas *</label>
+          <button type="button" onclick="Lideres.toggleNewAreaForm()" 
+            style="background:rgba(228,199,106,.1);border:1px solid rgba(228,199,106,.25);color:var(--one-gold);padding:4px 12px;border-radius:999px;font-size:11px;font-weight:800;cursor:pointer;transition:all .2s;"
+            onmouseover="this.style.background='rgba(228,199,106,.18)'"
+            onmouseout="this.style.background='rgba(228,199,106,.1)'">
+            + Nueva área
+          </button>
+        </div>
+        
+        <!-- Formulario crear nueva área -->
+        <div id="mlNewAreaForm" style="display:none;margin-bottom:10px;padding:10px;background:rgba(228,199,106,.06);border:1px solid rgba(228,199,106,.2);border-radius:10px;">
+          <div style="font-size:10px;font-weight:800;color:rgba(228,199,106,.8);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;">✨ Crear nueva área</div>
+          <div style="display:flex;gap:6px;align-items:end;">
+            <div style="flex:1;">
+              <input class="inp" type="text" id="mlNewAreaName" placeholder="Nombre del área (ej: FINANZAS)" 
+                style="text-transform:uppercase;font-size:13px;"
+                oninput="this.value=this.value.toUpperCase()"/>
+            </div>
+            <button type="button" onclick="Lideres.createNewArea()" id="btnCreateArea"
+              style="background:linear-gradient(135deg,rgba(228,199,106,.25),rgba(228,199,106,.15));border:1px solid rgba(228,199,106,.4);color:var(--one-gold);padding:8px 16px;border-radius:999px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;transition:all .2s;"
+              onmouseover="this.style.transform='translateY(-1px)'"
+              onmouseout="this.style.transform=''">
+              ✓ Crear
+            </button>
+            <button type="button" onclick="Lideres.toggleNewAreaForm()"
+              style="background:rgba(255,255,255,.05);border:1px solid rgba(198,201,215,.15);color:rgba(198,201,215,.5);padding:8px 14px;border-radius:999px;font-size:12px;font-weight:700;cursor:pointer;">
+              ✕
+            </button>
+          </div>
+        </div>
+
+        <div id="mlAreasCheck" style="display:flex;flex-direction:column;gap:7px;padding:10px;background:rgba(255,255,255,.04);border:1px solid rgba(198,201,215,.12);border-radius:10px;">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;"><input type="checkbox" value="ADMINISTRACION" style="accent-color:var(--one-cyan);width:15px;height:15px;"/> ADMINISTRACION</label>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;"><input type="checkbox" value="COMERCIAL" style="accent-color:var(--one-cyan);width:15px;height:15px;"/> COMERCIAL</label>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;"><input type="checkbox" value="RECURSOS HUMANOS" style="accent-color:var(--one-cyan);width:15px;height:15px;"/> RECURSOS HUMANOS</label>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;"><input type="checkbox" value="MARKETING" style="accent-color:var(--one-cyan);width:15px;height:15px;"/> MARKETING</label>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;"><input type="checkbox" value="ACADEMICO / GT" style="accent-color:var(--one-cyan);width:15px;height:15px;"/> ACADEMICO / GT</label>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;"><input type="checkbox" value="INNOVACION Y DESARROLLO" style="accent-color:var(--one-cyan);width:15px;height:15px;"/> INNOVACION Y DESARROLLO</label>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;"><input type="checkbox" value="MAESTRANZA" style="accent-color:var(--one-cyan);width:15px;height:15px;"/> MAESTRANZA</label>
+<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;"><input type="checkbox" value="PASANTIAS" style="accent-color:var(--one-cyan);width:15px;height:15px;"/> PASANTIAS</label>
+        </div>
+      </div>
+      
+      <div style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="mlActivo" checked style="width:15px;height:15px;cursor:pointer;accent-color:var(--one-cyan);"/><label for="mlActivo" style="font-size:14px;cursor:pointer;">Líder activo</label></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:18px;">
+      <button class="btn btn-ghost" onclick="Lideres.closeModal()" style="flex:1;">Cancelar</button>
+      <button class="btn btn-primary" onclick="Lideres.save()" style="flex:1;justify-content:center;padding:10px;" id="btnSLid">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="js/supabase.js"></script>
 <script src="js/utils.js"></script>
-<script src="js/auth.js"></script> 
-
+<script src="js/auth.js"></script>
+<script src="js/personal.js"></script>
+<script src="js/registros.js"></script>
+<script src="js/dashboard.js"></script>
+<script src="js/horarios-sem.js"></script>
+<script src="js/actividad.js"></script>
 <script>
-/* ═══════════════════════════════════════════════
-   REGISTRO — lógica completa inline (sin carga.js)
-   ═══════════════════════════════════════════════ */
+const TABS = ['dash', 'reg', 'per', 'lid', 'hsem', 'act'];
+let _hsemOk = false;
 
-let horarioPlan  = null;
-let sessionQueue = [];
-let registroActualId = null;
-
-/* ── Fecha ── */
-const _DIAS  = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
-const _MESES = ['enero','febrero','marzo','abril','mayo','junio','julio',
-                'agosto','septiembre','octubre','noviembre','diciembre'];
-let _offset = -1;
-
-function _fechaStr(off) {
-  const d = new Date();
-  d.setDate(d.getDate() + off);
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-}
-function getFechaActual() { return _fechaStr(_offset); }
-
-function _updFecha() {
-  const fs = getFechaActual();
-  const d  = new Date(fs + 'T12:00:00');
-  document.getElementById('lFecha').value    = fs;
-  document.getElementById('fechaDia').textContent =
-    _DIAS[d.getDay()] + ' ' + d.getDate() + ' de ' + _MESES[d.getMonth()];
-  document.getElementById('fechaNum').textContent =
-    fs.split('-').reverse().join('/');
-  const b = document.getElementById('btnHoy');
-  _offset !== 0 ? b.classList.remove('hide') : b.classList.add('hide');
-}
-
-function cambiarFecha(d) {
-  _offset += d;
-  _updFecha();
-  if (document.getElementById('lNom')?.value) onPersonaChange();
-}
-function irAHoy() {
-  _offset = 0;
-  _updFecha();
-  if (document.getElementById('lNom')?.value) onPersonaChange();
-}
-
-/* ── Personal ── */
-async function loadPersonal() {
-  const area = document.getElementById('lArea').value;
-  const sel  = document.getElementById('lNom');
-  horarioPlan = null; _clearCalc(); _clearPlan();
-  if (!area) { sel.innerHTML = '<option value="">Seleccioná área primero</option>'; return; }
-  sel.innerHTML = '<option value="">Cargando...</option>';
-  const { data } = await SB.from('personal')
-    .select('nombre,rol').eq('area', area).eq('activo', true).order('nombre');
-  sel.innerHTML = '<option value="">Seleccionar persona...</option>';
-  (data || []).forEach(p => {
-    const o = document.createElement('option');
-    o.value = JSON.stringify({ nombre: p.nombre, rol: p.rol || '' });
-    o.textContent = p.nombre;
-    sel.appendChild(o);
+function switchTab(t) {
+  TABS.forEach(x => {
+    document.getElementById('tab-'+x).style.display = x===t ? '' : 'none';
+    document.getElementById('at-'+x).classList.toggle('active', x===t);
   });
+  const btnPdf = document.getElementById('btnPdfWrap');
+  const btnCsv = document.getElementById('btnCsvWrap');
+  if (btnPdf) btnPdf.style.display = t==='dash' ? '' : 'none';
+  if (btnCsv) btnCsv.style.display = t==='reg'  ? '' : 'none';
+  if (t === 'hsem' && !_hsemOk) { _hsemOk = true; HorariosSem.init(); }
+if (t === 'lid') { Lideres.load(); CfgVentana.load(); }
 }
 
-/* ── Persona cambia ── */
-async function onPersonaChange() {
-  const opt = document.getElementById('lNom').selectedOptions[0];
-  horarioPlan = null; _clearCalc(); _clearPlan();
-  if (!opt?.value) return;
-  let nombre;
-  try { nombre = JSON.parse(opt.value).nombre; } catch { return; }
-
-  const plan = await getHorarioPlanificado(nombre, getFechaActual());
-  horarioPlan = plan;
-  const { data: regReal } = await SB.from('registros')
-    .select('*')
-    .eq('nombre', nombre)
-    .eq('fecha', getFechaActual())
-    .maybeSingle();
-
-  const el = document.getElementById('lPlanInfo');
-  el.className = 'plan-info';
-  el.style.display = 'flex'; // forzar visible
-
-  if (!plan) {
-    el.innerHTML = '<span style="color:rgba(198,201,215,.45);">Sin horario planificado — podés ingresar igualmente.</span>';
-    document.getElementById('btnAgregar2do').style.display = '';
-    document.getElementById('turno2Wrap').style.display = 'none';
-    return;
-  }
-  if (plan.tipo === 'flex') {
-    el.classList.add('plan-flex');
-    el.innerHTML = '<span style="color:rgba(198,201,215,.6);">Planificado:</span>'
-      + '<strong style="color:var(--one-purple);margin-left:5px;">&#x1F504; Flex</strong>'
-      + '<span style="font-size:10px;color:rgba(198,201,215,.35);margin-left:4px;">Sin hora fija</span>';
-    document.getElementById('btnAgregar2do').style.display = 'none';
-    document.getElementById('turno2Wrap').style.display = 'none';
-    return;
-  } else if (plan.tipo === 'guardia') {
-    el.classList.add('plan-guardia');
-    el.innerHTML = '<span style="color:rgba(198,201,215,.6);">Planificado:</span>'
-      + '<strong style="color:var(--one-gold);margin-left:5px;">&#x1F6E1; Guardia</strong>'
-      + '<span style="font-size:10px;color:rgba(198,201,215,.35);margin-left:4px;">1h computable</span>';
-    document.getElementById('btnAgregar2do').style.display = 'none';
-    document.getElementById('turno2Wrap').style.display = 'none';
-    return;
-  } else {
-    // Horario normal — mostrar horario y si es partido
-    const esCortado = !!(plan.entrada2 || plan.salida2);
-    let html = '<span style="color:rgba(198,201,215,.6);">Planificado:</span>'
-      + '<strong style="color:var(--one-cyan);margin-left:5px;">' + plan.entrada + '</strong>'
-      + (plan.salida ? '<span style="color:rgba(198,201,215,.4);font-size:11px;"> &#x2192; </span><strong>' + plan.salida + '</strong>' : '');
-    if (esCortado) {
-      html += '<span style="color:rgba(228,199,106,.6);margin-left:8px;font-size:11px;">✂</span>'
-        + '<strong style="color:var(--one-gold);margin-left:4px;font-size:11px;">'
-        + (plan.entrada2 || '?') + (plan.salida2 ? ' → ' + plan.salida2 : '') + '</strong>'
-        + '<span style="font-size:10px;color:rgba(228,199,106,.5);margin-left:4px;">turno partido</span>';
-    }
-    el.innerHTML = html;
-
-    // Mostrar/ocultar bloque de 2° turno
-    const t2 = document.getElementById('turno2Wrap');
-    const btn2 = document.getElementById('btnAgregar2do');
-    if (esCortado) {
-      if (t2) t2.style.display = '';
-      if (btn2) btn2.style.display = 'none';
-      const e2 = document.getElementById('lEnt2');
-      const s2 = document.getElementById('lSal2');
-      if (e2) e2.value = '';
-      if (s2) s2.value = '';
-    } else {
-      if (t2) t2.style.display = 'none';
-      if (btn2) btn2.style.display = ''; // mostrar botón manual
-    }
-  }
-
-  // Rellenar inputs si ya había cargado algo hoy
-// Rellenar inputs si ya había cargado algo hoy
-  registroActualId = regReal ? regReal.id : null;
-  if (regReal) {
-    document.getElementById('lEnt').value = regReal.hora_entrada ? regReal.hora_entrada.substring(0, 5) : '';
-    document.getElementById('lSal').value = regReal.hora_salida ? regReal.hora_salida.substring(0, 5) : '';
-    document.getElementById('lObs').value = regReal.observaciones || '';
-
-    // Leer los horarios REALES del segundo turno, no el planificado
-    if (regReal.hora_entrada2 || regReal.hora_salida2) {
-      if (document.getElementById('lEnt2')) document.getElementById('lEnt2').value = regReal.hora_entrada2 ? regReal.hora_entrada2.substring(0, 5) : '';
-      if (document.getElementById('lSal2')) document.getElementById('lSal2').value = regReal.hora_salida2 ? regReal.hora_salida2.substring(0, 5) : '';
-      mostrarTurno2();
-    }
-  } else {
-    document.getElementById('lEnt').value = '';
-    document.getElementById('lSal').value = '';
-    document.getElementById('lObs').value = '';
-    if (document.getElementById('lEnt2')) document.getElementById('lEnt2').value = '';
-    if (document.getElementById('lSal2')) document.getElementById('lSal2').value = '';
-  }
-
-  updCalc();
+function toggleTabla() {
+  const w   = document.getElementById('hsemTablaWrap');
+  const lbl = document.getElementById('btnTablaLbl');
+  const img = document.getElementById('btnDescImg');
+  const show = w.style.display === 'none';
+  w.style.display = show ? '' : 'none';
+  if (img) img.style.display = show ? '' : 'none';
+  lbl.textContent = show ? '🔼 Ocultar tabla' : '📋 Ver tabla detallada';
+  if (show) HorariosSem._renderTabla();
 }
 
-/* ── Calcular ── */
-function updCalc() {
-  const ent = document.getElementById('lEnt').value;
-  const sal = document.getElementById('lSal').value;
-  const it  = document.getElementById('lInfoT');
-  const ih  = document.getElementById('lInfoH');
-
-  if (horarioPlan?.tipo === 'flex') {
-    it.style.color = 'var(--one-purple)';
-    it.textContent = ent ? '&#x1F504; Flex — sin tardanza calculada' : '';
-  } else if (horarioPlan?.tipo === 'guardia') {
-    it.style.color = 'var(--one-gold)';
-    it.textContent = ent ? '&#x1F6E1; Guardia — 1h computable' : '';
-  } else if (ent && horarioPlan?.entrada) {
-    const diff = calcTardVsPlan(horarioPlan.entrada, ent);
-    const info = tardInfoText(diff);
-    it.style.color = info.color; it.textContent = info.text;
-  } else if (ent) {
-    it.style.color = 'rgba(198,201,215,.45)';
-    it.textContent = 'Sin planificación para comparar';
-  } else { it.textContent = ''; }
-
-  const hs = calcHs(ent, sal);
-  if (hs !== null) {
-    let ext = '';
-    if (horarioPlan?.tipo === 'normal' && horarioPlan?.salida && sal) {
-      const m = calcHsExtra(horarioPlan.salida, sal);
-      if (m > 0) ext = ' <span style="color:var(--one-gold);">(+' + m + 'm extra)</span>';
-    }
-    ih.innerHTML = '&#x23F1; ' + fmtHs(hs) + ' trabajadas' + ext;
-  } else { ih.textContent = ''; }
+function abrirInforme() {
+  const per  = document.getElementById('dPer')?.value  || 'semana';
+  const area = document.getElementById('dArea')?.value || '';
+  let url = 'informe.html?per=' + encodeURIComponent(per);
+  if (area) url += '&area=' + encodeURIComponent(area);
+  window.location.href = url;
 }
 
-/* ── Guardar ── */
-async function guardarRegistro() {
-  const area = document.getElementById('lArea').value;
-  const opt  = document.getElementById('lNom').selectedOptions[0];
-  const ent  = document.getElementById('lEnt').value;
-  const sal  = document.getElementById('lSal').value;
-  const ent2 = document.getElementById('lEnt2')?.value || '';
-  const sal2 = document.getElementById('lSal2')?.value || '';
-  const obs  = document.getElementById('lObs').value.trim();
-  const fecha = getFechaActual();
+// ── MÓDULO LÍDERES ──
+const Lideres = (() => {
+  let _data = [];
+  let _editId = null;
+  let _allAreas = [
+    'ADMINISTRACION', 'COMERCIAL', 'RECURSOS HUMANOS', 'MARKETING',
+    'ACADEMICO / GT', 'INNOVACION Y DESARROLLO', 'MAESTRANZA'
+  ];
 
-  if (!area || !opt?.value || !ent) {
-    showToast('Completá área, nombre y hora de entrada', 'err'); return;
-  }
-  let nombre, rol;
-  try { const d = JSON.parse(opt.value); nombre = d.nombre; rol = d.rol; }
-  catch { showToast('Seleccioná una persona válida', 'err'); return; }
-
-  const btn = document.getElementById('lBtnG');
-  btn.disabled = true;
-  document.getElementById('lBIco').textContent = '⏳';
-  document.getElementById('lBTxt').textContent = 'Guardando...';
-
-  const turno = !horarioPlan ? 'Personalizado'
-    : horarioPlan.tipo === 'flex'    ? 'Flex'
-    : horarioPlan.tipo === 'guardia' ? 'Guardia'
-    : (() => {
-        const esCortado = !!(horarioPlan.entrada2 || horarioPlan.salida2);
-        let t = horarioPlan.entrada + (horarioPlan.salida ? ' → ' + horarioPlan.salida : '');
-        if (esCortado) t += ' | ' + (horarioPlan.entrada2 || '') + (horarioPlan.salida2 ? ' → ' + horarioPlan.salida2 : '');
-        return t;
-      })();
-
-  const tardanza = horarioPlan?.tipo === 'normal' && horarioPlan?.entrada
-    ? calcTardVsPlan(horarioPlan.entrada, ent) : null;
-
-  // Combinar obs con el 2° turno real si existe
-const obsFinal = obs || null;
-
-const payload = {
-    area, nombre, rol, fecha,
-    turno, 
-    hora_entrada: ent + ':00',
-    hora_salida: sal ? sal + ':00' : null,
-    hora_entrada2: ent2 ? ent2 + ':00' : null,
-    hora_salida2: sal2 ? sal2 + ':00' : null,
-    observaciones: obsFinal,
+const ACOLOR = {
+    'ADMINISTRACION':'#6be1e3','COMERCIAL':'#e17bd7','RECURSOS HUMANOS':'#e4c76a',
+    'MARKETING':'#f472b6','ACADEMICO / GT':'#a78bfa',
+    'INNOVACION Y DESARROLLO':'#34d399','MAESTRANZA':'#fb923c','PASANTIAS':'#60a5fa',
   };
 
-  let error;
-  if (registroActualId) {
-    const { error: errUpd } = await SB.from('registros').update(payload).eq('id', registroActualId);
-    error = errUpd;
-  } else {
-    const { error: errIns } = await SB.from('registros').insert(payload);
-    error = errIns;
+  async function load() {
+    const tbody = document.getElementById('tbLid');
+    if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:30px;color:rgba(198,201,215,.28);"><span class="sp"></span></td></tr>';
+    const { data, error } = await SB.from('lideres').select('*').order('nombre');
+    if (error) {
+      if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--color-danger-text);">Error al cargar líderes</td></tr>';
+      return;
+    }
+    _data = data || [];
+    _render();
   }
 
-  btn.disabled = false;
-  document.getElementById('lBIco').textContent = '✅';
-  document.getElementById('lBTxt').textContent = 'Guardar registro';
+function _render() {
+    const tbody = document.getElementById('tbLid');
+    if (!tbody) return;
+    if (!_data.length) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;color:rgba(198,201,215,.28);">Sin líderes registrados — agregá el primero</td></tr>';
+      return;
+    }
+    tbody.innerHTML = _data.map((l, i) => {
+      const areas = (l.areas || []).map(a =>
+        `<span style="background:${ACOLOR[a]||'#a4a8c0'}22;border:1px solid ${ACOLOR[a]||'#a4a8c0'}44;color:${ACOLOR[a]||'#a4a8c0'};padding:1px 8px;border-radius:999px;font-size:10px;font-weight:800;white-space:nowrap;">${a.split(' ')[0]}</span>`
+      ).join(' ');
+      const est = l.activo
+        ? '<span class="badge badge-green">Activo</span>'
+        : '<span class="badge badge-gray">Inactivo</span>';
+      return `<tr>
+        <td style="color:rgba(198,201,215,.4);">${i+1}</td>
+        <td style="font-weight:700;">${l.nombre}</td>
+        <td><code style="background:rgba(107,225,227,.1);color:var(--one-cyan);padding:2px 8px;border-radius:6px;font-size:12px;">${l.usuario}</code></td>
+        <td><div style="display:flex;gap:4px;flex-wrap:wrap;">${areas}</div></td>
+        <td>${est}</td>
+        <td class="no-print">
+          <div style="display:flex;gap:5px;">
+            <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;" onclick="Lideres.openEdit('${l.id}')">✏ Editar</button>
+            <button class="btn btn-danger" style="font-size:11px;padding:4px 10px;" onclick="Lideres.del('${l.id}')">🗑</button>
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+  
+  function openNew() {
+    _editId = null;
+    document.getElementById('mLidT').textContent = 'Agregar Líder';
+    document.getElementById('mlId').value = '';
+    document.getElementById('mlNombre').value = '';
+    document.getElementById('mlUsuario').value = '';
+    document.getElementById('mlPassword').value = '';
+    document.getElementById('mlActivo').checked = true;
+    _renderAreaCheckboxes();
+    document.getElementById('mlNewAreaForm').style.display = 'none';
+    document.getElementById('mlNewAreaName').value = '';
+    document.getElementById('mLid').style.display = '';
+    document.getElementById('mlNombre').focus();
+  }
 
-  if (error) { showToast('Error: ' + error.message, 'err'); return; }
+  function openEdit(id) {
+    const l = _data.find(x => x.id === id);
+    if (!l) return;
+    _editId = id;
+    document.getElementById('mLidT').textContent = 'Editar Líder';
+    document.getElementById('mlId').value = id;
+    document.getElementById('mlNombre').value = l.nombre;
+    document.getElementById('mlUsuario').value = l.usuario;
+    document.getElementById('mlPassword').value = l.password || '';
+    document.getElementById('mlActivo').checked = l.activo !== false;
+    _renderAreaCheckboxes(l.areas || []);
+    document.getElementById('mlNewAreaForm').style.display = 'none';
+    document.getElementById('mlNewAreaName').value = '';
+    document.getElementById('mLid').style.display = '';
+  }
 
-  sessionQueue.unshift({ nombre, area, ent, sal, tardanza, hs: calcHs(ent,sal), plan: horarioPlan });
-  _renderQueue();
+  function _renderAreaCheckboxes(selectedAreas = []) {
+    const container = document.getElementById('mlAreasCheck');
+    if (!container) return;
+    
+    container.innerHTML = _allAreas.map(area => 
+      `<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;">
+        <input type="checkbox" value="${area}" ${selectedAreas.includes(area) ? 'checked' : ''} 
+          style="accent-color:var(--one-cyan);width:15px;height:15px;"/> 
+        ${area}
+      </label>`
+    ).join('');
+  }
 
-  document.getElementById('lOkMsg').textContent = '✓ ' + nombre + ' registrado';
-  const banner = document.getElementById('lOkBanner');
-  banner.style.display = '';
-  clearTimeout(banner._t);
-  banner._t = setTimeout(() => banner.style.display = 'none', 5000);
-
-  document.getElementById('lNom').value = '';
-  document.getElementById('lEnt').value = '';
-  document.getElementById('lSal').value = '';
-  document.getElementById('lObs').value = '';
-  const e2 = document.getElementById('lEnt2'); if (e2) e2.value = '';
-  const s2 = document.getElementById('lSal2'); if (s2) s2.value = '';
-  const t2w = document.getElementById('turno2Wrap'); if (t2w) t2w.style.display = 'none';
-  horarioPlan = null; registroActualId = null; _clearCalc(); _clearPlan();
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-/* ── Cola ── */
-function _renderQueue() {
-  const sec = document.getElementById('lQSec');
-  if (!sessionQueue.length) { sec.style.display = 'none'; return; }
-  sec.style.display = '';
-  document.getElementById('lQCnt').textContent = sessionQueue.length;
-  document.getElementById('lQList').innerHTML = sessionQueue.slice(0, 12).map(r => {
-    let tb = '';
-    if (r.plan?.tipo === 'flex')     tb = '<span class="badge badge-purple" style="font-size:10px;">Flex</span>';
-    else if (r.plan?.tipo === 'guardia') tb = '<span class="badge badge-gold" style="font-size:10px;">Guardia</span>';
-    else if (r.tardanza !== null) tb = r.tardanza <= 0
-      ? '<span class="badge badge-green" style="font-size:10px;">✓ ' + Math.abs(r.tardanza) + 'm ant.</span>'
-      : '<span class="badge badge-red" style="font-size:10px;">+' + r.tardanza + 'm</span>';
-    const hb = r.hs ? '<span class="badge badge-cyan" style="font-size:10px;">' + fmtHs(r.hs) + '</span>' : '';
-    let pt = r.plan?.tipo === 'flex'    ? '<span style="font-size:11px;color:var(--one-purple);">Flex</span>'
-           : r.plan?.tipo === 'guardia' ? '<span style="font-size:11px;color:var(--one-gold);">Guardia</span>'
-           : r.plan?.entrada ? '<span style="font-size:11px;color:rgba(198,201,215,.5);">' + r.plan.entrada + '</span>' : '';
-    return '<div class="queue-row">'
-      + '<div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;">'
-      + '<span style="color:' + areaColor(r.area) + ';font-size:11px;font-weight:800;">' + r.area.split(' ')[0] + '</span>'
-      + '<span style="font-weight:700;font-size:13px;">' + r.nombre + '</span>'
-      + pt
-      + '<span style="font-size:12px;color:rgba(198,201,215,.5);">' + r.ent + (r.sal ? ' → ' + r.sal : '') + '</span>'
-      + hb + tb
-      + '</div>'
-      + '<span style="color:var(--color-success-text);font-size:15px;">✓</span></div>';
-  }).join('');
-}
-
-/* ── Admin ── */
-/* ── Admin ── */
-function toggleAdmin() {
-  const box = document.getElementById('adminLoginBox');
-  const btn = document.getElementById('btnShowAdmin');
-  const isVisible = box.style.display === '';
-  box.style.display = isVisible ? 'none' : '';
-  btn.style.display = isVisible ? '' : 'none';
-}
-
-function loginAdmin() {
-    const u = document.getElementById('aU').value.trim();
-    const p = document.getElementById('aP').value.trim();
-
-    // Ahora Auth.loginAdmin DEBE funcionar porque auth.js ya se cargó arriba
-    if (Auth.loginAdmin(u, p)) {
-      showToast('Acceso concedido', 'ok');
-      setTimeout(() => {
-        window.location.href = 'admin.html';
-      }, 500);
+  function toggleNewAreaForm() {
+    const form = document.getElementById('mlNewAreaForm');
+    const isVisible = form.style.display !== 'none';
+    form.style.display = isVisible ? 'none' : '';
+    if (!isVisible) {
+      document.getElementById('mlNewAreaName').focus();
     } else {
-      showToast('Usuario o contraseña incorrectos', 'err');
+      document.getElementById('mlNewAreaName').value = '';
     }
   }
 
-function mostrarTurno2() {
-  document.getElementById('turno2Wrap').style.display = '';
-  document.getElementById('btnAgregar2do').style.display = 'none';
-}
-function ocultarTurno2() {
-  document.getElementById('turno2Wrap').style.display = 'none';
-  document.getElementById('btnAgregar2do').style.display = '';
-  const e2 = document.getElementById('lEnt2'); if (e2) e2.value = '';
-  const s2 = document.getElementById('lSal2'); if (s2) s2.value = '';
-}
+  async function createNewArea() {
+    const areaName = document.getElementById('mlNewAreaName').value.trim().toUpperCase();
+    
+    if (!areaName) {
+      showToast('Escribí el nombre del área', 'err');
+      return;
+    }
 
-/* ── Helpers ── */
-function _clearPlan() {
-  const el = document.getElementById('lPlanInfo');
-  if (el) { el.style.display = 'none'; el.innerHTML = ''; }
-  const t2 = document.getElementById('turno2Wrap');
-  if (t2) t2.style.display = 'none';
-  const btn2 = document.getElementById('btnAgregar2do');
-  if (btn2) btn2.style.display = 'none';
-}
-function _clearCalc() {
-  const it = document.getElementById('lInfoT');
-  const ih = document.getElementById('lInfoH');
-  if (it) it.textContent = '';
-  if (ih) ih.textContent = '';
-}
+    if (_allAreas.includes(areaName)) {
+      showToast('Esa área ya existe', 'err');
+      return;
+    }
 
-/* ── Init ── */
-document.addEventListener('DOMContentLoaded', _updFecha);
+    const btn = document.getElementById('btnCreateArea');
+    btn.disabled = true;
+    btn.textContent = '⏳';
+
+    // Agregar a la lista local
+    _allAreas.push(areaName);
+    _allAreas.sort();
+
+    // Re-renderizar checkboxes manteniendo las selecciones actuales
+    const currentSelections = [...document.querySelectorAll('#mlAreasCheck input[type=checkbox]:checked')]
+      .map(c => c.value);
+    currentSelections.push(areaName); // Auto-seleccionar la nueva
+    
+    _renderAreaCheckboxes(currentSelections);
+
+    // Limpiar formulario
+    document.getElementById('mlNewAreaName').value = '';
+    toggleNewAreaForm();
+
+    btn.disabled = false;
+    btn.textContent = '✓ Crear';
+
+    showToast(`✓ Área "${areaName}" creada y seleccionada`);
+    
+    // Aquí podrías guardar en una tabla de áreas si existiera
+    // Por ahora solo existe en memoria de esta sesión
+  }
+
+  function closeModal() { 
+    document.getElementById('mLid').style.display = 'none'; 
+    document.getElementById('mlNewAreaForm').style.display = 'none';
+    document.getElementById('mlNewAreaName').value = '';
+  }
+
+  async function save() {
+    const nombre   = document.getElementById('mlNombre').value.trim();
+    const usuario  = document.getElementById('mlUsuario').value.trim().toUpperCase();
+    const password = document.getElementById('mlPassword').value.trim() || usuario;
+    const activo   = document.getElementById('mlActivo').checked;
+    const areas    = [...document.querySelectorAll('#mlAreasCheck input[type=checkbox]:checked')].map(c => c.value);
+
+    if (!nombre || !usuario || !areas.length) {
+      showToast('Completá nombre, usuario y al menos un área', 'err'); return;
+    }
+
+    const btn = document.getElementById('btnSLid');
+    btn.disabled = true; btn.textContent = '⏳';
+
+    const payload = { nombre, usuario, password, areas, activo };
+    let error;
+    if (_editId) {
+      ({ error } = await SB.from('lideres').update(payload).eq('id', _editId));
+    } else {
+      ({ error } = await SB.from('lideres').insert(payload));
+    }
+
+    btn.disabled = false; btn.textContent = 'Guardar';
+    if (error) { showToast('Error: ' + error.message, 'err'); return; }
+    showToast(_editId ? '✓ Líder actualizado' : '✓ Líder creado');
+    closeModal();
+    load();
+  }
+
+  async function del(id) {
+    const l = _data.find(x => x.id === id);
+    if (!confirm(`¿Eliminar a ${l?.nombre}?`)) return;
+    const { error } = await SB.from('lideres').delete().eq('id', id);
+    if (error) { showToast('Error: ' + error.message, 'err'); return; }
+    showToast('✓ Eliminado');
+    load();
+  }
+
+  return { 
+    load, 
+    openNew, 
+    openEdit, 
+    closeModal, 
+    save, 
+    del, 
+    toggleNewAreaForm, 
+    createNewArea 
+  };
+})();
+
+document.addEventListener('DOMContentLoaded', () => {
+  Auth.requireAdmin();
+  Dashboard.load();
+  Registros.load();
+  Personal.load();
+});
+
+
 </script>
 </body>
 </html>
