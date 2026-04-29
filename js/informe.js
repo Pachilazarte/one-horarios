@@ -4,15 +4,16 @@
 
 const InformePDF = (() => {
 
-  const ACOLOR = {
-    'ADMINISTRACION':        '#6be1e3',
-    'COMERCIAL':             '#e17bd7',
-    'RECURSOS HUMANOS':      '#e4c76a',
-    'MARKETING':             '#f472b6',
-    'ACADEMICO / GT':        '#a78bfa',
-    'INNOVACION Y DESARROLLO':'#34d399',
-    'MAESTRANZA':            '#fb923c',
-  };
+const ACOLOR = {
+  'ADMINISTRACION':'#6be1e3',
+  'COMERCIAL':'#e17bd7',
+  'RECURSOS HUMANOS':'#e4c76a',
+  'MARKETING':'#f472b6',
+  'ACADEMICO / GT':'#a78bfa',
+  'INNOVACION Y DESARROLLO':'#34d399',
+  'MAESTRANZA':'#fb923c',
+  'PASANTIAS':'#60a5fa'  // ← Sin coma al final si es el último
+};
 
   const PERIOD_LABEL = {
     hoy:'HOY', ayer:'AYER', semana:'SEMANA EN CURSO',
