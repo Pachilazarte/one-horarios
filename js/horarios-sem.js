@@ -5,7 +5,7 @@ const HorariosSem = (() => {
   const DIAS      = ['lunes','martes','miercoles','jueves','viernes','sabado','domingo'];
   const DIA_LBL   = {lunes:'Lunes',martes:'Martes',miercoles:'Miércoles',jueves:'Jueves',viernes:'Viernes',sabado:'Sábado',domingo:'Domingo'};
   const DIA_CORTO = {lunes:'Lun',martes:'Mar',miercoles:'Mié',jueves:'Jue',viernes:'Vie',sabado:'Sáb',domingo:'Dom'};
-  const AREAS     = ['ADMINISTRACION','COMERCIAL','RECURSOS HUMANOS','MARKETING','ACADEMICO / GT','INNOVACION Y DESARROLLO','MAESTRANZA'];
+  const AREAS     = ['ADMINISTRACION','COMERCIAL','RECURSOS HUMANOS','MARKETING','ACADEMICO / GT','INNOVACION Y DESARROLLO','MAESTRANZA','PASANTIAS'];
 
   let semActual = '';
   let semViendo = '';
