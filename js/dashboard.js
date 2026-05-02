@@ -1,4 +1,4 @@
-// js/dashboard.js — v2 (fix ayer/dia_especifico + top horas extra con sumatoria)
+// js/dashboard.js — v4 (fix ayer/dia_especifico + top horas extra + filtro persona + detalle personal)
 const Dashboard = (() => {
   let _cA=null,_cP=null,_cD=null;
   const _dest=c=>{if(c){try{c.destroy();}catch(e){}}};
@@ -14,9 +14,10 @@ const Dashboard = (() => {
   }
 
   async function load(){
-    const per  = document.getElementById('dPer').value;
-    const area = document.getElementById('dArea').value;
-    _lastPer   = per;
+    const per     = document.getElementById('dPer').value;
+    const area    = document.getElementById('dArea').value;
+    const persona = document.getElementById('dPersona')?.value?.toLowerCase() || '';  // ✅ NUEVO
+    _lastPer      = per;
 
     let desde, hasta;
     if (per === 'dia_especifico') {
@@ -34,14 +35,19 @@ const Dashboard = (() => {
     if(area)q=q.eq('area',area);
     const{data,error}=await q;
     if(error){showToast('Error dashboard','err');return;}
-    const rows=data||[];
+    let rows=data||[];
+    
+    // ✅ NUEVO - Filtro por persona
+    if(persona){
+      rows = rows.filter(r => r.nombre.toLowerCase().includes(persona));
+    }
+    
     _lastRows = rows;
 
     // Para horarios semanales: buscar semanas que SE SOLAPEN con el período
-    // No usar semana_hasta <= hasta porque corta la semana actual (sábado > hoy)
     let qH=SB.from('horarios_semanales').select('*');
-    if(desde) qH=qH.lte('semana_desde',hasta||desde); // semana empieza antes del fin del período
-    if(hasta) qH=qH.gte('semana_hasta',desde);        // semana termina después del inicio del período
+    if(desde) qH=qH.lte('semana_desde',hasta||desde);
+    if(hasta) qH=qH.gte('semana_hasta',desde);
     if(area)  qH=qH.eq('area',area);
     const{data:hsData}=await qH;
     const hs=hsData||[];
@@ -53,6 +59,7 @@ const Dashboard = (() => {
     _topTard(rows, per);
     _topExtra(rows, per);
     _areaTable(rows);
+    _personasTable(rows);  // ✅ NUEVO - Mostrar tabla de personas
   }
 
   function _kpis(rows,hs){
@@ -106,7 +113,7 @@ const Dashboard = (() => {
       const planSal = parts[1].trim().slice(0,5);
       if (!planSal.match(/^\d{2}:\d{2}$/)) return;
       const salReal = r.hora_salida.slice(0,5);
-      const extra   = calcHsExtra(planSal, salReal); // mins
+      const extra   = calcHsExtra(planSal, salReal);
       if (extra === null) return;
       const key = r.nombre;
       if (!byPers[key]) byPers[key] = { nombre:r.nombre, area:r.area, totalExtra:0, veces:0, dias:[] };
@@ -149,7 +156,6 @@ const Dashboard = (() => {
   }
 
   // ── TOP TARDANZAS ──
-  let _topTardMode = 'sum';
   function _topTard(rows, per){
     const el=document.getElementById('topTard');
     if(!el) return;
@@ -159,126 +165,186 @@ const Dashboard = (() => {
     const withTard=rows.filter(r=>{
       if(!r.turno||!r.hora_entrada||r.turno==='Flex'||r.turno==='Guardia')return false;
       const e=r.turno.split('→')[0].trim();
-      return e.match(/^\d{2}:\d{2}$/)&&calcTardVsPlan(e,r.hora_entrada.slice(0,5))>0;
-    }).map(r=>({...r,diff:calcTardVsPlan(r.turno.split('→')[0].trim(),r.hora_entrada.slice(0,5))}));
+      return e.match(/^\d{2}:\d{2}$/);
+    });
 
-    if(!withTard.length){
-      el.innerHTML='<div style="color:rgba(198,201,215,.4);font-size:13px;text-align:center;padding:20px;">✓ Sin tardanzas</div>';
-      return;
-    }
+    const byPers={};
+    withTard.forEach(r=>{
+      const planEnt=r.turno.split('→')[0].trim();
+      const diff=calcTardVsPlan(planEnt,r.hora_entrada.slice(0,5));
+      if(diff===null||diff<=0)return;
+      const k=r.nombre;
+      if(!byPers[k])byPers[k]={nombre:r.nombre,area:r.area,totalMin:0,veces:0};
+      byPers[k].totalMin+=diff;
+      byPers[k].veces++;
+    });
 
-    const modeBar = esDia ? '' : `
-      <div style="display:flex;gap:5px;margin-bottom:10px;">
-        <button onclick="Dashboard._setTardMode('sum')"   id="btnTardSum"   class="tab-btn ${_topTardMode==='sum'?'active':''}" style="font-size:11px;padding:4px 10px;">Σ Sumatoria</button>
-        <button onclick="Dashboard._setTardMode('aisla')" id="btnTardAisla" class="tab-btn ${_topTardMode!=='sum'?'active':''}" style="font-size:11px;padding:4px 10px;">📅 Por registro</button>
-      </div>`;
+    const sorted=Object.values(byPers).sort((a,b)=>b.totalMin-a.totalMin).slice(0,3);
+    const ACOLOR={
+      'ADMINISTRACION':'#6be1e3','COMERCIAL':'#e17bd7','RECURSOS HUMANOS':'#e4c76a',
+      'MARKETING':'#f472b6','ACADEMICO / GT':'#a78bfa',
+      'INNOVACION Y DESARROLLO':'#34d399','MAESTRANZA':'#fb923c','PASANTIAS':'#60a5fa',
+    };
 
-    let html;
-    if (esDia || _topTardMode !== 'sum') {
-      html = withTard.sort((a,b)=>b.diff-a.diff).slice(0,8).map(r=>`
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
-          <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
-            <span style="color:${areaColor(r.area)};font-size:10px;font-weight:800;white-space:nowrap;">${r.area.split(' ')[0]}</span>
-            <span style="font-weight:700;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.nombre}</span>
-            <span style="font-size:11px;color:rgba(198,201,215,.5);">${fmtDate(r.fecha)}</span>
-          </div>
-          <span class="badge badge-red" style="flex-shrink:0;">+${r.diff}m</span>
-        </div>`).join('');
-    } else {
-      const byPers = {};
-      withTard.forEach(r=>{
-        if(!byPers[r.nombre]) byPers[r.nombre]={nombre:r.nombre,area:r.area,total:0,veces:0};
-        byPers[r.nombre].total += r.diff;
-        byPers[r.nombre].veces++;
-      });
-      html = Object.values(byPers).sort((a,b)=>b.total-a.total).slice(0,8).map(p=>`
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
-          <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
-            <span style="color:${areaColor(p.area)};font-size:10px;font-weight:800;white-space:nowrap;">${p.area.split(' ')[0]}</span>
-            <span style="font-weight:700;font-size:13px;">${p.nombre}</span>
-            <span style="font-size:11px;color:rgba(198,201,215,.4);">${p.veces} vez${p.veces!==1?'es':''}</span>
-          </div>
-          <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
-            <span style="font-size:11px;color:rgba(198,201,215,.4);">total</span>
-            <span class="badge badge-red">+${p.total}m</span>
-          </div>
-        </div>`).join('');
-    }
-    el.innerHTML = modeBar + `<div style="display:flex;flex-direction:column;gap:7px;">${html}</div>`;
+    if(!sorted.length){el.innerHTML='<div style="font-size:12px;color:rgba(198,201,215,.3);">—</div>';return;}
+    el.innerHTML=sorted.map((p,i)=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(198,201,215,.06);">
+      <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
+        <span style="color:${ACOLOR[p.area]||'#9ca3af'};font-weight:800;flex-shrink:0;">${i+1}</span>
+        <div style="min-width:0;flex:1;">
+          <div style="font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.nombre}</div>
+          <div style="font-size:10px;color:rgba(198,201,215,.4);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.area}</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;margin-left:8px;">
+        <div style="text-align:right;">
+          <div style="font-size:13px;font-weight:800;color:#ef4444;">+${p.totalMin}m</div>
+          <div style="font-size:10px;color:rgba(198,201,215,.4);">${p.veces}x</div>
+        </div>
+      </div>
+    </div>`).join('');
   }
 
   // ── TOP HORAS EXTRA POST-SALIDA ──
-  let _topExtraMode = 'sum';
   function _topExtra(rows, per){
     const el=document.getElementById('topExtra');
     if(!el) return;
 
-    const esDia = per==='hoy'||per==='ayer'||per==='dia_especifico';
-    const extraData = _calcExtraData(rows).filter(e=>e.totalExtra>0);
+    const extraData=_calcExtraData(rows);
+    const sorted=extraData.filter(e=>e.totalExtra>0).sort((a,b)=>b.totalExtra-a.totalExtra).slice(0,3);
+    const ACOLOR={
+      'ADMINISTRACION':'#6be1e3','COMERCIAL':'#e17bd7','RECURSOS HUMANOS':'#e4c76a',
+      'MARKETING':'#f472b6','ACADEMICO / GT':'#a78bfa',
+      'INNOVACION Y DESARROLLO':'#34d399','MAESTRANZA':'#fb923c','PASANTIAS':'#60a5fa',
+    };
 
-    if(!extraData.length){
-      el.innerHTML='<div style="color:rgba(198,201,215,.4);font-size:13px;text-align:center;padding:20px;">Sin horas extra post-salida</div>';
+    if(!sorted.length){el.innerHTML='<div style="font-size:12px;color:rgba(198,201,215,.3);">—</div>';return;}
+    el.innerHTML=sorted.map((p,i)=>{
+      const hs=fmtHs(p.totalExtra/60);
+      return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(198,201,215,.06);">
+        <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
+          <span style="color:${ACOLOR[p.area]||'#9ca3af'};font-weight:800;flex-shrink:0;">${i+1}</span>
+          <div style="min-width:0;flex:1;">
+            <div style="font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.nombre}</div>
+            <div style="font-size:10px;color:rgba(198,201,215,.4);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.area}</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;margin-left:8px;">
+          <div style="text-align:right;">
+            <div style="font-size:13px;font-weight:800;color:var(--one-gold);">+${hs}</div>
+            <div style="font-size:10px;color:rgba(198,201,215,.4);">${p.veces}d</div>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function _areaTable(rows){
+    const el=document.getElementById('tbArea');
+    if(!el)return;
+    const byArea={};
+    AREAS.forEach(a=>{
+      const ar=rows.filter(r=>r.area===a);
+      if(!ar.length)return;
+      const withPlan=ar.filter(r=>{
+        if(!r.turno||!r.hora_entrada||r.turno==='Flex'||r.turno==='Guardia')return false;
+        const e=r.turno.split('→')[0].trim();
+        return e.match(/^\d{2}:\d{2}$/);
+      });
+      if(!withPlan.length)return;
+      const diffs=withPlan.map(r=>{
+        const e=r.turno.split('→')[0].trim();
+        return calcTardVsPlan(e,r.hora_entrada.slice(0,5));
+      }).filter(d=>d!==null);
+      const prom=Math.round(diffs.reduce((a,b)=>a+b,0)/diffs.length);
+      const puntual=diffs.filter(d=>d<=0).length;
+      byArea[a]={prom,puntual,total:diffs.length};
+    });
+
+    const ACOLOR={
+      'ADMINISTRACION':'#6be1e3','COMERCIAL':'#e17bd7','RECURSOS HUMANOS':'#e4c76a',
+      'MARKETING':'#f472b6','ACADEMICO / GT':'#a78bfa',
+      'INNOVACION Y DESARROLLO':'#34d399','MAESTRANZA':'#fb923c','PASANTIAS':'#60a5fa',
+    };
+
+    el.innerHTML=Object.entries(byArea).map(([area,d])=>{
+      const col=ACOLOR[area]||'#9ca3af';
+      return`<tr><td style="color:${col};font-weight:700;font-size:12px;">${area.split(' ')[0]}</td><td>${d.total}</td><td>${d.prom>0?'+':''}${d.prom}m</td><td>${d.puntual}</td></tr>`;
+    }).join('');
+  }
+
+  // ✅ NUEVO - Tabla detallada por persona
+  function _personasTable(rows){
+    const el=document.getElementById('tbPersonas');
+    if(!el)return;
+
+    const byPers = {};
+    rows.forEach(r => {
+      if (!byPers[r.nombre]) {
+        byPers[r.nombre] = {
+          nombre: r.nombre,
+          area: r.area,
+          registros: 0,
+          puntuales: 0,
+          tardanzas: [],
+          horasTotal: 0,
+          ultimaFecha: r.fecha
+        };
+      }
+      const p = byPers[r.nombre];
+      p.registros++;
+      if (r.ultimaFecha < r.fecha) p.ultimaFecha = r.fecha;
+
+      // Calcular horas
+      const _hs1 = calcHs(r.hora_entrada?.slice(0,5), r.hora_salida?.slice(0,5));
+      const _hs2 = calcHs(r.hora_entrada2?.slice(0,5), r.hora_salida2?.slice(0,5));
+      const hs = (_hs1 !== null || _hs2 !== null) ? (_hs1 || 0) + (_hs2 || 0) : null;
+      if (hs !== null) p.horasTotal += hs;
+
+      // Calcular tardanza
+      if (r.turno && !['Flex', 'Guardia'].includes(r.turno) && r.hora_entrada) {
+        const planEnt = r.turno.split('→')[0].trim();
+        if (planEnt.match(/^\d{2}:\d{2}$/)) {
+          const diff = calcTardVsPlan(planEnt, r.hora_entrada.slice(0,5));
+          if (diff !== null) {
+            if (diff <= 0) {
+              p.puntuales++;
+            } else {
+              p.tardanzas.push(diff);
+            }
+          }
+        }
+      }
+    });
+
+    const sorted = Object.values(byPers).sort((a, b) => a.nombre.localeCompare(b.nombre));
+    const ACOLOR={
+      'ADMINISTRACION':'#6be1e3','COMERCIAL':'#e17bd7','RECURSOS HUMANOS':'#e4c76a',
+      'MARKETING':'#f472b6','ACADEMICO / GT':'#a78bfa',
+      'INNOVACION Y DESARROLLO':'#34d399','MAESTRANZA':'#fb923c','PASANTIAS':'#60a5fa',
+    };
+
+    if(!sorted.length){
+      el.innerHTML='<tr><td colspan="7" style="text-align:center;padding:30px;color:rgba(198,201,215,.28);">Sin datos</td></tr>';
       return;
     }
 
-    const modeBar = esDia ? '' : `
-      <div style="display:flex;gap:5px;margin-bottom:10px;">
-        <button onclick="Dashboard._setExtraMode('sum')"   id="btnExtraSum"   class="tab-btn ${_topExtraMode==='sum'?'active':''}" style="font-size:11px;padding:4px 10px;">Σ Sumatoria</button>
-        <button onclick="Dashboard._setExtraMode('aisla')" id="btnExtraAisla" class="tab-btn ${_topExtraMode!=='sum'?'active':''}" style="font-size:11px;padding:4px 10px;">📅 Por registro</button>
-      </div>`;
+    el.innerHTML = sorted.map((p, i) => {
+      const col = ACOLOR[p.area] || '#9ca3af';
+      const promTard = p.tardanzas.length ? Math.round(p.tardanzas.reduce((a,b)=>a+b,0)/p.tardanzas.length) : 0;
+      const puntualidad = (p.puntuales + p.tardanzas.length) > 0 ? Math.round(p.puntuales / (p.puntuales + p.tardanzas.length) * 100) : '—';
+      const hsFormatted = p.horasTotal > 0 ? fmtHs(p.horasTotal) : '—';
 
-    let html;
-    if (esDia || _topExtraMode !== 'sum') {
-      const flat = [];
-      extraData.forEach(p=>p.dias.filter(d=>d.extra>0).forEach(d=>flat.push({nombre:p.nombre,area:p.area,...d})));
-      flat.sort((a,b)=>b.extra-a.extra);
-      html = flat.slice(0,8).map(r=>`
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
-          <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
-            <span style="color:${areaColor(r.area)};font-size:10px;font-weight:800;white-space:nowrap;">${r.area.split(' ')[0]}</span>
-            <span style="font-weight:700;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.nombre}</span>
-            <span style="font-size:11px;color:rgba(198,201,215,.5);">${fmtDate(r.fecha)}</span>
-            <span style="font-size:10px;color:rgba(198,201,215,.35);">${r.planSal}→${r.salReal}</span>
-          </div>
-          <span class="badge badge-gold" style="flex-shrink:0;">+${fmtHs(r.extra/60)}</span>
-        </div>`).join('');
-    } else {
-      html = extraData.slice(0,8).map(p=>`
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
-          <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
-            <span style="color:${areaColor(p.area)};font-size:10px;font-weight:800;white-space:nowrap;">${p.area.split(' ')[0]}</span>
-            <span style="font-weight:700;font-size:13px;">${p.nombre}</span>
-            <span style="font-size:11px;color:rgba(198,201,215,.4);">${p.veces} día${p.veces!==1?'s':''}</span>
-          </div>
-          <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
-            <span style="font-size:11px;color:rgba(198,201,215,.4);">total</span>
-            <span class="badge badge-gold">+${fmtHs(p.totalExtra/60)}</span>
-          </div>
-        </div>`).join('');
-    }
-    el.innerHTML = modeBar + `<div style="display:flex;flex-direction:column;gap:7px;">${html}</div>`;
-  }
-
-  function _setTardMode(m) { _topTardMode=m; load(); }
-  function _setExtraMode(m) { _topExtraMode=m; load(); }
-
-  function _areaTable(rows){
-    const tbody=document.getElementById('tbArea');
-    if(!tbody) return;
-    tbody.innerHTML=AREAS.map(a=>{
-      const ar=rows.filter(r=>r.area===a);if(!ar.length)return'';
-      const withP=ar.filter(r=>r.turno&&r.hora_entrada&&r.turno.includes(':')&&r.turno!=='Flex'&&r.turno!=='Guardia');
-      const diffs=withP.map(r=>{const e=r.turno.split('→')[0].trim();return e.match(/^\d{2}:\d{2}$/)?calcTardVsPlan(e,r.hora_entrada.slice(0,5)):null;}).filter(d=>d!==null);
-      const prom=diffs.length?Math.round(diffs.reduce((x,y)=>x+y,0)/diffs.length):null;
-      const punt=diffs.filter(d=>d<=0).length;
-      return`<tr>
-        <td style="color:${areaColor(a)};font-weight:800;font-size:11px;">${a.split(' ')[0]}</td>
-        <td style="font-weight:700;">${ar.length}</td>
-        <td>${prom===null?'—':`<span class="badge ${prom>5?'badge-red':'badge-green'}">${prom>0?'+':''}${prom}m</span>`}</td>
-        <td>${diffs.length?`<span class="badge badge-green">${punt}/${diffs.length}</span>`:'—'}</td>
+      return `<tr>
+        <td style="color:rgba(198,201,215,.3);font-size:11px;">${i+1}</td>
+        <td style="font-weight:700;">${p.nombre}</td>
+        <td><span style="color:${col};font-weight:800;font-size:11px;">${p.area.split(' / ')[0]}</span></td>
+        <td style="text-align:center;color:rgba(198,201,215,.6);">${p.registros}</td>
+        <td style="text-align:center;"><span class="badge badge-cyan">${hsFormatted}</span></td>
+        <td style="text-align:center;color:rgba(198,201,215,.6);">${puntualidad === '—' ? '—' : puntualidad + '%'}</td>
+        <td style="text-align:center;${p.tardanzas.length > 0 ? 'color:#ef4444;' : 'color:var(--color-success-text);'}font-weight:700;">${p.tardanzas.length > 0 ? '+' + promTard + 'm' : '✓'}</td>
       </tr>`;
     }).join('');
   }
 
-  return { load, _changeDPer, _setTardMode, _setExtraMode };
+  return { load, _changeDPer };
 })();

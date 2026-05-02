@@ -1,6 +1,8 @@
-// js/registros.js
+// js/registros.js — CON PAGINACIÓN (10 registros por página)
 const Registros = (() => {
-  let allRegs=[];
+  let allRegs = [];
+  let currentPage = 1;
+  const regsPerPage = 10; // 10 registros por página
 
   function changePer(){
     const p=document.getElementById('fPer').value;
@@ -15,7 +17,22 @@ const Registros = (() => {
   async function load(){
     const per  = document.getElementById('fPer').value;
     const area = document.getElementById('fArea').value;
-    const { desde, hasta } = getDateRange(per);
+    
+    // ✅ Manejar períodos especiales correctamente
+    let desde, hasta;
+    if (per === 'custom') {
+      desde = document.getElementById('fDes')?.value || '';
+      hasta = document.getElementById('fHas')?.value || '';
+    } else if (per === 'dia_especifico') {
+      const dia = document.getElementById('fDiaEsp')?.value || '';
+      desde = dia;
+      hasta = dia;
+    } else {
+      const range = getDateRange(per);
+      desde = range.desde;
+      hasta = range.hasta;
+    }
+    
     let q = SB.from('registros').select('*').order('fecha',{ascending:false}).order('created_at',{ascending:false});
     if(desde) q=q.gte('fecha',desde);
     if(hasta) q=q.lte('fecha',hasta);
@@ -23,17 +40,32 @@ const Registros = (() => {
     const{data,error}=await q;
     if(error){showToast('Error al cargar','err');return;}
     allRegs=data||[];
+    currentPage = 1; // Resetear a página 1 al cambiar filtros
     render();
   }
 
   function render(){
-    const busq=(document.getElementById('fBusq')?.value||'').toLowerCase();
-    const rows=allRegs.filter(r=>!busq||r.nombre.toLowerCase().includes(busq)||(r.rol||'').toLowerCase().includes(busq));
+    const persona = (document.getElementById('fPersona')?.value||'').toLowerCase();
+    const rows=allRegs.filter(r=>{
+      if(persona && !r.nombre.toLowerCase().includes(persona)) return false;
+      return true;
+    });
+    
+    // ✅ PAGINACIÓN
+    const totalPages = Math.ceil(rows.length / regsPerPage);
+    const startIdx = (currentPage - 1) * regsPerPage;
+    const endIdx = startIdx + regsPerPage;
+    const paginatedRows = rows.slice(startIdx, endIdx);
+    
     const tbody=document.getElementById('tbR');
-    if(!rows.length){tbody.innerHTML=`<tr><td colspan="12" style="text-align:center;padding:40px;color:rgba(198,201,215,.28);">Sin registros</td></tr>`;return;}
+    if(!rows.length){
+      tbody.innerHTML=`<tr><td colspan="12" style="text-align:center;padding:40px;color:rgba(198,201,215,.28);">Sin registros</td></tr>`;
+      _renderPagination(0);
+      return;
+    }
 
-    tbody.innerHTML=rows.map((r,i)=>{
-      // CALCULAR HORAS REALES (SUMANDO TURNO 1 Y TURNO 2 SI EXISTEN)
+    tbody.innerHTML=paginatedRows.map((r,i)=>{
+      // CALCULAR HORAS REALES
       const _hs1 = calcHs(r.hora_entrada?.slice(0,5), r.hora_salida?.slice(0,5));
       const _hs2 = calcHs(r.hora_entrada2?.slice(0,5), r.hora_salida2?.slice(0,5));
       const hs = (_hs1 !== null || _hs2 !== null) ? (_hs1 || 0) + (_hs2 || 0) : null;
@@ -52,7 +84,7 @@ const Registros = (() => {
       else if(esGuardia) tardCell='<span class="badge badge-gold">🛡 Guardia</span>';
       else               tardCell=tardBadge(diff);
 
-      // ── CELDA OBSERVACIONES: preview + botón 👁 ──
+      // OBSERVACIONES
       let obsCell;
       if(r.observaciones){
         const preview=r.observaciones.length>22?r.observaciones.slice(0,22)+'…':r.observaciones;
@@ -67,7 +99,7 @@ const Registros = (() => {
       }
 
       return`<tr>
-        <td style="color:rgba(198,201,215,.3);font-size:11px;">${i+1}</td>
+        <td style="color:rgba(198,201,215,.3);font-size:11px;">${startIdx + i + 1}</td>
         <td><span style="color:${col};font-weight:800;font-size:11px;">${r.area.split(' / ')[0]}</span></td>
         <td style="font-weight:700;">${r.nombre}</td>
         <td class="hide-mobile" style="color:rgba(198,201,215,.58);font-size:12px;">${r.rol||'—'}</td>
@@ -84,9 +116,53 @@ const Registros = (() => {
         </div></td>
       </tr>`;
     }).join('');
+    
+    _renderPagination(totalPages);
   }
 
-  // ── POPUP OBSERVACIÓN COMPLETA ──
+  // ✅ PAGINACIÓN: Renderizar números de página
+  function _renderPagination(totalPages){
+    const paginationEl = document.getElementById('paginacion');
+    if(!paginationEl) return;
+    
+    if(totalPages <= 1){
+      paginationEl.innerHTML = '';
+      return;
+    }
+
+    let html = '';
+    
+    // Botón anterior
+    if(currentPage > 1){
+      html += `<button class="btn btn-ghost" style="padding:6px 12px;font-size:12px;" onclick="Registros.goToPage(${currentPage-1})">← Anterior</button>`;
+    }
+
+    // Números de página
+    for(let i=1; i<=totalPages; i++){
+      if(i === currentPage){
+        html += `<button class="btn btn-primary" style="padding:6px 12px;font-size:12px;min-width:40px;background:rgba(107,225,227,.25);border-color:#6be1e3;color:#6be1e3;font-weight:700;">${i}</button>`;
+      } else {
+        html += `<button class="btn btn-ghost" style="padding:6px 12px;font-size:12px;min-width:40px;" onclick="Registros.goToPage(${i})">${i}</button>`;
+      }
+    }
+
+    // Botón siguiente
+    if(currentPage < totalPages){
+      html += `<button class="btn btn-ghost" style="padding:6px 12px;font-size:12px;" onclick="Registros.goToPage(${currentPage+1})">Siguiente →</button>`;
+    }
+
+    paginationEl.innerHTML = html;
+  }
+
+  // ✅ NUEVA FUNCIÓN: Ir a página específica
+  function goToPage(page){
+    currentPage = page;
+    render();
+    // Scroll a la tabla
+    document.querySelector('.glass.tbl-wrap')?.scrollIntoView({behavior:'smooth'});
+  }
+
+  // POPUP OBSERVACIÓN
   function showObs(text){
     document.getElementById('obsPopup')?.remove();
     const overlay=document.createElement('div');
@@ -135,11 +211,8 @@ const Registros = (() => {
     document.getElementById('erE').value=r.hora_entrada?.slice(0,5)||'';
     document.getElementById('erS').value=r.hora_salida?.slice(0,5)||'';
     document.getElementById('erO').value=r.observaciones||'';
-    
-    // CARGAR LOS DATOS REALES DE LAS NUEVAS COLUMNAS AL EDITAR
     document.getElementById('erE2').value = r.hora_entrada2?.slice(0,5) || '';
     document.getElementById('erS2').value = r.hora_salida2?.slice(0,5) || '';
-    
     document.getElementById('mReg').style.display='';
     _cargarNombresModal(r.area||'', r.nombre||'');
   }
@@ -162,10 +235,8 @@ const Registros = (() => {
     const o     = document.getElementById('erO').value.trim();
     if(!area||!nombre||!fecha){showToast('Área, nombre y fecha son obligatorios','err');return;}
 
-    // Guardar original para el log
     const original = allRegs.find(x=>x.id===id);
 
-    // ACA MANDAMOS A GUARDAR A LAS NUEVAS COLUMNAS SIN ENSUCIAR OBSERVACIONES
     const{error}=await SB.from('registros').update({
       area,nombre,fecha,
       turno:t||null,
@@ -180,9 +251,8 @@ const Registros = (() => {
     showToast('Actualizado');
     closeModal();
 
-    // ── LOG DE AUDITORÍA ──
     const hoy = today();
-    const fueraDeTerm = fecha < hoy; // edición de fecha pasada = siempre fuera de término
+    const fueraDeTerm = fecha < hoy;
     const cambios = [];
     if (original) {
       if (original.hora_entrada?.slice(0,5) !== e) cambios.push(`entrada: ${original.hora_entrada?.slice(0,5)||'—'} → ${e||'—'}`);
@@ -212,14 +282,13 @@ const Registros = (() => {
     if(error){showToast('Error','err');return;}
     showToast('Eliminado');
 
-    // ── LOG DE AUDITORÍA ──
     if (r) {
       const hoy = today();
       await logActividad(
         'registro_eliminado', r.area, r.nombre,
         `Registro del ${r.fecha} eliminado (${r.hora_entrada?.slice(0,5)||'—'} → ${r.hora_salida?.slice(0,5)||'—'})`,
         { fecha: r.fecha, turno: r.turno, entrada: r.hora_entrada?.slice(0,5), salida: r.hora_salida?.slice(0,5) },
-        r.fecha < hoy // si la fecha del registro es pasada = fuera de término
+        r.fecha < hoy
       );
     }
 
@@ -254,5 +323,5 @@ const Registros = (() => {
     a.click();showToast('CSV descargado ✓');
   }
 
-  return{load,render,changePer,openEdit,closeModal,save,del,exportCSV,_onAreaChange,showObs};
+  return{load,render,changePer,openEdit,closeModal,save,del,exportCSV,_onAreaChange,showObs,goToPage};
 })();

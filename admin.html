@@ -105,14 +105,18 @@
         <div id="dCDiaEsp" style="display:none;flex:1;min-width:135px;">
           <label class="lbl">Elegir día</label>
           <input class="inp" type="date" id="dDiaEsp" onchange="Dashboard.load()"/>
-<div style="flex:1;min-width:135px;"><label class="lbl">Área</label>
+        </div>
+        <div style="flex:1;min-width:135px;">
+          <label class="lbl">Área</label>
           <select class="inp" id="dArea" onchange="Dashboard.load()">
             <option value="">Todas</option>
             <option>ADMINISTRACION</option><option>COMERCIAL</option><option>RECURSOS HUMANOS</option>
             <option>MARKETING</option><option>ACADEMICO / GT</option><option>INNOVACION Y DESARROLLO</option><option>MAESTRANZA</option><option>PASANTIAS</option>
           </select>
         </div>
-          </select>
+        <div style="flex:1;min-width:135px;">
+          <label class="lbl">Persona</label>
+          <input class="inp" type="text" id="dPersona" placeholder="Buscar por nombre..." oninput="Dashboard.load()"/>
         </div>
       </div>
     </div>
@@ -190,6 +194,9 @@
         <tbody id="tbR"><tr><td colspan="12" style="text-align:center;padding:40px;color:rgba(198,201,215,.28);">Cargando...</td></tr></tbody>
       </table>
     </div>
+    
+    <!-- ══ PAGINACIÓN ══ -->
+    <div style="display:flex;justify-content:center;align-items:center;gap:8px;margin-top:16px;padding:16px;flex-wrap:wrap;" id="paginacion"></div>
   </div>
 
   <!-- ══ PERSONAL ══ -->
@@ -642,3 +649,13 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+```
+
+---
+
+### 📄 `one-horarios/index.html`
+
+**Tamaño**: 25.6 KB
+
+```html
+/* ── V. 0.0.5 (Footer)── */
