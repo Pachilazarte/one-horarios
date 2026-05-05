@@ -139,10 +139,12 @@
       <div class="glass" style="padding:17px 19px;"><div style="font-size:13px;font-weight:700;margin-bottom:13px;color:rgba(198,201,215,.8);">Registros por día</div><div class="chart-wrap"><canvas id="chartDia"></canvas></div></div>
     </div>
 
-    <!-- TOP TARDANZAS + TOP EXTRA side by side -->
+<!-- TOP TARDANZAS + TOP EXTRA side by side -->
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:13px;margin-bottom:13px;">
       <div class="glass" style="padding:17px 19px;">
         <div style="font-size:13px;font-weight:700;margin-bottom:13px;color:rgba(198,201,215,.8);">🕐 Top tardanzas</div>
+        <input type="hidden" id="topTardMode" value="total">
+        <input type="hidden" id="topExtraMode" value="total">
         <div id="topTard" style="display:flex;flex-direction:column;gap:7px;"></div>
       </div>
       <div class="glass" style="padding:17px 19px;">

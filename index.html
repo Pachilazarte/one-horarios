@@ -324,9 +324,22 @@ async function onPersonaChange() {
   const plan = await getHorarioPlanificado(nombre, getFechaActual());
   horarioPlan = plan;
 
+  // ✅ CARGAR DATOS PREVIOS
+  const { data: regHoy } = await SB.from('registros')
+    .select('*')
+    .eq('nombre', nombre)
+    .eq('fecha', getFechaActual());
+
+  if (regHoy && regHoy.length > 0) {
+    const reg = regHoy[0];
+    if (reg.hora_entrada) document.getElementById('lEnt').value = reg.hora_entrada.slice(0, 5);
+    if (reg.hora_salida) document.getElementById('lSal').value = reg.hora_salida.slice(0, 5);
+    if (reg.observaciones) document.getElementById('lObs').value = reg.observaciones;
+  }
+
   const el = document.getElementById('lPlanInfo');
   el.className = 'plan-info';
-  el.style.display = 'flex'; // forzar visible
+  el.style.display = 'flex';
 
   if (!plan) {
     el.innerHTML = '<span style="color:rgba(198,201,215,.45);">Sin horario planificado — podés ingresar igualmente.</span>';
@@ -351,7 +364,6 @@ async function onPersonaChange() {
     document.getElementById('turno2Wrap').style.display = 'none';
     return;
   } else {
-    // Horario normal — mostrar horario y si es partido
     const esCortado = !!(plan.entrada2 || plan.salida2);
     let html = '<span style="color:rgba(198,201,215,.6);">Planificado:</span>'
       + '<strong style="color:var(--one-cyan);margin-left:5px;">' + plan.entrada + '</strong>'
@@ -364,7 +376,6 @@ async function onPersonaChange() {
     }
     el.innerHTML = html;
 
-    // Mostrar/ocultar bloque de 2° turno
     const t2 = document.getElementById('turno2Wrap');
     const btn2 = document.getElementById('btnAgregar2do');
     if (esCortado) {
@@ -376,11 +387,12 @@ async function onPersonaChange() {
       if (s2) s2.value = '';
     } else {
       if (t2) t2.style.display = 'none';
-      if (btn2) btn2.style.display = ''; // mostrar botón manual
+      if (btn2) btn2.style.display = '';
     }
   }
   updCalc();
 }
+
 
 /* ── Calcular ── */
 function updCalc() {

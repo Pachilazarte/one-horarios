@@ -156,11 +156,14 @@ const Dashboard = (() => {
   }
 
   // ── TOP TARDANZAS ──
+// ── TOP TARDANZAS CON MINIFILTRO ──
+// ── TOP TARDANZAS CON MINIFILTRO ──
   function _topTard(rows, per){
     const el=document.getElementById('topTard');
     if(!el) return;
 
-    const esDia = per==='hoy'||per==='ayer'||per==='dia_especifico';
+    // Obtener el modo seleccionado (por defecto "total")
+    const modo = document.getElementById('topTardMode')?.value || 'total';
 
     const withTard=rows.filter(r=>{
       if(!r.turno||!r.hora_entrada||r.turno==='Flex'||r.turno==='Guardia')return false;
@@ -168,18 +171,38 @@ const Dashboard = (() => {
       return e.match(/^\d{2}:\d{2}$/);
     });
 
-    const byPers={};
-    withTard.forEach(r=>{
-      const planEnt=r.turno.split('→')[0].trim();
-      const diff=calcTardVsPlan(planEnt,r.hora_entrada.slice(0,5));
-      if(diff===null||diff<=0)return;
-      const k=r.nombre;
-      if(!byPers[k])byPers[k]={nombre:r.nombre,area:r.area,totalMin:0,veces:0};
-      byPers[k].totalMin+=diff;
-      byPers[k].veces++;
-    });
+    let sorted, allData;
 
-    const sorted=Object.values(byPers).sort((a,b)=>b.totalMin-a.totalMin).slice(0,3);
+    if(modo === 'total') {
+      // TOTAL: Sumatoria de TODAS las tardanzas por persona
+      const byPers={};
+      withTard.forEach(r=>{
+        const planEnt=r.turno.split('→')[0].trim();
+        const diff=calcTardVsPlan(planEnt,r.hora_entrada.slice(0,5));
+        if(diff===null||diff<=0)return;
+        const k=r.nombre;
+        if(!byPers[k])byPers[k]={nombre:r.nombre,area:r.area,totalMin:0,veces:0};
+        byPers[k].totalMin+=diff;
+        byPers[k].veces++;
+      });
+      allData = Object.values(byPers).sort((a,b)=>b.totalMin-a.totalMin);
+      sorted = allData.slice(0,5); // Mostrar top 5
+    } else {
+      // INDIVIDUAL: MÁXIMA tardanza en un solo registro
+      const byPers={};
+      withTard.forEach(r=>{
+        const planEnt=r.turno.split('→')[0].trim();
+        const diff=calcTardVsPlan(planEnt,r.hora_entrada.slice(0,5));
+        if(diff===null||diff<=0)return;
+        const k=r.nombre;
+        if(!byPers[k]){byPers[k]={nombre:r.nombre,area:r.area,maxMin:diff,veces:0};}
+        byPers[k].veces++;
+        if(diff > byPers[k].maxMin) byPers[k].maxMin = diff;
+      });
+      allData = Object.values(byPers).sort((a,b)=>b.maxMin-a.maxMin);
+      sorted = allData.slice(0,5); // Mostrar top 5
+    }
+
     const ACOLOR={
       'ADMINISTRACION':'#6be1e3','COMERCIAL':'#e17bd7','RECURSOS HUMANOS':'#e4c76a',
       'MARKETING':'#f472b6','ACADEMICO / GT':'#a78bfa',
@@ -187,30 +210,148 @@ const Dashboard = (() => {
     };
 
     if(!sorted.length){el.innerHTML='<div style="font-size:12px;color:rgba(198,201,215,.3);">—</div>';return;}
-    el.innerHTML=sorted.map((p,i)=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(198,201,215,.06);">
-      <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
-        <span style="color:${ACOLOR[p.area]||'#9ca3af'};font-weight:800;flex-shrink:0;">${i+1}</span>
-        <div style="min-width:0;flex:1;">
-          <div style="font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.nombre}</div>
-          <div style="font-size:10px;color:rgba(198,201,215,.4);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.area}</div>
-        </div>
+    
+    // Header con minifiltro
+    const header = `
+      <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;">
+        <button class="tab-btn ${modo==='total'?'active':''}" style="padding:6px 12px;font-size:11px;" 
+          onclick="document.getElementById('topTardMode').value='total'; Dashboard.load()">📊 Total (suma)</button>
+        <button class="tab-btn ${modo==='individual'?'active':''}" style="padding:6px 12px;font-size:11px;" 
+          onclick="document.getElementById('topTardMode').value='individual'; Dashboard.load()">👤 Individual (máx)</button>
       </div>
-      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;margin-left:8px;">
-        <div style="text-align:right;">
-          <div style="font-size:13px;font-weight:800;color:#ef4444;">+${p.totalMin}m</div>
-          <div style="font-size:10px;color:rgba(198,201,215,.4);">${p.veces}x</div>
+    `;
+
+    const listHtml = sorted.map((p,i)=>{
+      const label = modo === 'total' ? `+${p.totalMin}m` : `+${p.maxMin}m`;
+      const subtitle = modo === 'total' ? `${p.veces} registros` : `máximo 1 día`;
+      return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(198,201,215,.06);">
+        <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
+          <span style="color:${ACOLOR[p.area]||'#9ca3af'};font-weight:800;flex-shrink:0;">${i+1}</span>
+          <div style="min-width:0;flex:1;">
+            <div style="font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.nombre}</div>
+            <div style="font-size:10px;color:rgba(198,201,215,.4);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.area}</div>
+          </div>
         </div>
+        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;margin-left:8px;">
+          <div style="text-align:right;">
+            <div style="font-size:13px;font-weight:800;color:#ef4444;">${label}</div>
+            <div style="font-size:10px;color:rgba(198,201,215,.4);">${subtitle}</div>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+
+    // Botón "Ver más" si hay más de 5 personas
+    const verMasBtn = allData.length > 5 ? `
+      <div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(198,201,215,.06);">
+        <button onclick="Dashboard._showAllTardanzas('${modo}')" style="width:100%;padding:8px;background:rgba(107,225,227,.1);border:1px solid rgba(107,225,227,.25);color:#6be1e3;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;">
+          Ver más (${allData.length} total)
+        </button>
       </div>
-    </div>`).join('');
+    ` : '';
+
+    el.innerHTML = header + listHtml + verMasBtn;
   }
 
-  // ── TOP HORAS EXTRA POST-SALIDA ──
+  // ── MOSTRAR TODAS LAS TARDANZAS EN MODAL ──
+  function _showAllTardanzas(modo) {
+    const rows = _lastRows;
+    const withTard=rows.filter(r=>{
+      if(!r.turno||!r.hora_entrada||r.turno==='Flex'||r.turno==='Guardia')return false;
+      const e=r.turno.split('→')[0].trim();
+      return e.match(/^\d{2}:\d{2}$/);
+    });
+
+    let allData;
+    if(modo === 'total') {
+      const byPers={};
+      withTard.forEach(r=>{
+        const planEnt=r.turno.split('→')[0].trim();
+        const diff=calcTardVsPlan(planEnt,r.hora_entrada.slice(0,5));
+        if(diff===null||diff<=0)return;
+        const k=r.nombre;
+        if(!byPers[k])byPers[k]={nombre:r.nombre,area:r.area,totalMin:0,veces:0};
+        byPers[k].totalMin+=diff;
+        byPers[k].veces++;
+      });
+      allData = Object.values(byPers).sort((a,b)=>b.totalMin-a.totalMin);
+    } else {
+      const byPers={};
+      withTard.forEach(r=>{
+        const planEnt=r.turno.split('→')[0].trim();
+        const diff=calcTardVsPlan(planEnt,r.hora_entrada.slice(0,5));
+        if(diff===null||diff<=0)return;
+        const k=r.nombre;
+        if(!byPers[k]){byPers[k]={nombre:r.nombre,area:r.area,maxMin:diff,veces:0};}
+        byPers[k].veces++;
+        if(diff > byPers[k].maxMin) byPers[k].maxMin = diff;
+      });
+      allData = Object.values(byPers).sort((a,b)=>b.maxMin-a.maxMin);
+    }
+
+    const ACOLOR={
+      'ADMINISTRACION':'#6be1e3','COMERCIAL':'#e17bd7','RECURSOS HUMANOS':'#e4c76a',
+      'MARKETING':'#f472b6','ACADEMICO / GT':'#a78bfa',
+      'INNOVACION Y DESARROLLO':'#34d399','MAESTRANZA':'#fb923c','PASANTIAS':'#60a5fa',
+    };
+
+    document.getElementById('tardanzasModalContent')?.remove();
+    const overlay=document.createElement('div');
+    overlay.id='tardanzasModalContent';
+    overlay.style.cssText='position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.8);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:16px;';
+    overlay.innerHTML=`
+      <div style="background:#13111c;border:1px solid rgba(107,225,227,.22);border-radius:16px;padding:24px;max-width:500px;width:100%;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.6);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+          <div style="font-size:14px;font-weight:700;color:#6be1e3;">📊 Todas las tardanzas (${modo==='total'?'suma':'máximo'})</div>
+          <button onclick="document.getElementById('tardanzasModalContent').remove()" style="background:none;border:none;color:rgba(198,201,215,.5);font-size:20px;cursor:pointer;">✕</button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          ${allData.map((p,i)=>{
+            const label = modo === 'total' ? `+${p.totalMin}m` : `+${p.maxMin}m`;
+            const subtitle = modo === 'total' ? `${p.veces} registros` : `máximo 1 día`;
+            return `<div style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:rgba(198,201,215,.05);border:1px solid rgba(198,201,215,.08);border-radius:8px;">
+              <div>
+                <div style="font-weight:700;color:#fff;">${i+1}. ${p.nombre}</div>
+                <div style="font-size:11px;color:${ACOLOR[p.area]||'#9ca3af'};margin-top:2px;">${p.area}</div>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-size:14px;font-weight:800;color:#ef4444;">${label}</div>
+                <div style="font-size:10px;color:rgba(198,201,215,.4);">${subtitle}</div>
+              </div>
+            </div>`;
+          }).join('')}
+        </div>
+        <button onclick="document.getElementById('tardanzasModalContent').remove()" style="margin-top:20px;width:100%;padding:10px;background:rgba(107,225,227,.12);border:1px solid rgba(107,225,227,.28);color:#6be1e3;border-radius:10px;font-weight:700;font-size:12px;cursor:pointer;">Cerrar</button>
+      </div>`;
+    overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.remove();});
+    document.body.appendChild(overlay);
+  }
+
+ // ── TOP HORAS EXTRA POST-SALIDA CON MINIFILTRO ──
   function _topExtra(rows, per){
     const el=document.getElementById('topExtra');
     if(!el) return;
 
-    const extraData=_calcExtraData(rows);
-    const sorted=extraData.filter(e=>e.totalExtra>0).sort((a,b)=>b.totalExtra-a.totalExtra).slice(0,3);
+    // Obtener el modo seleccionado (por defecto "total")
+    const modo = document.getElementById('topExtraMode')?.value || 'total';
+
+    let sorted, allData;
+
+    if(modo === 'total') {
+      // TOTAL: Sumatoria de todas las horas extra
+      const extraData=_calcExtraData(rows);
+      allData = extraData.filter(e=>e.totalExtra>0).sort((a,b)=>b.totalExtra-a.totalExtra);
+      sorted = allData.slice(0,5);
+    } else {
+      // INDIVIDUAL: Máxima hora extra en un solo día
+      const extraData=_calcExtraData(rows);
+      allData = extraData.filter(e=>e.totalExtra>0).map(e=>{
+        const maxExtra = e.dias.length ? Math.max(...e.dias.map(d=>d.extra)) : 0;
+        return {...e, maxExtra};
+      }).sort((a,b)=>b.maxExtra-a.maxExtra);
+      sorted = allData.slice(0,5);
+    }
+
     const ACOLOR={
       'ADMINISTRACION':'#6be1e3','COMERCIAL':'#e17bd7','RECURSOS HUMANOS':'#e4c76a',
       'MARKETING':'#f472b6','ACADEMICO / GT':'#a78bfa',
@@ -218,8 +359,21 @@ const Dashboard = (() => {
     };
 
     if(!sorted.length){el.innerHTML='<div style="font-size:12px;color:rgba(198,201,215,.3);">—</div>';return;}
-    el.innerHTML=sorted.map((p,i)=>{
-      const hs=fmtHs(p.totalExtra/60);
+    
+    // Header con minifiltro
+    const header = `
+      <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;">
+        <button class="tab-btn ${modo==='total'?'active':''}" style="padding:6px 12px;font-size:11px;" 
+          onclick="document.getElementById('topExtraMode').value='total'; Dashboard.load()">📊 Total (suma)</button>
+        <button class="tab-btn ${modo==='individual'?'active':''}" style="padding:6px 12px;font-size:11px;" 
+          onclick="document.getElementById('topExtraMode').value='individual'; Dashboard.load()">👤 Individual (máx)</button>
+      </div>
+    `;
+
+    const listHtml = sorted.map((p,i)=>{
+      const extraVal = modo === 'total' ? p.totalExtra : (p.maxExtra || 0);
+      const hs=fmtHs(extraVal/60);
+      const subtitle = modo === 'total' ? `${p.veces} días` : `máximo 1 día`;
       return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(198,201,215,.06);">
         <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
           <span style="color:${ACOLOR[p.area]||'#9ca3af'};font-weight:800;flex-shrink:0;">${i+1}</span>
@@ -231,11 +385,77 @@ const Dashboard = (() => {
         <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;margin-left:8px;">
           <div style="text-align:right;">
             <div style="font-size:13px;font-weight:800;color:var(--one-gold);">+${hs}</div>
-            <div style="font-size:10px;color:rgba(198,201,215,.4);">${p.veces}d</div>
+            <div style="font-size:10px;color:rgba(198,201,215,.4);">${subtitle}</div>
           </div>
         </div>
       </div>`;
     }).join('');
+
+    // Botón "Ver más" si hay más de 5 personas
+    const verMasBtn = allData.length > 5 ? `
+      <div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(198,201,215,.06);">
+        <button onclick="Dashboard._showAllExtra('${modo}')" style="width:100%;padding:8px;background:rgba(228,199,106,.1);border:1px solid rgba(228,199,106,.25);color:var(--one-gold);border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;">
+          Ver más (${allData.length} total)
+        </button>
+      </div>
+    ` : '';
+
+    el.innerHTML = header + listHtml + verMasBtn;
+  }
+
+  // ── MOSTRAR TODAS LAS HORAS EXTRA EN MODAL ──
+  function _showAllExtra(modo) {
+    const rows = _lastRows;
+    let allData;
+
+    if(modo === 'total') {
+      const extraData=_calcExtraData(rows);
+      allData = extraData.filter(e=>e.totalExtra>0).sort((a,b)=>b.totalExtra-a.totalExtra);
+    } else {
+      const extraData=_calcExtraData(rows);
+      allData = extraData.filter(e=>e.totalExtra>0).map(e=>{
+        const maxExtra = e.dias.length ? Math.max(...e.dias.map(d=>d.extra)) : 0;
+        return {...e, maxExtra};
+      }).sort((a,b)=>b.maxExtra-a.maxExtra);
+    }
+
+    const ACOLOR={
+      'ADMINISTRACION':'#6be1e3','COMERCIAL':'#e17bd7','RECURSOS HUMANOS':'#e4c76a',
+      'MARKETING':'#f472b6','ACADEMICO / GT':'#a78bfa',
+      'INNOVACION Y DESARROLLO':'#34d399','MAESTRANZA':'#fb923c','PASANTIAS':'#60a5fa',
+    };
+
+    document.getElementById('extraModalContent')?.remove();
+    const overlay=document.createElement('div');
+    overlay.id='extraModalContent';
+    overlay.style.cssText='position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.8);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:16px;';
+    overlay.innerHTML=`
+      <div style="background:#13111c;border:1px solid rgba(228,199,106,.22);border-radius:16px;padding:24px;max-width:500px;width:100%;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.6);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+          <div style="font-size:14px;font-weight:700;color:var(--one-gold);">⏰ Horas extra (${modo==='total'?'suma':'máximo'})</div>
+          <button onclick="document.getElementById('extraModalContent').remove()" style="background:none;border:none;color:rgba(198,201,215,.5);font-size:20px;cursor:pointer;">✕</button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          ${allData.map((p,i)=>{
+            const extraVal = modo === 'total' ? p.totalExtra : (p.maxExtra || 0);
+            const hs=fmtHs(extraVal/60);
+            const subtitle = modo === 'total' ? `${p.veces} días` : `máximo 1 día`;
+            return `<div style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:rgba(198,201,215,.05);border:1px solid rgba(198,201,215,.08);border-radius:8px;">
+              <div>
+                <div style="font-weight:700;color:#fff;">${i+1}. ${p.nombre}</div>
+                <div style="font-size:11px;color:${ACOLOR[p.area]||'#9ca3af'};margin-top:2px;">${p.area}</div>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-size:14px;font-weight:800;color:var(--one-gold);">+${hs}</div>
+                <div style="font-size:10px;color:rgba(198,201,215,.4);">${subtitle}</div>
+              </div>
+            </div>`;
+          }).join('')}
+        </div>
+        <button onclick="document.getElementById('extraModalContent').remove()" style="margin-top:20px;width:100%;padding:10px;background:rgba(228,199,106,.12);border:1px solid rgba(228,199,106,.28);color:var(--one-gold);border-radius:10px;font-weight:700;font-size:12px;cursor:pointer;">Cerrar</button>
+      </div>`;
+    overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.remove();});
+    document.body.appendChild(overlay);
   }
 
   function _areaTable(rows){
@@ -346,5 +566,11 @@ const Dashboard = (() => {
     }).join('');
   }
 
-  return { load, _changeDPer };
+
+return { 
+    load, 
+    _changeDPer,
+    _showAllTardanzas,
+    _showAllExtra
+  };
 })();

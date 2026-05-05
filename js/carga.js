@@ -43,56 +43,88 @@ const Carga = (() => {
     });
   }
 
-  // ── CUANDO SE SELECCIONA PERSONA: BUSCAR HORARIO PLANIFICADO ──
-  async function onPersonaChange() {
-    const nomSel = document.getElementById('lNom');
-    const nomOpt = nomSel.options[nomSel.selectedIndex];
-    horarioPlan  = null;
-    _clearCalc();
-    _clearPlanInfo();
+/* ── Persona cambia ── */
+async function onPersonaChange() {
+  const opt = document.getElementById('lNom').selectedOptions[0];
+  horarioPlan = null; _clearCalc(); _clearPlan();
+  if (!opt?.value) return;
+  let nombre;
+  try { nombre = JSON.parse(opt.value).nombre; } catch { return; }
 
-    if (!nomOpt?.value) return;
-    let nombre;
-    try { nombre = JSON.parse(nomOpt.value).nombre; } catch{ return; }
+  const plan = await getHorarioPlanificado(nombre, getFechaActual());
+  horarioPlan = plan;
 
-    const fecha = _fecha();
-    const plan  = await getHorarioPlanificado(nombre, fecha);
-    horarioPlan = plan;
+  // ✅ Buscar si existe un registro del MISMO DÍA para cargar datos previos
+  const { data: regHoy } = await SB.from('registros')
+    .select('*')
+    .eq('nombre', nombre)
+    .eq('fecha', getFechaActual())
+    .limit(1);
 
-    const infoEl = document.getElementById('lPlanInfo');
-    if (!plan) {
-      infoEl.style.display = '';
-      infoEl.innerHTML = `<span style="font-size:11px;color:rgba(198,201,215,.4);">Sin horario planificado para hoy — podés ingresar la hora de todas formas.</span>`;
-      return;
-    }
-
-    // Mostrar según tipo
-    infoEl.style.display = '';
-    if (plan.tipo === 'flex') {
-      infoEl.innerHTML = `
-        <span style="font-size:11px;color:rgba(198,201,215,.6);">Horario planificado hoy:</span>
-        <span style="font-weight:800;color:var(--one-purple);margin-left:6px;">🔄 Flex</span>
-        <span style="font-size:10px;color:rgba(198,201,215,.35);margin-left:6px;">Sin hora fija — se registra la entrada/salida real</span>`;
-    } else if (plan.tipo === 'guardia') {
-      infoEl.innerHTML = `
-        <span style="font-size:11px;color:rgba(198,201,215,.6);">Horario planificado hoy:</span>
-        <span style="font-weight:800;color:var(--one-gold);margin-left:6px;">🛡 Guardia</span>
-        <span style="font-size:10px;color:rgba(198,201,215,.35);margin-left:6px;">1h computable en cualquier horario</span>`;
-} else {
-  infoEl.innerHTML = `
-    <span style="font-size:11px;color:rgba(198,201,215,.6);">Planificado hoy:</span>
-    <span style="font-weight:800;color:var(--one-cyan);margin-left:6px;">${plan.entrada}</span>
-    ${plan.salida ? `<span style="color:rgba(198,201,215,.45);font-size:11px;"> → </span><span style="font-weight:700;">${plan.salida}</span>` : ''}
-    ${plan.entrada2 ? `
-      <span style="color:rgba(228,199,106,.5);font-size:11px;margin-left:8px;">✂</span>
-      <span style="font-weight:800;color:var(--one-gold);margin-left:6px;">${plan.entrada2}</span>
-      ${plan.salida2 ? `<span style="color:rgba(198,201,215,.45);font-size:11px;"> → </span><span style="font-weight:700;">${plan.salida2}</span>` : ''}
-      <span style="font-size:10px;color:rgba(228,199,106,.4);margin-left:4px;">turno partido</span>
-    ` : ''}`;
-    }
-
-    updCalc();
+  if (regHoy && Array.isArray(regHoy) && regHoy.length > 0) {
+    const reg = regHoy[0];
+    document.getElementById('lEnt').value = reg.hora_entrada?.slice(0,5) || '';
+    document.getElementById('lSal').value = reg.hora_salida?.slice(0,5) || '';
+    document.getElementById('lObs').value = reg.observaciones || '';
   }
+
+  const el = document.getElementById('lPlanInfo');
+  el.className = 'plan-info';
+  el.style.display = 'flex'; // forzar visible
+
+  if (!plan) {
+    el.innerHTML = '<span style="color:rgba(198,201,215,.45);">Sin horario planificado — podés ingresar igualmente.</span>';
+    document.getElementById('btnAgregar2do').style.display = '';
+    document.getElementById('turno2Wrap').style.display = 'none';
+    return;
+  }
+  if (plan.tipo === 'flex') {
+    el.classList.add('plan-flex');
+    el.innerHTML = '<span style="color:rgba(198,201,215,.6);">Planificado:</span>'
+      + '<strong style="color:var(--one-purple);margin-left:5px;">🔄 Flex</strong>'
+      + '<span style="font-size:10px;color:rgba(198,201,215,.35);margin-left:4px;">Sin hora fija</span>';
+    document.getElementById('btnAgregar2do').style.display = 'none';
+    document.getElementById('turno2Wrap').style.display = 'none';
+    return;
+  } else if (plan.tipo === 'guardia') {
+    el.classList.add('plan-guardia');
+    el.innerHTML = '<span style="color:rgba(198,201,215,.6);">Planificado:</span>'
+      + '<strong style="color:var(--one-gold);margin-left:5px;">🛡 Guardia</strong>'
+      + '<span style="font-size:10px;color:rgba(198,201,215,.35);margin-left:4px;">1h computable</span>';
+    document.getElementById('btnAgregar2do').style.display = 'none';
+    document.getElementById('turno2Wrap').style.display = 'none';
+    return;
+  } else {
+    // Horario normal — mostrar horario y si es partido
+    const esCortado = !!(plan.entrada2 || plan.salida2);
+    let html = '<span style="color:rgba(198,201,215,.6);">Planificado:</span>'
+      + '<strong style="color:var(--one-cyan);margin-left:5px;">' + plan.entrada + '</strong>'
+      + (plan.salida ? '<span style="color:rgba(198,201,215,.4);font-size:11px;"> → </span><strong>' + plan.salida + '</strong>' : '');
+    if (esCortado) {
+      html += '<span style="color:rgba(228,199,106,.6);margin-left:8px;font-size:11px;">✂</span>'
+        + '<strong style="color:var(--one-gold);margin-left:4px;font-size:11px;">'
+        + (plan.entrada2 || '?') + (plan.salida2 ? ' → ' + plan.salida2 : '') + '</strong>'
+        + '<span style="font-size:10px;color:rgba(228,199,106,.5);margin-left:4px;">turno partido</span>';
+    }
+    el.innerHTML = html;
+
+    // Mostrar/ocultar bloque de 2° turno
+    const t2 = document.getElementById('turno2Wrap');
+    const btn2 = document.getElementById('btnAgregar2do');
+    if (esCortado) {
+      if (t2) t2.style.display = '';
+      if (btn2) btn2.style.display = 'none';
+      const e2 = document.getElementById('lEnt2');
+      const s2 = document.getElementById('lSal2');
+      if (e2) e2.value = '';
+      if (s2) s2.value = '';
+    } else {
+      if (t2) t2.style.display = 'none';
+      if (btn2) btn2.style.display = ''; // mostrar botón manual
+    }
+  }
+  updCalc();
+}
 
   function _clearPlanInfo() {
     const el = document.getElementById('lPlanInfo');
@@ -148,7 +180,7 @@ const Carga = (() => {
     }
   }
 
-  // ── GUARDAR REGISTRO ──
+// ── GUARDAR REGISTRO (INSERT o UPDATE si ya existe del mismo día) ──
   async function guardar() {
     const area   = document.getElementById('lArea').value;
     const nomSel = document.getElementById('lNom');
@@ -179,26 +211,52 @@ const Carga = (() => {
     } else if (horarioPlan.tipo === 'guardia') {
       turnoStr = 'Guardia';
     } else {
-// Normal: incluir turno partido si existe
-turnoStr = horarioPlan.entrada
-  + (horarioPlan.salida ? ' → ' + horarioPlan.salida : '');
-if (horarioPlan.entrada2) {
-  turnoStr += ' | ' + horarioPlan.entrada2
-    + (horarioPlan.salida2 ? ' → ' + horarioPlan.salida2 : '');
-}
+      // Normal: incluir turno partido si existe
+      turnoStr = horarioPlan.entrada
+        + (horarioPlan.salida ? ' → ' + horarioPlan.salida : '');
+      if (horarioPlan.entrada2) {
+        turnoStr += ' | ' + horarioPlan.entrada2
+          + (horarioPlan.salida2 ? ' → ' + horarioPlan.salida2 : '');
+      }
+    }
 
     // Tardanza: solo aplica para horario normal
     const tardanza = (horarioPlan?.tipo === 'normal' && horarioPlan?.entrada)
       ? calcTardVsPlan(horarioPlan.entrada, ent)
       : null;
 
-    const { error } = await SB.from('registros').insert({
-      area, nombre, rol, fecha,
-      turno:        turnoStr,
-      hora_entrada: ent + ':00',
-      hora_salida:  sal ? sal + ':00' : null,
-      observaciones: obs || null,
-    });
+    // ✅ NUEVO: Buscar si ya existe un registro del mismo día
+const { data: regHoy, error: errReg } = await SB.from('registros')
+    .select('*')
+    .eq('nombre', nombre)
+    .eq('fecha', getFechaActual())
+    .limit(1);
+
+  console.log('Buscando registro:', { nombre, fecha: getFechaActual(), regHoy, errReg });
+
+  if (regHoy) {
+
+
+      const result = await SB.from('registros').update({
+        area, nombre, rol, fecha,
+        turno:        turnoStr,
+        hora_entrada: ent + ':00',
+        hora_salida:  sal ? sal + ':00' : null,
+        observaciones: obs || null,
+      }).eq('id', regExistente.id);
+      error = result.error;
+      isUpdate = true;
+    } else {
+      // INSERT: No existe, crear nuevo
+      const result = await SB.from('registros').insert({
+        area, nombre, rol, fecha,
+        turno:        turnoStr,
+        hora_entrada: ent + ':00',
+        hora_salida:  sal ? sal + ':00' : null,
+        observaciones: obs || null,
+      });
+      error = result.error;
+    }
 
     btn.disabled = false;
     document.getElementById('lBIco').textContent = '✅';
@@ -211,7 +269,8 @@ if (horarioPlan.entrada2) {
     _renderQueue();
 
     // Banner
-    document.getElementById('lOkMsg').textContent = `✓ ${nombre} registrado`;
+    const accion = isUpdate ? 'actualizado' : 'registrado';
+    document.getElementById('lOkMsg').textContent = `✓ ${nombre} ${accion}`;
     const banner = document.getElementById('lOkBanner');
     banner.style.display = '';
     clearTimeout(banner._t);
@@ -228,13 +287,12 @@ if (horarioPlan.entrada2) {
     window.scrollTo({top:0,behavior:'smooth'});
   }
 
-  function _renderQueue() {
+function _renderQueue() {
     const sec = document.getElementById('lQSec');
     if (!sessionQueue.length) { sec.style.display='none'; return; }
     sec.style.display = '';
     document.getElementById('lQCnt').textContent = sessionQueue.length;
     document.getElementById('lQList').innerHTML = sessionQueue.slice(0,12).map(r => {
-      // Badge de tardanza / tipo
       let tb = '';
       if (r.plan?.tipo === 'flex') {
         tb = `<span class="badge badge-purple" style="font-size:10px;">🔄 Flex</span>`;
@@ -243,17 +301,13 @@ if (horarioPlan.entrada2) {
       } else if (r.tardanza !== null) {
         tb = r.tardanza <= 0
           ? `<span class="badge badge-green" style="font-size:10px;">✓ ${Math.abs(r.tardanza)}m antes</span>`
-          : `<span class="badge badge-red"   style="font-size:10px;">+${r.tardanza}m tarde</span>`;
+          : `<span class="badge badge-red" style="font-size:10px;">+${r.tardanza}m tarde</span>`;
       }
-
       const hb = r.hs ? `<span class="badge badge-cyan" style="font-size:10px;">${fmtHs(r.hs)}</span>` : '';
-
-      // Texto del plan según tipo
       let planTxt = '';
       if (r.plan?.tipo === 'flex')    planTxt = `<span style="font-size:11px;color:var(--one-purple);">Flex</span>`;
       else if (r.plan?.tipo === 'guardia') planTxt = `<span style="font-size:11px;color:var(--one-gold);">Guardia</span>`;
       else if (r.plan?.entrada)       planTxt = `<span style="font-size:11px;color:rgba(198,201,215,.5);">${r.plan.entrada}</span>`;
-
       return `<div class="queue-row">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
           <span style="color:${areaColor(r.area)};font-size:11px;font-weight:800;">${r.area.split(' ')[0]}</span>
@@ -264,7 +318,7 @@ if (horarioPlan.entrada2) {
         </div>
         <span style="color:var(--color-success-text);font-size:15px;flex-shrink:0;">✓</span>
       </div>`;
-    }).join('');
+}).join('');
   }
 
   // ── LOGIN ADMIN ──

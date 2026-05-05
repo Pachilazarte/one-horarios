@@ -44,18 +44,31 @@ const Registros = (() => {
     render();
   }
 
-  function render(){
+function render(){
+    const per = document.getElementById('fPer').value;
     const persona = (document.getElementById('fPersona')?.value||'').toLowerCase();
-    const rows=allRegs.filter(r=>{
+    let rows = allRegs.filter(r=>{
       if(persona && !r.nombre.toLowerCase().includes(persona)) return false;
       return true;
     });
     
-    // ✅ PAGINACIÓN
-    const totalPages = Math.ceil(rows.length / regsPerPage);
-    const startIdx = (currentPage - 1) * regsPerPage;
-    const endIdx = startIdx + regsPerPage;
-    const paginatedRows = rows.slice(startIdx, endIdx);
+    // ✅ NUEVO: Verificar si el filtro es "día específico"
+    const isDiaEspecifico = per === 'dia_especifico';
+    
+    let paginatedRows, totalPages;
+
+    if (isDiaEspecifico || rows.length <= 100) {
+      // SIN PAGINACIÓN: Mostrar todo (día específico o menos de 100 registros)
+      paginatedRows = rows;
+      totalPages = 1;
+      currentPage = 1;
+    } else {
+      // CON PAGINACIÓN: Más de 100 registros y no es día específico
+      totalPages = Math.ceil(rows.length / regsPerPage);
+      const startIdx = (currentPage - 1) * regsPerPage;
+      const endIdx = startIdx + regsPerPage;
+      paginatedRows = rows.slice(startIdx, endIdx);
+    }
     
     const tbody=document.getElementById('tbR');
     if(!rows.length){
@@ -98,8 +111,19 @@ const Registros = (() => {
         obsCell=`<span style="color:rgba(198,201,215,.25);">—</span>`;
       }
 
+      // ✅ Calcular índice correcto para la tabla
+      let rowNumber;
+      if (paginatedRows.length === rows.length) {
+        // SIN PAGINACIÓN: Usar índice directo
+        rowNumber = rows.indexOf(r) + 1;
+      } else {
+        // CON PAGINACIÓN: Usar índice de la página actual
+        const startIdx = (currentPage - 1) * regsPerPage;
+        rowNumber = startIdx + i + 1;
+      }
+
       return`<tr>
-        <td style="color:rgba(198,201,215,.3);font-size:11px;">${startIdx + i + 1}</td>
+        <td style="color:rgba(198,201,215,.3);font-size:11px;">${rowNumber}</td>
         <td><span style="color:${col};font-weight:800;font-size:11px;">${r.area.split(' / ')[0]}</span></td>
         <td style="font-weight:700;">${r.nombre}</td>
         <td class="hide-mobile" style="color:rgba(198,201,215,.58);font-size:12px;">${r.rol||'—'}</td>
