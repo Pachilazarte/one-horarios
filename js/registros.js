@@ -2,7 +2,7 @@
 const Registros = (() => {
   let allRegs = [];
   let currentPage = 1;
-  const regsPerPage = 10; // 10 registros por página
+  const regsPerPage = 100; // 100 registros por página
 
   function changePer(){
     const p=document.getElementById('fPer').value;
@@ -46,7 +46,7 @@ const Registros = (() => {
 
 function render(){
     const per = document.getElementById('fPer').value;
-    const persona = (document.getElementById('fPersona')?.value||'').toLowerCase();
+    const persona = (document.getElementById('fBusq')?.value||'').toLowerCase();
     let rows = allRegs.filter(r=>{
       if(persona && !r.nombre.toLowerCase().includes(persona)) return false;
       return true;

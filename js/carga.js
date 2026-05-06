@@ -181,111 +181,136 @@ async function onPersonaChange() {
   }
 
 // ── GUARDAR REGISTRO (INSERT o UPDATE si ya existe del mismo día) ──
-  async function guardar() {
-    const area   = document.getElementById('lArea').value;
-    const nomSel = document.getElementById('lNom');
-    const nomOpt = nomSel.options[nomSel.selectedIndex];
-    const ent    = document.getElementById('lEnt').value;
-    const sal    = document.getElementById('lSal').value;
-    const obs    = document.getElementById('lObs').value.trim();
-    const fecha  = _fecha();
+// ═══════════════════════════════════════════════════════════════════════════
+// SOLUCIÓN SIMPLE: En vez de UPSERT, usa UPDATE+INSERT manual
+// NO necesita constraint en Supabase
+// ═══════════════════════════════════════════════════════════════════════════
 
-    if (!area || !nomOpt?.value || !ent) {
-      showToast('Completá área, nombre y hora de entrada','err'); return;
-    }
-    let nombre, rol;
-    try { const d=JSON.parse(nomOpt.value); nombre=d.nombre; rol=d.rol; }
-    catch { showToast('Seleccioná una persona válida','err'); return; }
+// REEMPLAZA la función guardarRegistro() en index.html con ESTA:
 
-    const btn = document.getElementById('lBtnG');
-    btn.disabled = true;
-    document.getElementById('lBIco').textContent = '⏳';
-    document.getElementById('lBTxt').textContent = 'Guardando...';
+async function guardarRegistro() {
+  const area = document.getElementById('lArea').value;
+  const opt  = document.getElementById('lNom').selectedOptions[0];
+  const ent  = document.getElementById('lEnt').value;
+  const sal  = document.getElementById('lSal').value;
+  const ent2 = document.getElementById('lEnt2')?.value || '';
+  const sal2 = document.getElementById('lSal2')?.value || '';
+  const obs  = document.getElementById('lObs').value.trim();
+  const fecha = getFechaActual();
 
-    // ── Determinar el campo "turno" según el tipo de plan ──
-    let turnoStr;
-    if (!horarioPlan) {
-      turnoStr = 'Personalizado';
-    } else if (horarioPlan.tipo === 'flex') {
-      turnoStr = 'Flex';
-    } else if (horarioPlan.tipo === 'guardia') {
-      turnoStr = 'Guardia';
-    } else {
-      // Normal: incluir turno partido si existe
-      turnoStr = horarioPlan.entrada
-        + (horarioPlan.salida ? ' → ' + horarioPlan.salida : '');
-      if (horarioPlan.entrada2) {
-        turnoStr += ' | ' + horarioPlan.entrada2
-          + (horarioPlan.salida2 ? ' → ' + horarioPlan.salida2 : '');
-      }
-    }
+  if (!area || !opt?.value || !ent) {
+    showToast('Completá área, nombre y hora de entrada', 'err'); return;
+  }
+  let nombre, rol;
+  try { const d = JSON.parse(opt.value); nombre = d.nombre; rol = d.rol; }
+  catch { showToast('Seleccioná una persona válida', 'err'); return; }
 
-    // Tardanza: solo aplica para horario normal
-    const tardanza = (horarioPlan?.tipo === 'normal' && horarioPlan?.entrada)
-      ? calcTardVsPlan(horarioPlan.entrada, ent)
-      : null;
+  const btn = document.getElementById('lBtnG');
+  btn.disabled = true;
+  document.getElementById('lBIco').textContent = '⏳';
+  document.getElementById('lBTxt').textContent = 'Guardando...';
 
-    // ✅ NUEVO: Buscar si ya existe un registro del mismo día
-const { data: regHoy, error: errReg } = await SB.from('registros')
-    .select('*')
+  const turno = !horarioPlan ? 'Personalizado'
+    : horarioPlan.tipo === 'flex'    ? 'Flex'
+    : horarioPlan.tipo === 'guardia' ? 'Guardia'
+    : (() => {
+        const esCortado = !!(horarioPlan.entrada2 || horarioPlan.salida2);
+        let t = horarioPlan.entrada + (horarioPlan.salida ? ' → ' + horarioPlan.salida : '');
+        if (esCortado) t += ' | ' + (horarioPlan.entrada2 || '') + (horarioPlan.salida2 ? ' → ' + horarioPlan.salida2 : '');
+        return t;
+      })();
+
+  const tardanza = horarioPlan?.tipo === 'normal' && horarioPlan?.entrada
+    ? calcTardVsPlan(horarioPlan.entrada, ent) : null;
+
+  let obsFinal = obs || null;
+  if (ent2) {
+    const t2str = ent2 + (sal2 ? ' → ' + sal2 : '');
+    obsFinal = (obs ? obs + ' | ' : '') + '2° turno: ' + t2str;
+  }
+
+  // ✅ NUEVA LÓGICA: Buscar si existe, UPDATE si existe, INSERT si no
+  
+  // 1. Buscar si ya existe registro para esta persona este día
+  const { data: existing } = await SB
+    .from('registros')
+    .select('id')
     .eq('nombre', nombre)
-    .eq('fecha', getFechaActual())
+    .eq('fecha', fecha)
     .limit(1);
 
-  console.log('Buscando registro:', { nombre, fecha: getFechaActual(), regHoy, errReg });
+  let error = null;
 
-  if (regHoy) {
-
-
-      const result = await SB.from('registros').update({
-        area, nombre, rol, fecha,
-        turno:        turnoStr,
+  if (existing && existing.length > 0) {
+    // YA EXISTE → ACTUALIZAR
+    const id = existing[0].id;
+    const { error: errUpdate } = await SB
+      .from('registros')
+      .update({
+        area, rol, turno,
         hora_entrada: ent + ':00',
-        hora_salida:  sal ? sal + ':00' : null,
-        observaciones: obs || null,
-      }).eq('id', regExistente.id);
-      error = result.error;
-      isUpdate = true;
-    } else {
-      // INSERT: No existe, crear nuevo
-      const result = await SB.from('registros').insert({
+        hora_salida: sal ? sal + ':00' : null,
+        observaciones: obsFinal,
+      })
+      .eq('id', id);
+    error = errUpdate;
+  } else {
+    // NO EXISTE → INSERTAR
+    const { error: errInsert } = await SB
+      .from('registros')
+      .insert({
         area, nombre, rol, fecha,
-        turno:        turnoStr,
+        turno,
         hora_entrada: ent + ':00',
-        hora_salida:  sal ? sal + ':00' : null,
-        observaciones: obs || null,
+        hora_salida: sal ? sal + ':00' : null,
+        observaciones: obsFinal,
       });
-      error = result.error;
-    }
-
-    btn.disabled = false;
-    document.getElementById('lBIco').textContent = '✅';
-    document.getElementById('lBTxt').textContent = 'Guardar registro';
-
-    if (error) { showToast('Error: '+error.message,'err'); return; }
-
-    // Cola visual
-    sessionQueue.unshift({ nombre, area, ent, sal, tardanza, hs:calcHs(ent,sal), plan:horarioPlan });
-    _renderQueue();
-
-    // Banner
-    const accion = isUpdate ? 'actualizado' : 'registrado';
-    document.getElementById('lOkMsg').textContent = `✓ ${nombre} ${accion}`;
-    const banner = document.getElementById('lOkBanner');
-    banner.style.display = '';
-    clearTimeout(banner._t);
-    banner._t = setTimeout(()=>banner.style.display='none', 5000);
-
-    // Reset rápido (mantiene área)
-    document.getElementById('lNom').value = '';
-    document.getElementById('lEnt').value = '';
-    document.getElementById('lSal').value = '';
-    document.getElementById('lObs').value = '';
-    horarioPlan = null;
-    _clearCalc();
-    _clearPlanInfo();
-    window.scrollTo({top:0,behavior:'smooth'});
+    error = errInsert;
   }
+
+  btn.disabled = false;
+  document.getElementById('lBIco').textContent = '✅';
+  document.getElementById('lBTxt').textContent = 'Guardar registro';
+
+  if (error) { 
+    console.error('Error:', error);
+    showToast('Error: ' + error.message, 'err'); 
+    return; 
+  }
+
+  sessionQueue.unshift({ nombre, area, ent, sal, tardanza, hs: calcHs(ent,sal), plan: horarioPlan });
+  _renderQueue();
+
+  document.getElementById('lOkMsg').textContent = '✓ ' + nombre + ' registrado';
+  const banner = document.getElementById('lOkBanner');
+  banner.style.display = '';
+  clearTimeout(banner._t);
+  banner._t = setTimeout(() => banner.style.display = 'none', 5000);
+
+  document.getElementById('lNom').value = '';
+  document.getElementById('lEnt').value = '';
+  document.getElementById('lSal').value = '';
+  document.getElementById('lObs').value = '';
+  const e2 = document.getElementById('lEnt2'); if (e2) e2.value = '';
+  const s2 = document.getElementById('lSal2'); if (s2) s2.value = '';
+  const t2w = document.getElementById('turno2Wrap'); if (t2w) t2w.style.display = 'none';
+  horarioPlan = null; _clearCalc(); _clearPlan();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ¿QUÉ HACE?
+// 
+// 1. Busca: ¿Existe registro para (nombre, fecha)?
+// 2. Si SÍ existe → UPDATE (actualiza entrada/salida/obs)
+// 3. Si NO existe → INSERT (crea registro nuevo)
+// 4. Listo
+//
+// NO necesita constraint
+// NO necesita UPSERT
+// Funciona al toque
+// ═══════════════════════════════════════════════════════════════════════════
+
 
 function _renderQueue() {
     const sec = document.getElementById('lQSec');

@@ -3,7 +3,15 @@ const Dashboard = (() => {
   let _cA=null,_cP=null,_cD=null;
   const _dest=c=>{if(c){try{c.destroy();}catch(e){}}};
 
-  let _lastRows = [], _lastPer = 'semana';
+let _lastRows = [], _lastPer = 'semana';
+
+  // ✅ Formateador de fecha YYYY-MM-DD → DD/MM/YYYY
+  function _fmtFechaCompleta(fecha) {
+    if (!fecha) return '';
+    const parts = fecha.split('-');
+    if (parts.length !== 3) return fecha;
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  }
 
   function _changeDPer(){
     const p = document.getElementById('dPer').value;
@@ -155,8 +163,6 @@ const Dashboard = (() => {
     _cD=new Chart(ctx,{type:'line',data:{labels:dates.map(d=>fmtDate(d)),datasets:[{label:'Registros',data:dates.map(d=>by[d]),borderColor:'#6be1e3',backgroundColor:'rgba(107,225,227,.10)',fill:true,tension:.35,pointBackgroundColor:'#6be1e3',pointRadius:4,pointHoverRadius:6}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{ticks:{color:'rgba(198,201,215,.6)',font:{size:10},stepSize:1},grid:{color:'rgba(198,201,215,.07)'}},x:{ticks:{color:'rgba(198,201,215,.6)',font:{size:10},maxTicksLimit:8},grid:{display:false}}},plugins:{legend:{display:false}}}});
   }
 
-  // ── TOP TARDANZAS ──
-// ── TOP TARDANZAS CON MINIFILTRO ──
 // ── TOP TARDANZAS CON MINIFILTRO ──
   function _topTard(rows, per){
     const el=document.getElementById('topTard');
@@ -174,7 +180,7 @@ const Dashboard = (() => {
     let sorted, allData;
 
     if(modo === 'total') {
-      // TOTAL: Sumatoria de TODAS las tardanzas por persona
+// TOTAL: Sumatoria de TODAS las tardanzas por persona
       const byPers={};
       withTard.forEach(r=>{
         const planEnt=r.turno.split('→')[0].trim();
@@ -185,6 +191,7 @@ const Dashboard = (() => {
         byPers[k].totalMin+=diff;
         byPers[k].veces++;
       });
+      
       allData = Object.values(byPers).sort((a,b)=>b.totalMin-a.totalMin);
       sorted = allData.slice(0,5); // Mostrar top 5
     } else {
@@ -195,9 +202,12 @@ const Dashboard = (() => {
         const diff=calcTardVsPlan(planEnt,r.hora_entrada.slice(0,5));
         if(diff===null||diff<=0)return;
         const k=r.nombre;
-        if(!byPers[k]){byPers[k]={nombre:r.nombre,area:r.area,maxMin:diff,veces:0};}
+        if(!byPers[k]){byPers[k]={nombre:r.nombre,area:r.area,maxMin:diff,maxFecha:r.fecha,veces:0};}
         byPers[k].veces++;
-        if(diff > byPers[k].maxMin) byPers[k].maxMin = diff;
+        if(diff > byPers[k].maxMin) {
+          byPers[k].maxMin = diff;
+          byPers[k].maxFecha = r.fecha; // ✅ guardar fecha del máximo
+        }
       });
       allData = Object.values(byPers).sort((a,b)=>b.maxMin-a.maxMin);
       sorted = allData.slice(0,5); // Mostrar top 5
@@ -221,9 +231,9 @@ const Dashboard = (() => {
       </div>
     `;
 
-    const listHtml = sorted.map((p,i)=>{
+const listHtml = sorted.map((p,i)=>{
       const label = modo === 'total' ? `+${p.totalMin}m` : `+${p.maxMin}m`;
-      const subtitle = modo === 'total' ? `${p.veces} registros` : `máximo 1 día`;
+      const subtitle = modo === 'total' ? `${p.veces} registros` : (p.maxFecha ? _fmtFechaCompleta(p.maxFecha) : 'máximo 1 día');;
       return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(198,201,215,.06);">
         <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
           <span style="color:${ACOLOR[p.area]||'#9ca3af'};font-weight:800;flex-shrink:0;">${i+1}</span>
@@ -275,19 +285,23 @@ const Dashboard = (() => {
         byPers[k].veces++;
       });
       allData = Object.values(byPers).sort((a,b)=>b.totalMin-a.totalMin);
-    } else {
+} else {
       const byPers={};
       withTard.forEach(r=>{
         const planEnt=r.turno.split('→')[0].trim();
         const diff=calcTardVsPlan(planEnt,r.hora_entrada.slice(0,5));
         if(diff===null||diff<=0)return;
         const k=r.nombre;
-        if(!byPers[k]){byPers[k]={nombre:r.nombre,area:r.area,maxMin:diff,veces:0};}
+        if(!byPers[k]){byPers[k]={nombre:r.nombre,area:r.area,maxMin:diff,maxFecha:r.fecha,veces:0};}
         byPers[k].veces++;
-        if(diff > byPers[k].maxMin) byPers[k].maxMin = diff;
+        if(diff > byPers[k].maxMin) {
+          byPers[k].maxMin = diff;
+          byPers[k].maxFecha = r.fecha;
+        }
       });
       allData = Object.values(byPers).sort((a,b)=>b.maxMin-a.maxMin);
     }
+
 
     const ACOLOR={
       'ADMINISTRACION':'#6be1e3','COMERCIAL':'#e17bd7','RECURSOS HUMANOS':'#e4c76a',
@@ -306,9 +320,9 @@ const Dashboard = (() => {
           <button onclick="document.getElementById('tardanzasModalContent').remove()" style="background:none;border:none;color:rgba(198,201,215,.5);font-size:20px;cursor:pointer;">✕</button>
         </div>
         <div style="display:flex;flex-direction:column;gap:8px;">
-          ${allData.map((p,i)=>{
+${allData.map((p,i)=>{
             const label = modo === 'total' ? `+${p.totalMin}m` : `+${p.maxMin}m`;
-            const subtitle = modo === 'total' ? `${p.veces} registros` : `máximo 1 día`;
+            const subtitle = modo === 'total' ? `${p.veces} registros` : (p.maxFecha ? _fmtFechaCompleta(p.maxFecha) : 'máximo 1 día');
             return `<div style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:rgba(198,201,215,.05);border:1px solid rgba(198,201,215,.08);border-radius:8px;">
               <div>
                 <div style="font-weight:700;color:#fff;">${i+1}. ${p.nombre}</div>
@@ -346,8 +360,11 @@ const Dashboard = (() => {
       // INDIVIDUAL: Máxima hora extra en un solo día
       const extraData=_calcExtraData(rows);
       allData = extraData.filter(e=>e.totalExtra>0).map(e=>{
-        const maxExtra = e.dias.length ? Math.max(...e.dias.map(d=>d.extra)) : 0;
-        return {...e, maxExtra};
+        let maxExtra = 0, maxFecha = null;
+        e.dias.forEach(d => {
+          if (d.extra > maxExtra) { maxExtra = d.extra; maxFecha = d.fecha; }
+        });
+        return {...e, maxExtra, maxFecha};
       }).sort((a,b)=>b.maxExtra-a.maxExtra);
       sorted = allData.slice(0,5);
     }
@@ -373,7 +390,7 @@ const Dashboard = (() => {
     const listHtml = sorted.map((p,i)=>{
       const extraVal = modo === 'total' ? p.totalExtra : (p.maxExtra || 0);
       const hs=fmtHs(extraVal/60);
-      const subtitle = modo === 'total' ? `${p.veces} días` : `máximo 1 día`;
+      const subtitle = modo === 'total' ? `${p.veces} días` : (p.maxFecha ? _fmtFechaCompleta(p.maxFecha) : 'máximo 1 día');
       return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(198,201,215,.06);">
         <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
           <span style="color:${ACOLOR[p.area]||'#9ca3af'};font-weight:800;flex-shrink:0;">${i+1}</span>
@@ -404,7 +421,7 @@ const Dashboard = (() => {
   }
 
   // ── MOSTRAR TODAS LAS HORAS EXTRA EN MODAL ──
-  function _showAllExtra(modo) {
+function _showAllExtra(modo) {
     const rows = _lastRows;
     let allData;
 
@@ -414,8 +431,11 @@ const Dashboard = (() => {
     } else {
       const extraData=_calcExtraData(rows);
       allData = extraData.filter(e=>e.totalExtra>0).map(e=>{
-        const maxExtra = e.dias.length ? Math.max(...e.dias.map(d=>d.extra)) : 0;
-        return {...e, maxExtra};
+        let maxExtra = 0, maxFecha = null;
+        e.dias.forEach(d => {
+          if (d.extra > maxExtra) { maxExtra = d.extra; maxFecha = d.fecha; }
+        });
+        return {...e, maxExtra, maxFecha};
       }).sort((a,b)=>b.maxExtra-a.maxExtra);
     }
 
@@ -439,7 +459,7 @@ const Dashboard = (() => {
           ${allData.map((p,i)=>{
             const extraVal = modo === 'total' ? p.totalExtra : (p.maxExtra || 0);
             const hs=fmtHs(extraVal/60);
-            const subtitle = modo === 'total' ? `${p.veces} días` : `máximo 1 día`;
+            const subtitle = modo === 'total' ? `${p.veces} días` : (p.maxFecha ? _fmtFechaCompleta(p.maxFecha) : 'máximo 1 día');
             return `<div style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:rgba(198,201,215,.05);border:1px solid rgba(198,201,215,.08);border-radius:8px;">
               <div>
                 <div style="font-weight:700;color:#fff;">${i+1}. ${p.nombre}</div>

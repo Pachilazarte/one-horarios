@@ -238,7 +238,7 @@ body{-webkit-tap-highlight-color:transparent;}
   </span>
 
   <div style="position: absolute; bottom: 12px; right: 20px; font-size: 9px; opacity: 0.15; font-family: 'Exo 2', sans-serif; letter-spacing: 1px;">
-    V. 0.0.5
+    V 0.0.9
   </div>
 </footer>
 
@@ -427,7 +427,13 @@ function updCalc() {
   } else { ih.textContent = ''; }
 }
 
-/* ── Guardar ── */
+/* ── Guardar ── */// ═══════════════════════════════════════════════════════════════════════════
+// SOLUCIÓN SIMPLE: En vez de UPSERT, usa UPDATE+INSERT manual
+// NO necesita constraint en Supabase
+// ═══════════════════════════════════════════════════════════════════════════
+
+// REEMPLAZA la función guardarRegistro() en index.html con ESTA:
+
 async function guardarRegistro() {
   const area = document.getElementById('lArea').value;
   const opt  = document.getElementById('lNom').selectedOptions[0];
@@ -463,25 +469,60 @@ async function guardarRegistro() {
   const tardanza = horarioPlan?.tipo === 'normal' && horarioPlan?.entrada
     ? calcTardVsPlan(horarioPlan.entrada, ent) : null;
 
-  // Combinar obs con el 2° turno real si existe
   let obsFinal = obs || null;
   if (ent2) {
     const t2str = ent2 + (sal2 ? ' → ' + sal2 : '');
     obsFinal = (obs ? obs + ' | ' : '') + '2° turno: ' + t2str;
   }
 
-  const { error } = await SB.from('registros').insert({
-    area, nombre, rol, fecha,
-    turno, hora_entrada: ent + ':00',
-    hora_salida: sal ? sal + ':00' : null,
-    observaciones: obsFinal,
-  });
+  // ✅ NUEVA LÓGICA: Buscar si existe, UPDATE si existe, INSERT si no
+  
+  // 1. Buscar si ya existe registro para esta persona este día
+  const { data: existing } = await SB
+    .from('registros')
+    .select('id')
+    .eq('nombre', nombre)
+    .eq('fecha', fecha)
+    .limit(1);
+
+  let error = null;
+
+  if (existing && existing.length > 0) {
+    // YA EXISTE → ACTUALIZAR
+    const id = existing[0].id;
+    const { error: errUpdate } = await SB
+      .from('registros')
+      .update({
+        area, rol, turno,
+        hora_entrada: ent + ':00',
+        hora_salida: sal ? sal + ':00' : null,
+        observaciones: obsFinal,
+      })
+      .eq('id', id);
+    error = errUpdate;
+  } else {
+    // NO EXISTE → INSERTAR
+    const { error: errInsert } = await SB
+      .from('registros')
+      .insert({
+        area, nombre, rol, fecha,
+        turno,
+        hora_entrada: ent + ':00',
+        hora_salida: sal ? sal + ':00' : null,
+        observaciones: obsFinal,
+      });
+    error = errInsert;
+  }
 
   btn.disabled = false;
   document.getElementById('lBIco').textContent = '✅';
   document.getElementById('lBTxt').textContent = 'Guardar registro';
 
-  if (error) { showToast('Error: ' + error.message, 'err'); return; }
+  if (error) { 
+    console.error('Error:', error);
+    showToast('Error: ' + error.message, 'err'); 
+    return; 
+  }
 
   sessionQueue.unshift({ nombre, area, ent, sal, tardanza, hs: calcHs(ent,sal), plan: horarioPlan });
   _renderQueue();
@@ -502,6 +543,19 @@ async function guardarRegistro() {
   horarioPlan = null; _clearCalc(); _clearPlan();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ¿QUÉ HACE?
+// 
+// 1. Busca: ¿Existe registro para (nombre, fecha)?
+// 2. Si SÍ existe → UPDATE (actualiza entrada/salida/obs)
+// 3. Si NO existe → INSERT (crea registro nuevo)
+// 4. Listo
+//
+// NO necesita constraint
+// NO necesita UPSERT
+// Funciona al toque
+// ═══════════════════════════════════════════════════════════════════════════
 
 /* ── Cola ── */
 function _renderQueue() {
