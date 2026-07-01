@@ -76,7 +76,7 @@ let _lastRows = [], _lastPer = 'semana';
 
     const withPlan=rows.filter(r=>{
       if(!r.turno||!r.hora_entrada)return false;
-      if(r.turno==='Flex'||r.turno==='Guardia')return false;
+      if(r.turno==='Flex'||r.turno==='Guardia'||r.turno==='Licencia')return false;
       const planEnt=r.turno.split('→')[0].trim();
       return planEnt.match(/^\d{2}:\d{2}$/);
     });
@@ -98,7 +98,7 @@ let _lastRows = [], _lastPer = 'semana';
     document.getElementById('kPunt').textContent=puntuales;
     document.getElementById('kTarde').textContent=tardes;
 
-    const conHs=rows.filter(r=>r.hora_entrada&&r.hora_salida&&r.turno!=='Flex'&&r.turno!=='Guardia');
+    const conHs=rows.filter(r=>r.hora_entrada&&r.hora_salida&&r.turno!=='Flex'&&r.turno!=='Guardia'&&r.turno!=='Licencia');
     const tot=conHs.reduce((acc,r)=>{const h=calcHs(r.hora_entrada.slice(0,5),r.hora_salida.slice(0,5));return h?acc+h:acc;},0);
     document.getElementById('kH').textContent=conHs.length?fmtHs(tot/conHs.length):'—';
 
@@ -115,7 +115,7 @@ let _lastRows = [], _lastPer = 'semana';
     const byPers = {};
     rows.forEach(r => {
       if (!r.turno||!r.hora_entrada||!r.hora_salida) return;
-      if (r.turno==='Flex'||r.turno==='Guardia') return;
+      if (r.turno==='Flex'||r.turno==='Guardia'||r.turno==='Licencia') return;
       const parts = r.turno.split('→');
       if (parts.length < 2) return;
       const planSal = parts[1].trim().slice(0,5);
@@ -144,7 +144,7 @@ let _lastRows = [], _lastPer = 'semana';
     _dest(_cP);
     const areas=AREAS.filter(a=>rows.some(r=>r.area===a));
     const punt=areas.map(a=>{
-      const ar=rows.filter(r=>r.area===a&&r.turno&&r.hora_entrada&&r.turno.includes(':')&&r.turno!=='Flex'&&r.turno!=='Guardia');
+      const ar=rows.filter(r=>r.area===a&&r.turno&&r.hora_entrada&&r.turno.includes(':')&&r.turno!=='Flex'&&r.turno!=='Guardia'&&r.turno!=='Licencia');
       if(!ar.length)return 0;
       const p=ar.filter(r=>{const e=r.turno.split('→')[0].trim();return e.match(/^\d{2}:\d{2}$/)&&calcTardVsPlan(e,r.hora_entrada.slice(0,5))<=0;});
       return Math.round(p.length/ar.length*100);
@@ -172,7 +172,7 @@ let _lastRows = [], _lastPer = 'semana';
     const modo = document.getElementById('topTardMode')?.value || 'total';
 
     const withTard=rows.filter(r=>{
-      if(!r.turno||!r.hora_entrada||r.turno==='Flex'||r.turno==='Guardia')return false;
+      if(!r.turno||!r.hora_entrada||r.turno==='Flex'||r.turno==='Guardia'||r.turno==='Licencia')return false;
       const e=r.turno.split('→')[0].trim();
       return e.match(/^\d{2}:\d{2}$/);
     });
@@ -267,7 +267,7 @@ const listHtml = sorted.map((p,i)=>{
   function _showAllTardanzas(modo) {
     const rows = _lastRows;
     const withTard=rows.filter(r=>{
-      if(!r.turno||!r.hora_entrada||r.turno==='Flex'||r.turno==='Guardia')return false;
+      if(!r.turno||!r.hora_entrada||r.turno==='Flex'||r.turno==='Guardia'||r.turno==='Licencia')return false;
       const e=r.turno.split('→')[0].trim();
       return e.match(/^\d{2}:\d{2}$/);
     });
@@ -486,7 +486,7 @@ function _showAllExtra(modo) {
       const ar=rows.filter(r=>r.area===a);
       if(!ar.length)return;
       const withPlan=ar.filter(r=>{
-        if(!r.turno||!r.hora_entrada||r.turno==='Flex'||r.turno==='Guardia')return false;
+        if(!r.turno||!r.hora_entrada||r.turno==='Flex'||r.turno==='Guardia'||r.turno==='Licencia')return false;
         const e=r.turno.split('→')[0].trim();
         return e.match(/^\d{2}:\d{2}$/);
       });
@@ -541,7 +541,7 @@ function _showAllExtra(modo) {
       if (hs !== null) p.horasTotal += hs;
 
       // Calcular tardanza
-      if (r.turno && !['Flex', 'Guardia'].includes(r.turno) && r.hora_entrada) {
+      if (r.turno && !['Flex', 'Guardia', 'Licencia'].includes(r.turno) && r.hora_entrada) {
         const planEnt = r.turno.split('→')[0].trim();
         if (planEnt.match(/^\d{2}:\d{2}$/)) {
           const diff = calcTardVsPlan(planEnt, r.hora_entrada.slice(0,5));

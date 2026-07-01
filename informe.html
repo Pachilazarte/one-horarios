@@ -416,20 +416,20 @@ function onPerChange(){
 /* ══ CALCULAR STATS ══ */
 function calcStats(rows){
   const withPlan=rows.filter(r=>{
-    if(!r.turno||!r.hora_entrada||r.turno==='Flex'||r.turno==='Guardia')return false;
+    if(!r.turno||!r.hora_entrada||r.turno==='Flex'||r.turno==='Guardia'||r.turno==='Licencia')return false;
     return r.turno.split(ARROW)[0].trim().match(/^\d{2}:\d{2}$/);
   });
   const allD=withPlan.map(r=>({r,d:calcTard(r.turno.split(ARROW)[0].trim(),r.hora_entrada.slice(0,5))})).filter(x=>x.d!==null);
   const diffs=allD.map(x=>x.d);
   const puntual=diffs.filter(d=>d<=0).length,tarde=diffs.filter(d=>d>0).length;
   const promTard=diffs.length?Math.round(diffs.reduce((a,b)=>a+b,0)/diffs.length):0;
-  const conHs=rows.filter(r=>r.hora_entrada&&r.hora_salida&&r.turno!=='Flex'&&r.turno!=='Guardia');
+  const conHs=rows.filter(r=>r.hora_entrada&&r.hora_salida&&r.turno!=='Flex'&&r.turno!=='Guardia'&&r.turno!=='Licencia');
   const totHs=conHs.reduce((acc,r)=>{const h=calcHs(r.hora_entrada.slice(0,5),r.hora_salida.slice(0,5));return h?acc+h:acc;},0);
   const promHs=conHs.length?totHs/conHs.length:0;
 
   const em={};
   rows.forEach(r=>{
-    if(!r.turno||!r.hora_entrada||!r.hora_salida||r.turno==='Flex'||r.turno==='Guardia')return;
+    if(!r.turno||!r.hora_entrada||!r.hora_salida||r.turno==='Flex'||r.turno==='Guardia'||r.turno==='Licencia')return;
     const pts=r.turno.split(ARROW);if(pts.length<2)return;
     const ps=pts[1].trim().slice(0,5);if(!ps.match(/^\d{2}:\d{2}$/))return;
     const ex=calcExtra(ps,r.hora_salida.slice(0,5));if(!ex||ex<=0)return;
@@ -448,9 +448,9 @@ function calcStats(rows){
 
   const byArea=AREAS.map(a=>{
     const ar=rows.filter(r=>r.area===a);if(!ar.length)return null;
-    const ad=ar.filter(r=>r.turno&&r.hora_entrada&&r.turno.includes(':')&&r.turno!=='Flex'&&r.turno!=='Guardia')
+    const ad=ar.filter(r=>r.turno&&r.hora_entrada&&r.turno.includes(':')&&r.turno!=='Flex'&&r.turno!=='Guardia'&&r.turno!=='Licencia')
       .map(r=>{const e=r.turno.split(ARROW)[0].trim();return e.match(/^\d{2}:\d{2}$/)?calcTard(e,r.hora_entrada.slice(0,5)):null;}).filter(d=>d!==null);
-    const hsA=ar.filter(r=>r.hora_entrada&&r.hora_salida&&r.turno!=='Flex'&&r.turno!=='Guardia');
+    const hsA=ar.filter(r=>r.hora_entrada&&r.hora_salida&&r.turno!=='Flex'&&r.turno!=='Guardia'&&r.turno!=='Licencia');
     const totA=hsA.reduce((acc,r)=>{const h=calcHs(r.hora_entrada.slice(0,5),r.hora_salida.slice(0,5));return h?acc+h:acc;},0);
     return{area:a,registros:ar.length,punt:ad.filter(d=>d<=0).length,
       conTard:ad.filter(d=>d>0).length,totalDiffs:ad.length,
@@ -711,6 +711,7 @@ function regTableHTML(rows){
       let tardCell='<span class="badge b-gray">—</span>';
       if(turno==='Flex')      tardCell='<span class="badge b-blue">Flex</span>';
       else if(turno==='Guardia') tardCell='<span class="badge b-amber">Guardia</span>';
+      else if(turno==='Licencia') tardCell='<span class="badge" style="background:rgba(96,165,250,.14);color:#3b82f6;">📋 Licencia</span>';
       else if(turno.includes(':')&&r.hora_entrada){
         const pe=turno.split(ARROW)[0].trim();
         if(pe.match(/^\d{2}:\d{2}$/)){

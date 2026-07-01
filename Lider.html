@@ -88,6 +88,8 @@
     .tipo-badge-flex:hover{background:rgba(167,139,250,.28);}
     .tipo-badge-guardia{background:rgba(228,199,106,.18);border:1px solid rgba(228,199,106,.4)!important;color:var(--one-gold);}
     .tipo-badge-guardia:hover{background:rgba(228,199,106,.28);}
+    .tipo-badge-licencia{background:rgba(96,165,250,.18);border:1px solid rgba(96,165,250,.4)!important;color:#60a5fa;}
+    .tipo-badge-licencia:hover{background:rgba(96,165,250,.28);}
 
     /* Input de tipo — para editar el tipo del día completo */
     .tipo-inp{background:rgba(255,255,255,.07);border:1px solid rgba(198,201,215,.16);color:var(--one-white);
@@ -223,6 +225,8 @@
       <span style="opacity:.3">·</span>
       <span class="tip-g"><strong>guardia</strong> o <strong>g</strong> → Guardia (1h)</span>
       <span style="opacity:.3">·</span>
+      <span style="color:#60a5fa;"><strong>licencia</strong> o <strong>lic</strong> → Licencia (0h, ausencia avisada)</span>
+      <span style="opacity:.3">·</span>
       <span style="color:rgba(198,201,215,.4);">Click en la casilla para quitarlo </span>
     </div>
 
@@ -312,6 +316,7 @@ function detectTipo(raw) {
   const v = raw.trim().toLowerCase();
   if (v === 'f' || v === 'flex' || v === 'flexible') return 'flex';
   if (v === 'g' || v === 'guardia' || v === 'gdia'  || v === 'guard') return 'guardia';
+  if (v === 'l' || v === 'lic' || v === 'licencia' || v === 'licen') return 'licencia';
   return null;
 }
 
@@ -337,8 +342,9 @@ function calcTot(r) {
   let t = 0;
   DIAS.forEach(d => {
     const tipo = r[d + '_tipo'] || 'normal';
-    if (tipo === 'guardia') { t += 1; return; }
-    if (tipo === 'flex')    { return; }
+    if (tipo === 'guardia')  { t += 1; return; }
+    if (tipo === 'flex')     { return; }
+    if (tipo === 'licencia') { return; }
     const h1 = calcHs(r[d + '_e'], r[d + '_s']);
     const h2 = calcHs(r[d + '_e2'], r[d + '_s2']);
     if (h1) t += h1;
@@ -630,6 +636,8 @@ function renderCards() {
         celda = `<button class="tipo-badge tipo-badge-flex" onclick="quitarTipo(${i},'${d}')" title="Click para quitar Flex">🔄 Flex</button>`;
       } else if (tipo === 'guardia') {
         celda = `<button class="tipo-badge tipo-badge-guardia" onclick="quitarTipo(${i},'${d}')" title="Click para quitar Guardia">🛡 Guard.</button>`;
+      } else if (tipo === 'licencia') {
+        celda = `<button class="tipo-badge tipo-badge-licencia" onclick="quitarTipo(${i},'${d}')" title="Click para quitar Licencia">📋 Lic.</button>`;
       } else {
         celda = `
           <input class="ht ${r[d+'_e']?'v':''}" type="text" maxlength="8"
@@ -729,8 +737,10 @@ function updCelda(i, k, inp) {
   const tipo = detectTipo(raw);
   if (tipo) {
     // Ya reconoció un tipo especial — resaltar el input provisionalmente
-    inp.style.color = tipo === 'flex' ? 'var(--one-purple)' : 'var(--one-gold)';
-    inp.style.borderColor = tipo === 'flex' ? 'rgba(167,139,250,.5)' : 'rgba(228,199,106,.5)';
+    const _col = tipo === 'flex' ? 'var(--one-purple)' : tipo === 'guardia' ? 'var(--one-gold)' : '#60a5fa';
+    const _bor = tipo === 'flex' ? 'rgba(167,139,250,.5)' : tipo === 'guardia' ? 'rgba(228,199,106,.5)' : 'rgba(96,165,250,.5)';
+    inp.style.color = _col;
+    inp.style.borderColor = _bor;
   } else {
     inp.style.color = '';
     inp.style.borderColor = '';
@@ -780,7 +790,8 @@ function setTipoDia(i, d, tipo) {
   dirty();
   // Re-render solo la card afectada
   renderCards();
-  toast(`✓ ${tipo === 'flex' ? '🔄 Flex' : '🛡 Guardia'} aplicado a ${rows[i].nombre} — ${d}`);
+  const _lbl = { flex: '🔄 Flex', guardia: '🛡 Guardia', licencia: '📋 Licencia' }[tipo] || tipo;
+  toast(`✓ ${_lbl} aplicado a ${rows[i].nombre} — ${d}`);
 }
 
 /* ── QUITAR TIPO ESPECIAL (volver a normal) ── */
@@ -940,8 +951,9 @@ regs.forEach(reg => {
     if (!dia) return;
     const tipo = dia.tipo || 'normal';
     let nuevoTurno;
-    if (tipo === 'flex')         nuevoTurno = 'Flex';
-    else if (tipo === 'guardia') nuevoTurno = 'Guardia';
+    if (tipo === 'flex')          nuevoTurno = 'Flex';
+    else if (tipo === 'guardia')  nuevoTurno = 'Guardia';
+    else if (tipo === 'licencia') nuevoTurno = 'Licencia';
     else {
       if (!dia.e) return;
       nuevoTurno = dia.e + (dia.s ? ' → ' + dia.s : '');
@@ -978,8 +990,9 @@ const ACOLOR = {
 };
 
   const fd = (e,s,tipo) => {
-    if (tipo==='flex')    return 'Flex';
-    if (tipo==='guardia') return '1h Guard.';
+    if (tipo==='flex')     return 'Flex';
+    if (tipo==='guardia')  return '1h Guard.';
+    if (tipo==='licencia') return 'Licencia';
     if (!e) return '—';
     return s ? `${e} → ${s}` : e;
   };
@@ -1092,10 +1105,10 @@ const ACOLOR = {
     // Días
     ctx.font = `11px "Segoe UI", system-ui, sans-serif`;
     row.dias.forEach((txt, di) => {
-      const isEsp  = txt === 'Flex' || txt === '1h Guard.';
+      const isEsp  = txt === 'Flex' || txt === '1h Guard.' || txt === 'Licencia';
       const isDash = txt === '—';
       ctx.fillStyle = isEsp
-        ? (txt === 'Flex' ? '#a78bfa' : '#e4c76a')
+        ? (txt === 'Flex' ? '#a78bfa' : txt === 'Licencia' ? '#60a5fa' : '#e4c76a')
         : isDash ? 'rgba(198,201,215,.22)' : '#6be1e3';
       ctx.fillText(txt, pad + colN + colD * di + 8, y + rowH * 0.62);
     });

@@ -122,6 +122,11 @@
       border-color: rgba(228, 199, 106, .28) !important;
     }
 
+    .plan-licencia {
+      background: rgba(96, 165, 250, .08) !important;
+      border-color: rgba(96, 165, 250, .3) !important;
+    }
+
     /* ── Inputs mobile-friendly ── */
     .inp {
       min-height: 46px;
@@ -352,7 +357,7 @@
 
       <div
         style="position: absolute; bottom: 12px; right: 20px; font-size: 9px; opacity: 0.15; font-family: 'Exo 2', sans-serif; letter-spacing: 1px;">
-        V 1.0.0
+        V 1.1.0
       </div>
     </footer>
 
@@ -413,7 +418,7 @@
     async function loadPersonal() {
       const area = document.getElementById('lArea').value;
       const sel = document.getElementById('lNom');
-      horarioPlan = null; _clearCalc(); _clearPlan();
+      horarioPlan = null; _clearCalc(); _clearPlan(); _bloquearPorLicencia(false);
       if (!area) { sel.innerHTML = '<option value="">Seleccioná área primero</option>'; return; }
       sel.innerHTML = '<option value="">Cargando...</option>';
       const { data } = await SB.from('personal')
@@ -430,7 +435,7 @@
     /* ── Persona cambia ── */
     async function onPersonaChange() {
       const opt = document.getElementById('lNom').selectedOptions[0];
-      horarioPlan = null; _clearCalc(); _clearPlan();
+      horarioPlan = null; _clearCalc(); _clearPlan(); _bloquearPorLicencia(false);
       if (!opt?.value) return;
       let nombre;
       try { nombre = JSON.parse(opt.value).nombre; } catch { return; }
@@ -459,6 +464,16 @@
         el.innerHTML = '<span style="color:rgba(198,201,215,.45);">Sin horario planificado — podés ingresar igualmente.</span>';
         document.getElementById('btnAgregar2do').style.display = '';
         document.getElementById('turno2Wrap').style.display = 'none';
+        return;
+      }
+      if (plan.tipo === 'licencia') {
+        el.classList.add('plan-licencia');
+        el.innerHTML = '<span style="color:rgba(198,201,215,.6);">Planificado:</span>'
+          + '<strong style="color:#60a5fa;margin-left:5px;">📋 Licencia</strong>'
+          + '<span style="font-size:10px;color:rgba(198,201,215,.4);margin-left:4px;">Ausencia avisada — no requiere registro</span>';
+        document.getElementById('btnAgregar2do').style.display = 'none';
+        document.getElementById('turno2Wrap').style.display = 'none';
+        _bloquearPorLicencia(true);
         return;
       }
       if (plan.tipo === 'flex') {
@@ -515,7 +530,10 @@
       const it = document.getElementById('lInfoT');
       const ih = document.getElementById('lInfoH');
 
-      if (horarioPlan?.tipo === 'flex') {
+      if (horarioPlan?.tipo === 'licencia') {
+        it.style.color = '#60a5fa';
+        it.textContent = '📋 Licencia — no se computa';
+      } else if (horarioPlan?.tipo === 'flex') {
         it.style.color = 'var(--one-purple)';
         it.textContent = ent ? '🔄 Flex — sin tardanza calculada' : '';
       } else if (horarioPlan?.tipo === 'guardia') {
@@ -558,6 +576,9 @@
       const obs = document.getElementById('lObs').value.trim();
       const fecha = getFechaActual();
 
+      if (horarioPlan?.tipo === 'licencia') {
+        showToast('Persona de licencia — no se registra horario', 'err'); return;
+      }
       if (!area || !opt?.value || !ent) {
         showToast('Completá área, nombre y hora de entrada', 'err'); return;
       }
@@ -573,6 +594,7 @@
       const turno = !horarioPlan ? 'Personalizado'
         : horarioPlan.tipo === 'flex' ? 'Flex'
           : horarioPlan.tipo === 'guardia' ? 'Guardia'
+            : horarioPlan.tipo === 'licencia' ? 'Licencia'
             : (() => {
               const esCortado = !!(horarioPlan.entrada2 || horarioPlan.salida2);
               let t = horarioPlan.entrada + (horarioPlan.salida ? ' → ' + horarioPlan.salida : '');
@@ -749,6 +771,25 @@
       const ih = document.getElementById('lInfoH');
       if (it) it.textContent = '';
       if (ih) ih.textContent = '';
+    }
+
+    /* ── Bloqueo por licencia ──
+       La persona está de licencia ese día: no se registra horario.
+       Deshabilita inputs de hora y el botón Guardar para que no se compute. */
+    function _bloquearPorLicencia(activo) {
+      const btn = document.getElementById('lBtnG');
+      const ids = ['lEnt', 'lSal', 'lEnt2', 'lSal2'];
+      if (activo) {
+        ids.forEach(id => { const e = document.getElementById(id); if (e) { e.value = ''; e.disabled = true; } });
+        if (btn) btn.disabled = true;
+        document.getElementById('lBIco').textContent = '📋';
+        document.getElementById('lBTxt').textContent = 'De licencia — no se registra';
+      } else {
+        ids.forEach(id => { const e = document.getElementById(id); if (e) e.disabled = false; });
+        if (btn) btn.disabled = false;
+        document.getElementById('lBIco').textContent = '✅';
+        document.getElementById('lBTxt').textContent = 'Guardar registro';
+      }
     }
 
     /* ── Init ── */

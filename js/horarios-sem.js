@@ -70,7 +70,7 @@ const HorariosSem = (() => {
     s('hsKH', totalHs > 0 ? fmtHs(totalHs) : '—');
 
     const conEspecial = personas.filter(p =>
-      DIAS.some(d => p[d+'_tipo']==='flex' || p[d+'_tipo']==='guardia')
+      DIAS.some(d => p[d+'_tipo']==='flex' || p[d+'_tipo']==='guardia' || p[d+'_tipo']==='licencia')
     ).length;
     s('hsKE', conEspecial || '—');
   }
@@ -160,6 +160,7 @@ function _hsPersona(p) {
     const tipo = p[d+'_tipo'] || 'normal';
     if (tipo === 'guardia') { t += 1; return; }
     if (tipo === 'flex') return;
+    if (tipo === 'licencia') return;
     const h1=calcHs(p[d+'_e'],p[d+'_s']);
     const h2=calcHs(p[d+'_e2'],p[d+'_s2']);
     if(h1)t+=h1; if(h2)t+=h2;
@@ -183,9 +184,10 @@ function _hsPersona(p) {
       const totalHs  = personas.reduce((a,p) => a+_hsPersona(p), 0);
       const cargado  = !!row;
 
-const flexCount    = personas.filter(p => DIAS.some(d => p[d+'_tipo']==='flex')).length;
-const guardiaCount = personas.filter(p => DIAS.some(d => p[d+'_tipo']==='guardia')).length;
-const vacCount     = personas.filter(p => p.vacaciones).length;  // ← agregar
+const flexCount     = personas.filter(p => DIAS.some(d => p[d+'_tipo']==='flex')).length;
+const guardiaCount  = personas.filter(p => DIAS.some(d => p[d+'_tipo']==='guardia')).length;
+const licenciaCount = personas.filter(p => DIAS.some(d => p[d+'_tipo']==='licencia')).length;
+const vacCount      = personas.filter(p => p.vacaciones).length;  // ← agregar
 
       const persHtml = personas.slice(0,5).map(p => {
         const hs = _hsPersona(p);
@@ -193,8 +195,9 @@ const vacCount     = personas.filter(p => p.vacaciones).length;  // ← agregar
         const refE = DIAS.map(d=>p[d+'_e']).find(x=>x) || '';
         const refS = DIAS.map(d=>p[d+'_s']).find(x=>x) || '';
         let horStr;
-        if (refTipo==='flex')         horStr = `<span style="font-size:10px;color:var(--one-purple);">🔄 Flex</span>`;
-        else if (refTipo==='guardia') horStr = `<span style="font-size:10px;color:var(--one-gold);">🛡 Guardia</span>`;
+        if (refTipo==='flex')          horStr = `<span style="font-size:10px;color:var(--one-purple);">🔄 Flex</span>`;
+        else if (refTipo==='guardia')  horStr = `<span style="font-size:10px;color:var(--one-gold);">🛡 Guardia</span>`;
+        else if (refTipo==='licencia') horStr = `<span style="font-size:10px;color:#60a5fa;">📋 Licencia</span>`;
         else horStr = refE ? `<span style="font-size:10px;color:rgba(198,201,215,.4);">${refE}${refS?' → '+refS:''}</span>` : '';
         return `<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(198,201,215,.05);">
           <div>
@@ -214,8 +217,9 @@ const vacCount     = personas.filter(p => p.vacaciones).length;  // ← agregar
 
 const extraBadges = [
   flexCount    ? `<span style="background:rgba(167,139,250,.14);border:1px solid rgba(167,139,250,.24);color:var(--one-purple);padding:2px 8px;border-radius:999px;font-size:9px;font-weight:800;">🔄 ${flexCount} Flex</span>` : '',
-  guardiaCount ? `<span style="background:rgba(228,199,106,.14);border:1px solid rgba(228,199,106,.24);color:var(--one-gold);padding:2px 8px;border-radius:999px;font-size:9px;font-weight:800;">🛡 ${guardiaCount} Guardia</span>` : '',
-  vacCount     ? `<span style="background:rgba(34,197,94,.14);border:1px solid rgba(34,197,94,.24);color:var(--color-success-text);padding:2px 8px;border-radius:999px;font-size:9px;font-weight:800;">🏖 ${vacCount} Vac.</span>` : '',
+  guardiaCount  ? `<span style="background:rgba(228,199,106,.14);border:1px solid rgba(228,199,106,.24);color:var(--one-gold);padding:2px 8px;border-radius:999px;font-size:9px;font-weight:800;">🛡 ${guardiaCount} Guardia</span>` : '',
+  licenciaCount ? `<span style="background:rgba(96,165,250,.14);border:1px solid rgba(96,165,250,.24);color:#60a5fa;padding:2px 8px;border-radius:999px;font-size:9px;font-weight:800;">📋 ${licenciaCount} Lic.</span>` : '',
+  vacCount      ? `<span style="background:rgba(34,197,94,.14);border:1px solid rgba(34,197,94,.24);color:var(--color-success-text);padding:2px 8px;border-radius:999px;font-size:9px;font-weight:800;">🏖 ${vacCount} Vac.</span>` : '',
 ].filter(Boolean).join(' ');
 
       return `<div class="area-card" onclick="HorariosSem.openAreaModal('${area}')">
@@ -329,7 +333,7 @@ const extraBadges = [
     const fArr = _diasArr(semViendo);
 
     const rows = DIAS.map((d, di) => {
-      const conH    = editRows.filter(r => r[d+'_e'] || r[d+'_tipo']==='flex' || r[d+'_tipo']==='guardia');
+      const conH    = editRows.filter(r => r[d+'_e'] || r[d+'_tipo']==='flex' || r[d+'_tipo']==='guardia' || r[d+'_tipo']==='licencia');
       const primerH = conH[0];
       const todosIgual = conH.length > 1 && conH.every(r =>
         r[d+'_tipo'] === conH[0][d+'_tipo'] &&
@@ -343,8 +347,9 @@ const extraBadges = [
       } else {
         const tipo0 = primerH[d+'_tipo'] || 'normal';
         let horStr;
-        if (tipo0==='flex')         horStr = `<span style="color:var(--one-purple);font-weight:800;font-size:13px;">🔄 Flex</span>`;
-        else if (tipo0==='guardia') horStr = `<span style="color:var(--one-gold);font-weight:800;font-size:13px;">🛡 Guardia 1h</span>`;
+        if (tipo0==='flex')          horStr = `<span style="color:var(--one-purple);font-weight:800;font-size:13px;">🔄 Flex</span>`;
+        else if (tipo0==='guardia')  horStr = `<span style="color:var(--one-gold);font-weight:800;font-size:13px;">🛡 Guardia 1h</span>`;
+        else if (tipo0==='licencia') horStr = `<span style="color:#60a5fa;font-weight:800;font-size:13px;">📋 Licencia</span>`;
         else horStr = `<span style="font-size:13px;font-weight:800;color:var(--one-cyan);">${primerH[d+'_e']}${primerH[d+'_s']?' → '+primerH[d+'_s']:''}</span>`;
         resumen = `${horStr}
           ${todosIgual
@@ -392,6 +397,7 @@ const extraBadges = [
           <button class="tipo-btn ${tipo==='normal'?'tipo-active-cyan':''}" onclick="HorariosSem._setTipo(${i},'${d}','normal')">🕐 Fijo</button>
           <button class="tipo-btn ${tipo==='flex'?'tipo-active-purple':''}" onclick="HorariosSem._setTipo(${i},'${d}','flex')">🔄 Flex</button>
           <button class="tipo-btn ${tipo==='guardia'?'tipo-active-gold':''}" onclick="HorariosSem._setTipo(${i},'${d}','guardia')">🛡 Guardia</button>
+          <button class="tipo-btn ${tipo==='licencia'?'tipo-active-blue':''}" onclick="HorariosSem._setTipo(${i},'${d}','licencia')">📋 Licencia</button>
         </div>`;
 
       let contenido;
@@ -399,6 +405,8 @@ const extraBadges = [
         contenido = `<div style="padding:10px 14px;background:rgba(167,139,250,.07);border:1px solid rgba(167,139,250,.2);border-radius:8px;font-size:12px;color:var(--one-purple);">🔄 <strong>Horario Flex</strong> — Sin horario fijo.</div>`;
       } else if (tipo === 'guardia') {
         contenido = `<div style="padding:10px 14px;background:rgba(228,199,106,.07);border:1px solid rgba(228,199,106,.2);border-radius:8px;font-size:12px;color:var(--one-gold);">🛡 <strong>Guardia</strong> — 1 hora computable.</div>`;
+      } else if (tipo === 'licencia') {
+        contenido = `<div style="padding:10px 14px;background:rgba(96,165,250,.07);border:1px solid rgba(96,165,250,.2);border-radius:8px;font-size:12px;color:#60a5fa;">📋 <strong>Licencia</strong> — Ausencia avisada, 0 horas. No se registra ni computa.</div>`;
       } else {
         contenido = `
           <div style="display:grid;grid-template-columns:1fr 18px 1fr;align-items:center;gap:6px;">
@@ -454,7 +462,7 @@ return `<div id="mh-member-${i}" style="padding:12px 16px;border-bottom:1px soli
 
     const daySidebar = DIAS.map((dd, ddi) => {
       const isActive = ddi === di;
-      const conH = editRows.filter(r => r[dd+'_e'] || r[dd+'_tipo']==='flex' || r[dd+'_tipo']==='guardia');
+      const conH = editRows.filter(r => r[dd+'_e'] || r[dd+'_tipo']==='flex' || r[dd+'_tipo']==='guardia' || r[dd+'_tipo']==='licencia');
       const dot = conH.length === 0 ? 'rgba(239,68,68,.4)'
         : conH.length === editRows.length ? 'rgba(34,197,94,.55)' : 'rgba(228,199,106,.55)';
       return `<button onclick="HorariosSem._goDia(${ddi})"
@@ -469,7 +477,7 @@ return `<div id="mh-member-${i}" style="padding:12px 16px;border-bottom:1px soli
 
     const memberBar = editRows.map((r, i) => {
       const tipo = r[d+'_tipo'] || 'normal';
-      const tCol = tipo==='flex' ? '#a78bfa' : tipo==='guardia' ? '#e4c76a' : (r[d+'_e'] ? '#6be1e3' : 'rgba(198,201,215,.28)');
+      const tCol = tipo==='flex' ? '#a78bfa' : tipo==='guardia' ? '#e4c76a' : tipo==='licencia' ? '#60a5fa' : (r[d+'_e'] ? '#6be1e3' : 'rgba(198,201,215,.28)');
       const initials = r.nombre.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
       const firstName = r.nombre.split(' ')[0];
       return `<button onclick="document.getElementById('mh-member-${i}').scrollIntoView({behavior:'smooth',block:'nearest'})"
@@ -487,6 +495,7 @@ return `<div id="mh-member-${i}" style="padding:12px 16px;border-bottom:1px soli
         .tipo-active-cyan{background:rgba(107,225,227,.15)!important;border-color:rgba(107,225,227,.45)!important;color:var(--one-cyan)!important;}
         .tipo-active-purple{background:rgba(167,139,250,.15)!important;border-color:rgba(167,139,250,.45)!important;color:var(--one-purple)!important;}
         .tipo-active-gold{background:rgba(228,199,106,.15)!important;border-color:rgba(228,199,106,.45)!important;color:var(--one-gold)!important;}
+        .tipo-active-blue{background:rgba(96,165,250,.15)!important;border-color:rgba(96,165,250,.45)!important;color:#60a5fa!important;}
       </style>
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
         <button onclick="HorariosSem._backDias()" style="background:rgba(255,255,255,.07);border:1px solid rgba(198,201,215,.18);color:rgba(198,201,215,.8);padding:6px 14px;border-radius:999px;font-family:var(--font-title);font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;">‹ Volver</button>
@@ -674,8 +683,9 @@ regs.forEach(reg => {
       if (!dia) return;
       const tipo = dia.tipo || 'normal';
       let nuevoTurno;
-      if (tipo === 'flex')         nuevoTurno = 'Flex';
-      else if (tipo === 'guardia') nuevoTurno = 'Guardia';
+      if (tipo === 'flex')          nuevoTurno = 'Flex';
+      else if (tipo === 'guardia')  nuevoTurno = 'Guardia';
+      else if (tipo === 'licencia') nuevoTurno = 'Licencia';
       else {
         if (!dia.e) return;
         nuevoTurno = dia.e + (dia.s ? ' → ' + dia.s : '');
@@ -730,8 +740,9 @@ regs.forEach(reg => {
       const extra=re>tp&&tp>0?re-tp:0;
       const eb=extra>0?`<span class="badge badge-gold" style="font-size:10px;margin-left:4px;">+${fmtHs(extra)}</span>`:'';
       const fd=(e,s,tipo)=>{
-        if(tipo==='flex')    return `<span style="color:var(--one-purple);font-size:11px;font-weight:700;">🔄 Flex</span>`;
-        if(tipo==='guardia') return `<span style="color:var(--one-gold);font-size:11px;font-weight:700;">🛡 1h</span>`;
+        if(tipo==='flex')     return `<span style="color:var(--one-purple);font-size:11px;font-weight:700;">🔄 Flex</span>`;
+        if(tipo==='guardia')  return `<span style="color:var(--one-gold);font-size:11px;font-weight:700;">🛡 1h</span>`;
+        if(tipo==='licencia') return `<span style="color:#60a5fa;font-size:11px;font-weight:700;">📋 Lic.</span>`;
         if(!e) return '<span style="color:rgba(198,201,215,.2);font-size:11px;">—</span>';
         return s?`<b style="font-size:12px;">${e}</b><span style="color:rgba(198,201,215,.35);font-size:10px;"> → ${s}</span>`
                 :`<b style="font-size:12px;">${e}</b>`;
@@ -789,8 +800,9 @@ regs.forEach(reg => {
     const DLAN  = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
 
     const fd = (e,s,tipo) => {
-      if (tipo==='flex')    return 'Flex';
-      if (tipo==='guardia') return '1h';
+      if (tipo==='flex')     return 'Flex';
+      if (tipo==='guardia')  return '1h';
+      if (tipo==='licencia') return 'Licencia';
       if (!e) return '—';
       return s ? `${e}→${s}` : e;
     };

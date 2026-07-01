@@ -201,8 +201,9 @@ const getHorarioPlanificado = async (nombre, fecha) => {
     // Leer tipo — registros viejos no tienen campo tipo → asumir 'normal'
     const tipo = diaData.tipo || 'normal';
 
-    if (tipo === 'flex')    return { entrada: null, salida: null, tipo: 'flex' };
-    if (tipo === 'guardia') return { entrada: null, salida: null, tipo: 'guardia' };
+    if (tipo === 'flex')     return { entrada: null, salida: null, tipo: 'flex' };
+    if (tipo === 'guardia')  return { entrada: null, salida: null, tipo: 'guardia' };
+    if (tipo === 'licencia') return { entrada: null, salida: null, tipo: 'licencia' };
 
     // Tipo normal: leer horas
     const entrada = diaData.e || '';
