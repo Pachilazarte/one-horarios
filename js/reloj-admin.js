@@ -3,9 +3,16 @@
 // vista previa en vivo, carga de personal, hora y reinicio remotos.
 // Lecturas de Supabase (personal) solamente; el vínculo se guarda LOCAL en el
 // servidor del reloj — esta base no se toca hasta activar la sincronización.
-// ⚙ El servidor del reloj corre en la X270 (backend fijo de Escencial).
-// El dominio se auto-corrige solo si la IP de la X270 cambia (cron en la X270).
-const RELOJ_API = 'http://reloj.escencialconsultora.com:8081';
+// ⚙ El servidor del reloj corre en la X270, expuesto vía Tailscale Funnel
+// (HTTPS real — necesario porque esta página se sirve por HTTPS y el
+// navegador bloquea llamadas a http:// desde una página https, "mixed
+// content"). El dominio taild45448 es el tailnet de Santiago; si algún día
+// cambia, actualizar solo esta línea.
+const RELOJ_API = 'https://x270-server.taild45448.ts.net';
+// Clave solo exigida cuando el pedido llega desde fuera de la red local
+// (o sea, siempre que se accede vía este dominio público) — en LAN directa
+// (el panel técnico en http://reloj...:8081/) nunca hace falta.
+const RELOJ_HEADERS = { 'X-Reloj-Key': 'one2026reloj' };
 
 const RelojAdmin = (() => {
   let _timer = null;
@@ -18,7 +25,10 @@ const RelojAdmin = (() => {
   const PRIV = { '0': 'Usuario', '2': 'Admin', '6': 'Admin', '14': 'Admin' };
 
   async function api(path, data) {
-    const r = await fetch(RELOJ_API + path, data ? { method: 'POST', body: JSON.stringify(data) } : {});
+    const opts = data
+      ? { method: 'POST', headers: { ...RELOJ_HEADERS, 'Content-Type': 'application/json' }, body: JSON.stringify(data) }
+      : { headers: RELOJ_HEADERS };
+    const r = await fetch(RELOJ_API + path, opts);
     return await r.json();
   }
 

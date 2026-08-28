@@ -1,7 +1,10 @@
 // js/reloj.js — panel del reloj biométrico (lee el servidor ADMS local)
 // ⚙ El servidor del reloj corre en la X270 (backend fijo de Escencial).
 // El dominio se auto-corrige solo si la IP de la X270 cambia (cron en la X270).
-const RELOJ_API = 'http://reloj.escencialconsultora.com:8081';
+const RELOJ_API = 'https://x270-server.taild45448.ts.net';
+// Clave solo exigida cuando el pedido llega desde fuera de la red local
+// (vía Tailscale Funnel) — en LAN nunca hace falta.
+const RELOJ_HEADERS = { 'X-Reloj-Key': 'one2026reloj' };
 
 const $ = id => document.getElementById(id);
 let ultimoTotal = null;
@@ -14,10 +17,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function refrescar() {
   try {
+    const opts = { headers: RELOJ_HEADERS };
     const [estado, fichajes, registros] = await Promise.all([
-      fetch(RELOJ_API + '/api/estado').then(r => r.json()),
-      fetch(RELOJ_API + '/api/fichajes?limit=200').then(r => r.json()),
-      fetch(RELOJ_API + '/api/registros').then(r => r.json()),
+      fetch(RELOJ_API + '/api/estado', opts).then(r => r.json()),
+      fetch(RELOJ_API + '/api/fichajes?limit=200', opts).then(r => r.json()),
+      fetch(RELOJ_API + '/api/registros', opts).then(r => r.json()),
     ]);
     pintarEstado(estado);
     pintarFichajes(fichajes);

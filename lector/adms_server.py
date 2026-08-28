@@ -46,6 +46,40 @@ LOGF = os.path.join(BASE, "lector.log")
 FOTOS = os.path.join(BASE, "fotos")
 PUERTO = 8081
 TZ_HORAS = -3  # Argentina
+# Token de acceso público: el lector y el panel técnico en LAN siguen sin
+# pedirlo (compatibilidad total). Solo se exige a pedidos que llegan desde
+# fuera de la red local — el caso de la página pública vía Tailscale Funnel.
+# OJO: Tailscale Funnel entrega la IP real del pedido en X-Forwarded-For (el
+# backend escucha en loopback), NUNCA en la conexión socket directa — si se
+# mirara solo self.client_address, todo pedido funneled parecería "local"
+# (127.0.0.1) y el filtro quedaría roto. Por eso _ip_origen() prioriza ese
+# header. Fuente: https://github.com/tailscale/tailscale/issues/12972
+TOKEN_PUBLICO = "one2026reloj"
+REDES_PRIVADAS = ("10.", "192.168.", "127.", "100.")  # 100.x = red de Tailscale
+for _o in range(16, 32):
+    REDES_PRIVADAS += (f"172.{_o}.",)
+
+def _ip_origen(handler):
+    xff = handler.headers.get("X-Forwarded-For", "")
+    if xff:
+        return xff.split(",")[0].strip()
+    return handler.client_address[0]
+
+def _es_privada(ip):
+    return ip.startswith(REDES_PRIVADAS)
+
+def _autorizado(handler):
+    """True si el pedido puede pasar sin token: viene de una red privada
+    (LAN, Tailscale) o directo desde loopback. Si es pública, exige el token
+    (header X-Reloj-Key o ?key=) — así el reloj físico y el panel técnico en
+    LAN no cambian en nada, y solo lo que entra desde internet vía Funnel
+    necesita la clave."""
+    ip = _ip_origen(handler)
+    if _es_privada(ip):
+        return True
+    q = parse_qs(urlparse(handler.path).query)
+    return (handler.headers.get("X-Reloj-Key") == TOKEN_PUBLICO
+            or q.get("key", [""])[0] == TOKEN_PUBLICO)
 
 _lock = threading.Lock()
 
@@ -703,6 +737,15 @@ class H(BaseHTTPRequestHandler):
             q = {k: v[0] for k, v in parse_qs(u.query).items()}
             sn = q.get("SN", "")
 
+            # el reloj físico habla /iclock/* siempre en LAN — nunca se gatea.
+            # todo lo demás (API/panel) pide token si llega desde internet.
+            if not u.path.startswith("/iclock/") and not _autorizado(self):
+                self.send_response(401)
+                self.send_header("Content-Type", "text/plain; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(b"Falta la clave de acceso (X-Reloj-Key)")
+                return
+
             if u.path == "/favicon.ico":
                 self._resp(b"")                        # sin ruido en el log
             elif u.path == "/iclock/cdata":            # handshake del lector
@@ -856,7 +899,15 @@ class H(BaseHTTPRequestHandler):
             q = {k: v[0] for k, v in parse_qs(u.query).items()}
             sn = q.get("SN", "")
             tabla = q.get("table", "").upper()
-            crudo = self._body()
+            crudo = self._body()  # drenar el body siempre, gatee o no
+
+            if not u.path.startswith("/iclock/") and not _autorizado(self):
+                self.send_response(401)
+                self.send_header("Content-Type", "text/plain; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(b"Falta la clave de acceso (X-Reloj-Key)")
+                return
+
             if sn: registrar_dispositivo(sn)
 
             if u.path == "/iclock/cdata":
