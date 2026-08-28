@@ -166,6 +166,14 @@
         font-size: 20px !important;
       }
     }
+
+    /* entradas suaves al aparecer (se re-disparan al mostrar/ocultar) */
+    #lOkBanner, #lPlanInfo, #turno2Wrap, #adminLoginBox {
+      animation: fadeUp .22s ease-out both;
+    }
+
+    .fecha-arr .lucide { width: 20px; height: 20px; }
+    .btn-success .lucide { width: 19px; height: 19px; }
   </style>
 </head>
 
@@ -196,7 +204,7 @@
 
       <!-- BANNER OK -->
       <div id="lOkBanner" style="display:none;margin-bottom:14px;" class="ok-banner">
-        <div style="font-size:24px;margin-bottom:4px;">✅</div>
+        <div style="margin-bottom:6px;color:var(--color-success-text);"><i data-lucide="circle-check-big" style="width:28px;height:28px;"></i></div>
         <div style="font-size:15px;font-weight:800;color:var(--color-success-text);" id="lOkMsg">¡Registrado!</div>
         <div style="font-size:12px;color:rgba(134,239,172,.55);margin-top:3px;">Para cargar otro, completá el formulario
           y guardá de nuevo.</div>
@@ -219,13 +227,13 @@
 
         <!-- FECHA NAV -->
         <div class="fecha-nav">
-          <button class="fecha-arr" onclick="cambiarFecha(-1)">‹</button>
+          <button class="fecha-arr" onclick="cambiarFecha(-1)" aria-label="Día anterior"><i data-lucide="chevron-left"></i></button>
           <div class="fecha-center">
             <div class="fecha-dia-txt" id="fechaDia">—</div>
             <div class="fecha-num-txt" id="fechaNum">—</div>
-            <button class="fecha-hoy-btn hide" id="btnHoy" onclick="irAHoy()">⟲ Hoy</button>
+            <button class="fecha-hoy-btn hide" id="btnHoy" onclick="irAHoy()"><i data-lucide="undo-2" style="width:11px;height:11px;"></i> Hoy</button>
           </div>
-          <button class="fecha-arr" onclick="cambiarFecha(+1)">›</button>
+          <button class="fecha-arr" onclick="cambiarFecha(+1)" aria-label="Día siguiente"><i data-lucide="chevron-right"></i></button>
         </div>
         <input type="hidden" id="lFecha" />
 
@@ -276,9 +284,9 @@
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
             <div
               style="font-size:10px;font-weight:800;color:rgba(228,199,106,.7);letter-spacing:.08em;text-transform:uppercase;">
-              ✂ 2° Turno</div>
+              <i data-lucide="scissors" style="width:11px;height:11px;"></i> 2° Turno</div>
             <button onclick="ocultarTurno2()"
-              style="background:none;border:none;cursor:pointer;font-size:11px;color:rgba(228,199,106,.5);font-weight:700;">✕
+              style="background:none;border:none;cursor:pointer;font-size:11px;color:rgba(228,199,106,.5);font-weight:700;"><i data-lucide="x" style="width:11px;height:11px;"></i>
               Quitar</button>
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
@@ -299,7 +307,7 @@
           <button onclick="mostrarTurno2()" style="background:rgba(228,199,106,.08);border:1px dashed rgba(228,199,106,.3);
           color:rgba(228,199,106,.6);padding:8px 14px;border-radius:8px;
           font-family:var(--font-title);font-size:12px;font-weight:700;cursor:pointer;width:100%;">
-            ✂ Agregar 2° turno
+            <i data-lucide="scissors" style="width:12px;height:12px;vertical-align:-2px;"></i> Agregar 2° turno
           </button>
         </div>
 
@@ -311,7 +319,7 @@
         </div>
 
         <button class="btn btn-success" id="lBtnG" onclick="guardarRegistro()">
-          <span id="lBIco">✅</span>&nbsp;<span id="lBTxt">Guardar registro</span>
+          <span id="lBIco" style="display:inline-flex;"><i data-lucide="check"></i></span>&nbsp;<span id="lBTxt">Guardar registro</span>
         </button>
       </div>
 
@@ -319,7 +327,7 @@
       <div style="text-align:center;padding-bottom:10px;">
         <button class="btn btn-ghost" id="btnShowAdmin" onclick="toggleAdmin()"
           style="font-size:12px;padding:7px 18px;opacity:.55;">
-          🔐 Acceder como administrador
+          <i data-lucide="lock" style="width:13px;height:13px;"></i> Acceder como administrador
         </button>
         <div id="adminLoginBox" style="display:none;margin-top:10px;" class="glass fade-in"
           style="border-radius:14px;overflow:hidden;">
@@ -365,6 +373,7 @@
   <div class="toast" id="toast"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
 
   <script src="js/supabase.js"></script>
   <script src="js/utils.js"></script>
@@ -421,8 +430,13 @@
       horarioPlan = null; _clearCalc(); _clearPlan(); _bloquearPorLicencia(false);
       if (!area) { sel.innerHTML = '<option value="">Seleccioná área primero</option>'; return; }
       sel.innerHTML = '<option value="">Cargando...</option>';
-      const { data } = await SB.from('personal')
+      const { data, error } = await SB.from('personal')
         .select('nombre,rol').eq('area', area).eq('activo', true).order('nombre');
+      if (error) {
+        sel.innerHTML = '<option value="">Sin conexión — reintentá</option>';
+        showToast('No se pudo cargar el personal. Revisá tu conexión.', 'err');
+        return;
+      }
       sel.innerHTML = '<option value="">Seleccionar persona...</option>';
       (data || []).forEach(p => {
         const o = document.createElement('option');
@@ -449,11 +463,18 @@
         .eq('nombre', nombre)
         .eq('fecha', getFechaActual());
 
+      let tieneReg2 = false;
       if (regHoy && regHoy.length > 0) {
         const reg = regHoy[0];
         if (reg.hora_entrada) document.getElementById('lEnt').value = reg.hora_entrada.slice(0, 5);
         if (reg.hora_salida) document.getElementById('lSal').value = reg.hora_salida.slice(0, 5);
         if (reg.observaciones) document.getElementById('lObs').value = reg.observaciones;
+        if (reg.hora_entrada2 || reg.hora_salida2) {
+          tieneReg2 = true;
+          if (reg.hora_entrada2) document.getElementById('lEnt2').value = reg.hora_entrada2.slice(0, 5);
+          if (reg.hora_salida2) document.getElementById('lSal2').value = reg.hora_salida2.slice(0, 5);
+          mostrarTurno2();
+        }
       }
 
       const el = document.getElementById('lPlanInfo');
@@ -510,10 +531,12 @@
         if (esCortado) {
           if (t2) t2.style.display = '';
           if (btn2) btn2.style.display = 'none';
-          const e2 = document.getElementById('lEnt2');
-          const s2 = document.getElementById('lSal2');
-          if (e2) e2.value = '';
-          if (s2) s2.value = '';
+          if (!tieneReg2) {
+            const e2 = document.getElementById('lEnt2');
+            const s2 = document.getElementById('lSal2');
+            if (e2) e2.value = '';
+            if (s2) s2.value = '';
+          }
         } else {
           if (t2) t2.style.display = 'none';
           if (btn2) btn2.style.display = '';
@@ -559,13 +582,7 @@
       } else { ih.textContent = ''; }
     }
 
-    /* ── Guardar ── */// ═══════════════════════════════════════════════════════════════════════════
-    // SOLUCIÓN SIMPLE: En vez de UPSERT, usa UPDATE+INSERT manual
-    // NO necesita constraint en Supabase
-    // ═══════════════════════════════════════════════════════════════════════════
-
-    // REEMPLAZA la función guardarRegistro() en index.html con ESTA:
-
+    /* ── Guardar (busca por nombre+fecha: UPDATE si existe, INSERT si no) ── */
     async function guardarRegistro() {
       const area = document.getElementById('lArea').value;
       const opt = document.getElementById('lNom').selectedOptions[0];
@@ -588,7 +605,7 @@
 
       const btn = document.getElementById('lBtnG');
       btn.disabled = true;
-      document.getElementById('lBIco').textContent = '⏳';
+      setIcono('lBIco', 'loader-circle', 'spin');
       document.getElementById('lBTxt').textContent = 'Guardando...';
 
       const turno = !horarioPlan ? 'Personalizado'
@@ -605,53 +622,41 @@
       const tardanza = horarioPlan?.tipo === 'normal' && horarioPlan?.entrada
         ? calcTardVsPlan(horarioPlan.entrada, ent) : null;
 
-      let obsFinal = obs || null;
-      if (ent2) {
-        const t2str = ent2 + (sal2 ? ' → ' + sal2 : '');
-        obsFinal = (obs ? obs + ' | ' : '') + '2° turno: ' + t2str;
-      }
+      // el 2° turno va a SUS columnas (hora_entrada2/salida2) — el dashboard
+      // y los informes las computan; en observaciones no las ve nadie
+      const datos = {
+        area, rol, turno,
+        hora_entrada: ent + ':00',
+        hora_salida: sal ? sal + ':00' : null,
+        hora_entrada2: ent2 ? ent2 + ':00' : null,
+        hora_salida2: sal2 ? sal2 + ':00' : null,
+        observaciones: obs || null,
+      };
 
-      // ✅ NUEVA LÓGICA: Buscar si existe, UPDATE si existe, INSERT si no
-
-      // 1. Buscar si ya existe registro para esta persona este día
-      const { data: existing } = await SB
+      const { data: existing, error: errBusq } = await SB
         .from('registros')
         .select('id')
         .eq('nombre', nombre)
         .eq('fecha', fecha)
         .limit(1);
 
-      let error = null;
+      let error = errBusq;
 
-      if (existing && existing.length > 0) {
-        // YA EXISTE → ACTUALIZAR
-        const id = existing[0].id;
+      if (!error && existing && existing.length > 0) {
         const { error: errUpdate } = await SB
           .from('registros')
-          .update({
-            area, rol, turno,
-            hora_entrada: ent + ':00',
-            hora_salida: sal ? sal + ':00' : null,
-            observaciones: obsFinal,
-          })
-          .eq('id', id);
+          .update(datos)
+          .eq('id', existing[0].id);
         error = errUpdate;
-      } else {
-        // NO EXISTE → INSERTAR
+      } else if (!error) {
         const { error: errInsert } = await SB
           .from('registros')
-          .insert({
-            area, nombre, rol, fecha,
-            turno,
-            hora_entrada: ent + ':00',
-            hora_salida: sal ? sal + ':00' : null,
-            observaciones: obsFinal,
-          });
+          .insert({ nombre, fecha, ...datos });
         error = errInsert;
       }
 
       btn.disabled = false;
-      document.getElementById('lBIco').textContent = '✅';
+      setIcono('lBIco', 'check');
       document.getElementById('lBTxt').textContent = 'Guardar registro';
 
       if (error) {
@@ -679,19 +684,6 @@
       horarioPlan = null; _clearCalc(); _clearPlan();
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
-
-    // ═══════════════════════════════════════════════════════════════════════════
-    // ¿QUÉ HACE?
-    // 
-    // 1. Busca: ¿Existe registro para (nombre, fecha)?
-    // 2. Si SÍ existe → UPDATE (actualiza entrada/salida/obs)
-    // 3. Si NO existe → INSERT (crea registro nuevo)
-    // 4. Listo
-    //
-    // NO necesita constraint
-    // NO necesita UPSERT
-    // Funciona al toque
-    // ═══════════════════════════════════════════════════════════════════════════
 
     /* ── Cola ── */
     function _renderQueue() {
@@ -782,18 +774,29 @@
       if (activo) {
         ids.forEach(id => { const e = document.getElementById(id); if (e) { e.value = ''; e.disabled = true; } });
         if (btn) btn.disabled = true;
-        document.getElementById('lBIco').textContent = '📋';
+        setIcono('lBIco', 'clipboard-list');
         document.getElementById('lBTxt').textContent = 'De licencia — no se registra';
       } else {
         ids.forEach(id => { const e = document.getElementById(id); if (e) e.disabled = false; });
         if (btn) btn.disabled = false;
-        document.getElementById('lBIco').textContent = '✅';
+        setIcono('lBIco', 'check');
         document.getElementById('lBTxt').textContent = 'Guardar registro';
       }
     }
 
+    /* ── Iconos Lucide en estados dinámicos ── */
+    function setIcono(id, nombre, clase) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.innerHTML = '<i data-lucide="' + nombre + '"' + (clase ? ' class="' + clase + '"' : '') + '></i>';
+      if (window.lucide) lucide.createIcons();
+    }
+
     /* ── Init ── */
-    document.addEventListener('DOMContentLoaded', _updFecha);
+    document.addEventListener('DOMContentLoaded', () => {
+      _updFecha();
+      if (window.lucide) lucide.createIcons();
+    });
   </script>
 </body>
 

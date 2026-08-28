@@ -239,6 +239,7 @@
             <span id="actBadge"
               style="display:none;background:#e17bd7;color:#fff;border-radius:99px;font-size:9px;font-weight:800;padding:1px 6px;margin-left:4px;vertical-align:middle;"></span>
           </button>
+          <button class="tab-btn" id="at-reloj" onclick="switchTab('reloj'); RelojAdmin.start();">⏰ Reloj</button>
         </div>
         <div style="display:flex;gap:6px;">
           <div id="btnCsvWrap" style="display:none;">
@@ -683,13 +684,81 @@
         </div>
       </div>
 
+      <!-- ═══ TAB RELOJ (sincronización con el reloj biométrico) ═══ -->
+      <div id="tab-reloj" style="display:none;">
+        <style>
+          .reloj-tbl th { text-align: left; font-family: var(--font-title); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--one-cyan); padding: 9px 12px; border-bottom: 1px solid rgba(198, 201, 215, .12); white-space: nowrap; }
+          .reloj-tbl td { padding: 8px 12px; border-bottom: 1px solid rgba(198, 201, 215, .055); vertical-align: middle; }
+          .reloj-tbl tr:hover td { background: rgba(255, 255, 255, .025); }
+          .rj-si { color: var(--color-success-text); font-weight: 800; }
+          .rj-no { color: rgba(198, 201, 215, .3); }
+          .rj-badge-ok { background: rgba(52, 211, 153, .12); border: 1px solid rgba(52, 211, 153, .3); color: var(--color-success-text); padding: 2px 9px; border-radius: 999px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+          .rj-badge-warn { background: rgba(228, 199, 106, .08); border: 1px solid rgba(228, 199, 106, .25); color: var(--one-gold); padding: 2px 9px; border-radius: 999px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+        </style>
+        <div class="stat-card-lg" style="margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+          <div>
+            <div style="font-family:var(--font-title);font-weight:800;font-size:16px;">⏰ Reloj biométrico · Sincronización</div>
+            <div style="font-size:12px;color:rgba(198,201,215,.55);margin-top:3px;max-width:640px;">
+              Quiénes están registrados en el reloj, con qué métodos, y su vínculo con el personal del sistema.
+              El vínculo se guarda <b>local</b> (no toca esta base). Las áreas salen de <b>nuestro sistema</b>, no del aparato.
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <span id="relojEstado" class="rj-badge-warn">⏳ conectando...</span>
+            <button class="btn btn-ghost" style="font-size:11px;padding:5px 10px;" onclick="RelojAdmin.hora()" title="Sincronizar la hora del reloj con la PC del servidor"><i data-lucide="clock-4" style="width:12px;height:12px;"></i> Hora</button>
+            <button class="btn btn-ghost" style="font-size:11px;padding:5px 10px;" onclick="RelojAdmin.reboot()" title="Reiniciar el reloj"><i data-lucide="rotate-cw" style="width:12px;height:12px;"></i></button>
+            <span id="rjAccMsg" style="font-size:11px;color:var(--one-gold);"></span>
+          </div>
+        </div>
+        <div class="glass" style="padding:14px 18px;margin-bottom:14px;">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <span style="font-family:var(--font-title);font-weight:800;font-size:14px;display:inline-flex;align-items:center;gap:6px;"><i data-lucide="refresh-cw" style="width:15px;height:15px;color:var(--one-cyan);"></i> Sincronización a Registros</span>
+            <span id="rjSyncEstado" class="rj-badge-warn">...</span>
+            <button class="btn btn-ghost" style="font-size:12px;padding:5px 12px;" onclick="RelojAdmin.toggleSync()">cambiar</button>
+            <button class="btn btn-print" style="font-size:12px;padding:6px 14px;" onclick="RelojAdmin.syncHoy()"><i data-lucide="eye" style="width:13px;height:13px;"></i> Ver cómo queda HOY</button>
+            <button class="btn btn-danger" style="font-size:12px;padding:6px 14px;" onclick="RelojAdmin.borrarPruebas()"><i data-lucide="trash-2" style="width:13px;height:13px;"></i> Borrar datos de prueba</button>
+          </div>
+          <div id="rjSyncInfo" style="font-size:11px;color:rgba(198,201,215,.4);margin-top:6px;"></div>
+          <div id="rjPreview" style="margin-top:10px;"></div>
+        </div>
+
+        <div class="glass" style="padding:14px 18px;margin-bottom:14px;">
+          <div style="font-family:var(--font-title);font-weight:800;font-size:13px;margin-bottom:4px;display:flex;align-items:center;gap:6px;"><i data-lucide="user-plus" style="width:15px;height:15px;color:var(--one-cyan);"></i> Personal del sistema sin cargar al reloj</div>
+          <div style="font-size:12px;color:rgba(198,201,215,.5);margin-bottom:10px;">
+            "Cargar" lo crea en el reloj con su nombre real, ya vinculado — después la persona registra su huella/cara en la terminal y listo.</div>
+          <div id="rjSinCargar" style="display:flex;gap:7px;flex-wrap:wrap;">Cargando...</div>
+        </div>
+
+        <div class="glass" style="padding:16px 18px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+            <div style="font-family:var(--font-title);font-weight:800;font-size:13px;display:flex;align-items:center;gap:6px;"><i data-lucide="users" style="width:15px;height:15px;color:var(--one-cyan);"></i> Registrados en el reloj</div>
+            <button id="rjBtnGuardarTodos" class="btn btn-print" style="font-size:12px;padding:7px 16px;display:none;"
+              onclick="RelojAdmin.guardarTodos()"><i data-lucide="save" style="width:13px;height:13px;"></i> Guardar vínculos (<span id="rjCantCambios">0</span>)</button>
+          </div>
+          <div style="overflow:auto;border-radius:12px;border:1px solid rgba(198,201,215,.09);">
+            <table class="reloj-tbl" style="border-collapse:collapse;width:100%;font-size:13px;">
+              <thead>
+                <tr>
+                  <th>ID</th><th>Nombre en el reloj</th><th>Tipo</th><th>Tarjeta</th>
+                  <th>Huella</th><th>Cara</th><th>Foto</th>
+                  <th>Persona en el sistema</th><th>Área</th><th></th><th>Vínculo</th>
+                </tr>
+              </thead>
+              <tbody id="relojTbody">
+                <tr><td colspan="11" style="padding:22px;color:rgba(198,201,215,.4);">Cargando...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
     </main>
 
 
     <footer class="app-footer no-print">
       <img src="img/one-logoletra.png" alt="ONE" class="footer-logo"
         onerror="this.replaceWith(document.createTextNode('ONE'))" />
-      <span style="opacity:.3;">·</span><span>© 2026</span><span style="opacity:.3;">·</span>
+      <span style="opacity:.3;">·</span><span>© <script>document.write(new Date().getFullYear())</script></span><span style="opacity:.3;">·</span>
       <span style="display:flex;align-items:center;gap:5px;">Desarrollado por
         <img src="img/escencial-logoblanco.png" alt="Escencial" class="footer-logo"
           onerror="this.replaceWith(document.createTextNode('Escencial'))" />
@@ -886,6 +955,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
   <script src="js/supabase.js"></script>
   <script src="js/utils.js"></script>
   <script src="js/auth.js"></script>
@@ -894,8 +964,9 @@
   <script src="js/dashboard.js"></script>
   <script src="js/horarios-sem.js"></script>
   <script src="js/actividad.js"></script>
+  <script src="js/reloj-admin.js"></script>
   <script>
-    const TABS = ['dash', 'reg', 'per', 'lid', 'hsem', 'act'];
+    const TABS = ['dash', 'reg', 'per', 'lid', 'hsem', 'act', 'reloj'];
     let _hsemOk = false;
 
     function switchTab(t) {

@@ -21,14 +21,17 @@ const Auth = {
     isLoggedIn: function() {
         return localStorage.getItem(SESSION_KEY) === 'true';
     },
-    // ESTA ES LA FUNCIÓN QUE TE FALTA:
     requireAdmin: function() {
         if (!this.isLoggedIn()) {
             window.location.href = 'index.html';
         }
     },
     logout: function() {
-        localStorage.clear();
+        // borrar SOLO las claves de sesión propias (no todo el localStorage,
+        // que puede guardar datos de otras partes de la app)
+        localStorage.removeItem(SESSION_KEY);
+        localStorage.removeItem('admin_role');
+        localStorage.removeItem('admin_user');
         window.location.href = 'index.html';
     }
 };

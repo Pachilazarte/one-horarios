@@ -1,0 +1,13 @@
+# Datos reales del reloj biométrico — NO subir (huellas/caras/fichajes de
+# personas reales, y config local por máquina). El código sí se sube.
+lector/lector.db
+lector/lector.db-*
+lector/lector.log
+lector/supabase.json
+lector/fotos/
+lector/__pycache__/
+lector/usb-reloj/
+
+__pycache__/
+*.pyc
+.DS_Store

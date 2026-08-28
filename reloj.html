@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ONE — Reloj Biométrico</title>
+  <link rel="icon" type="image/png" href="img/favicon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/brand.css" />
+  <link rel="stylesheet" href="css/main.css" />
+  <style>
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 18px; }
+    .kpi-num { font-family: var(--font-title); font-size: 26px; font-weight: 800; color: var(--one-white); }
+    .kpi-lbl { font-size: 12px; color: rgba(198, 201, 215, .55); margin-top: 2px; }
+
+    .estado-pill { display: inline-flex; align-items: center; gap: 7px; padding: 6px 16px; border-radius: 999px; font-family: var(--font-title); font-size: 13px; font-weight: 800; }
+    .estado-online { background: rgba(52, 211, 153, .12); border: 1px solid rgba(52, 211, 153, .35); color: var(--color-success-text); }
+    .estado-offline { background: rgba(228, 199, 106, .1); border: 1px solid rgba(228, 199, 106, .3); color: var(--one-gold); }
+
+    .panel { padding: 18px 20px; margin-bottom: 18px; }
+    .panel h2 { font-family: var(--font-title); font-size: 15px; font-weight: 800; letter-spacing: .03em; margin-bottom: 3px; }
+    .panel .sub { font-size: 12px; color: rgba(198, 201, 215, .5); margin-bottom: 12px; }
+
+    .tbl-wrap { overflow: auto; max-height: 430px; border-radius: var(--radius-md); border: 1px solid rgba(198, 201, 215, .09); }
+    table { border-collapse: collapse; width: 100%; font-size: 13px; }
+    th { text-align: left; font-family: var(--font-title); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--one-cyan); padding: 9px 12px; border-bottom: 1px solid rgba(198, 201, 215, .12); position: sticky; top: 0; background: #16141c; z-index: 1; }
+    td { padding: 8px 12px; border-bottom: 1px solid rgba(198, 201, 215, .055); }
+    tr:hover td { background: rgba(255, 255, 255, .025); }
+    .fila-nueva td { background: rgba(107, 225, 227, .07); }
+
+    .badge-match { background: rgba(52, 211, 153, .12); border: 1px solid rgba(52, 211, 153, .3); color: var(--color-success-text); padding: 2px 9px; border-radius: 999px; font-size: 11px; font-weight: 700; }
+    .badge-nomatch { background: rgba(228, 199, 106, .08); border: 1px solid rgba(228, 199, 106, .25); color: var(--one-gold); padding: 2px 9px; border-radius: 999px; font-size: 11px; font-weight: 700; }
+    .badge-verify { background: rgba(167, 139, 250, .12); border: 1px solid rgba(167, 139, 250, .28); color: var(--one-purple); padding: 2px 9px; border-radius: 999px; font-size: 11px; font-weight: 700; }
+    .muted { color: rgba(198, 201, 215, .45); }
+    .vacio { color: rgba(198, 201, 215, .4); font-style: italic; padding: 22px; text-align: center; }
+
+    .aviso-offline { background: rgba(228, 199, 106, .07); border: 1px solid rgba(228, 199, 106, .25); border-radius: var(--radius-md); padding: 12px 16px; margin-bottom: 16px; color: var(--one-gold); font-size: 13px; display: none; }
+  </style>
+</head>
+
+<body>
+  <div class="bg-layer" aria-hidden="true"></div>
+  <div class="app-wrap">
+
+    <header class="app-header">
+      <div class="app-header__inner">
+        <div class="app-header__brand">
+          <div class="brand-mark"></div>
+          <div>
+            <div class="brand-name">ONE <span class="brand-gc">Horarios</span></div>
+            <span class="brand-sub">Reloj biométrico · en vivo</span>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span id="estadoPill" class="estado-pill estado-offline">⏳ conectando...</span>
+          <a href="index.html" class="btn btn-ghost" style="font-size:12px;padding:6px 12px;">← Inicio</a>
+        </div>
+      </div>
+    </header>
+
+    <main style="max-width:1280px;margin:0 auto;padding:20px 16px 80px;">
+
+      <div id="avisoOffline" class="aviso-offline"></div>
+
+      <div class="kpi-grid">
+        <div class="stat-card"><div class="kpi-num" id="kMarcasHoy">—</div><div class="kpi-lbl">Marcas de hoy</div></div>
+        <div class="stat-card"><div class="kpi-num" id="kFichajes">—</div><div class="kpi-lbl">Fichajes totales</div></div>
+        <div class="stat-card"><div class="kpi-num" id="kPersonas">—</div><div class="kpi-lbl">Personas en el reloj</div></div>
+        <div class="stat-card"><div class="kpi-num" id="kUltima">—</div><div class="kpi-lbl">Última señal del reloj</div></div>
+      </div>
+
+      <section class="glass panel">
+        <h2>🕐 Tipeos en vivo</h2>
+        <div class="sub">Cada marca que se hace en el reloj aparece acá sola, en segundos. Se actualiza cada 5 s.</div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Fecha y hora</th><th>Persona</th><th>Área</th><th>PIN</th><th>Verificación</th><th>Vínculo</th></tr></thead>
+            <tbody id="tbodyFichajes"><tr><td colspan="6" class="vacio">Cargando...</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="glass panel">
+        <h2>📅 Entrada / Salida por día</h2>
+        <div class="sub">Calculado automático: primera marca del día = entrada · última = salida.</div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Fecha</th><th>Persona</th><th>Área</th><th>Entrada</th><th>Salida</th><th>Marcas</th></tr></thead>
+            <tbody id="tbodyRegistros"><tr><td colspan="6" class="vacio">Cargando...</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+
+      <p style="font-size:12px;color:rgba(198,201,215,.4);">
+        Gestión del reloj (altas, matcheo, comandos): <a id="linkPanel" href="#" target="_blank" style="color:var(--one-cyan);">panel técnico del lector</a>
+      </p>
+
+    </main>
+
+    <footer class="app-footer">
+      <img src="img/escencial-logoblanco.png" alt="Escencial" class="footer-logo" />
+      <span>ONE Horarios · Reloj biométrico · Escencial Consultora</span>
+    </footer>
+  </div>
+
+  <script src="js/reloj.js"></script>
+</body>
+
+</html>
