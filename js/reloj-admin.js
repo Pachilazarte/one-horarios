@@ -3,12 +3,13 @@
 // vista previa en vivo, carga de personal, hora y reinicio remotos.
 // Lecturas de Supabase (personal) solamente; el vínculo se guarda LOCAL en el
 // servidor del reloj — esta base no se toca hasta activar la sincronización.
-// ⚙ El servidor del reloj corre en la X270, expuesto vía Tailscale Funnel
-// (HTTPS real — necesario porque esta página se sirve por HTTPS y el
-// navegador bloquea llamadas a http:// desde una página https, "mixed
-// content"). El dominio taild45448 es el tailnet de Santiago; si algún día
-// cambia, actualizar solo esta línea.
-const RELOJ_API = 'https://x270-server.taild45448.ts.net';
+// ⚙ El servidor del reloj corre en la X270, expuesto a internet vía un
+// túnel de Cloudflare (contenedor "reloj-tunnel" en la X270 — HTTPS real,
+// necesario porque esta página es HTTPS y el navegador bloquea llamadas a
+// http:// desde acá, "mixed content"). Es un túnel "quick" (sin cuenta ni
+// token): la URL cambia si el contenedor se reinicia — si deja de andar,
+// `docker logs reloj-tunnel` en la X270 tiene la URL nueva.
+const RELOJ_API = 'https://careers-hunt-mailman-tanks.trycloudflare.com';
 // Clave solo exigida cuando el pedido llega desde fuera de la red local
 // (o sea, siempre que se accede vía este dominio público) — en LAN directa
 // (el panel técnico en http://reloj...:8081/) nunca hace falta.

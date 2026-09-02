@@ -1,9 +1,14 @@
 // js/reloj.js — panel del reloj biométrico (lee el servidor ADMS local)
-// ⚙ El servidor del reloj corre en la X270 (backend fijo de Escencial).
-// El dominio se auto-corrige solo si la IP de la X270 cambia (cron en la X270).
-const RELOJ_API = 'https://x270-server.taild45448.ts.net';
+// ⚙ El servidor del reloj corre en la X270 (backend fijo de Escencial),
+// expuesto a internet vía un túnel de Cloudflare (contenedor "reloj-tunnel"
+// en la X270 — mismo patrón que ya usan otros proyectos ahí). El túnel es
+// "quick" (sin cuenta ni token): la URL cambia si el contenedor se reinicia
+// — si algún día deja de andar, revisar `docker logs reloj-tunnel` en la
+// X270 y actualizar esta línea con la URL nueva.
+const RELOJ_API = 'https://careers-hunt-mailman-tanks.trycloudflare.com';
 // Clave solo exigida cuando el pedido llega desde fuera de la red local
-// (vía Tailscale Funnel) — en LAN nunca hace falta.
+// (o sea, siempre que se accede vía este túnel) — en LAN directa nunca
+// hace falta.
 const RELOJ_HEADERS = { 'X-Reloj-Key': 'one2026reloj' };
 
 const $ = id => document.getElementById(id);

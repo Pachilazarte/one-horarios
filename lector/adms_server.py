@@ -48,18 +48,24 @@ PUERTO = 8081
 TZ_HORAS = -3  # Argentina
 # Token de acceso público: el lector y el panel técnico en LAN siguen sin
 # pedirlo (compatibilidad total). Solo se exige a pedidos que llegan desde
-# fuera de la red local — el caso de la página pública vía Tailscale Funnel.
-# OJO: Tailscale Funnel entrega la IP real del pedido en X-Forwarded-For (el
-# backend escucha en loopback), NUNCA en la conexión socket directa — si se
-# mirara solo self.client_address, todo pedido funneled parecería "local"
-# (127.0.0.1) y el filtro quedaría roto. Por eso _ip_origen() prioriza ese
-# header. Fuente: https://github.com/tailscale/tailscale/issues/12972
+# fuera de la red local — el caso de la página pública vía túnel (Cloudflare
+# o Tailscale Funnel).
+# OJO: cualquier túnel reverse-proxea al backend por loopback, así que
+# self.client_address SIEMPRE muestra 127.0.0.1 para ese tráfico — si se
+# mirara solo eso, todo pedido tunneled parecería "local" y el filtro
+# quedaría roto. Por eso _ip_origen() prioriza los headers que cada túnel
+# usa para llevar la IP real: Cloudflare manda CF-Connecting-IP, Tailscale
+# Funnel manda X-Forwarded-For (fuente: github.com/tailscale/tailscale/
+# issues/12972).
 TOKEN_PUBLICO = "one2026reloj"
 REDES_PRIVADAS = ("10.", "192.168.", "127.", "100.")  # 100.x = red de Tailscale
 for _o in range(16, 32):
     REDES_PRIVADAS += (f"172.{_o}.",)
 
 def _ip_origen(handler):
+    cf = handler.headers.get("CF-Connecting-IP", "")
+    if cf:
+        return cf.strip()
     xff = handler.headers.get("X-Forwarded-For", "")
     if xff:
         return xff.split(",")[0].strip()
