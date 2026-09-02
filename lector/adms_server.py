@@ -736,6 +736,20 @@ class H(BaseHTTPRequestHandler):
         n = int(self.headers.get("Content-Length", 0) or 0)
         return self.rfile.read(n) if n else b""
 
+    # ── OPTIONS (preflight CORS) ──
+    # El navegador manda esto ANTES de cualquier fetch cross-origin que lleve
+    # un header custom (X-Reloj-Key) — sin contestarlo bien, bloquea la
+    # llamada real entera y ni siquiera llega a tocar do_GET/do_POST. curl no
+    # hace este paso, por eso las pruebas por curl pasaban y el navegador no.
+    def do_OPTIONS(self):
+        self.send_response(204)
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, X-Reloj-Key")
+        self.send_header("Access-Control-Max-Age", "86400")
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+
     # ── GET ──
     def do_GET(self):
         try:
@@ -748,6 +762,7 @@ class H(BaseHTTPRequestHandler):
             if not u.path.startswith("/iclock/") and not _autorizado(self):
                 self.send_response(401)
                 self.send_header("Content-Type", "text/plain; charset=utf-8")
+                self.send_header("Access-Control-Allow-Origin", "*")
                 self.end_headers()
                 self.wfile.write(b"Falta la clave de acceso (X-Reloj-Key)")
                 return
@@ -910,6 +925,7 @@ class H(BaseHTTPRequestHandler):
             if not u.path.startswith("/iclock/") and not _autorizado(self):
                 self.send_response(401)
                 self.send_header("Content-Type", "text/plain; charset=utf-8")
+                self.send_header("Access-Control-Allow-Origin", "*")
                 self.end_headers()
                 self.wfile.write(b"Falta la clave de acceso (X-Reloj-Key)")
                 return
