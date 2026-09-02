@@ -3,6 +3,7 @@ const Registros = (() => {
   let allRegs = [];
   let currentPage = 1;
   const regsPerPage = 100; // 100 registros por página
+  let _channel = null;
 
   function changePer() {
     const p = document.getElementById('fPer').value;
@@ -358,5 +359,27 @@ const Registros = (() => {
     a.click(); showToast('CSV descargado ✓');
   }
 
-  return { load, render, changePer, openEdit, closeModal, save, del, exportCSV, _onAreaChange, showObs, goToPage };
+  // ── Refresco automático: el reloj biométrico (u otro admin) puede
+  // insertar/actualizar un registro en cualquier momento — Supabase
+  // Realtime avisa apenas pasa y se vuelve a cargar la lista sola, sin
+  // que nadie tenga que tocar nada. Mismo patrón que Actividad.start().
+  function startRealtime() {
+    if (_channel) return;
+    _channel = SB
+      .channel('one-registros-live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'registros' }, () => load())
+      .subscribe();
+  }
+
+  // ── Refresco manual (botón ↻) — por si alguien prefiere no esperar,
+  // o Realtime no llegó a conectar (red rara, tab en segundo plano, etc.)
+  async function refrescarManual() {
+    const btn = document.getElementById('btnRefreshReg');
+    const icono = btn?.querySelector('svg, i');
+    icono?.classList.add('spin');
+    await load();
+    icono?.classList.remove('spin');
+  }
+
+  return { load, render, changePer, openEdit, closeModal, save, del, exportCSV, _onAreaChange, showObs, goToPage, startRealtime, refrescarManual };
 })();

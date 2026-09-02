@@ -223,6 +223,27 @@
 
     <main style="max-width:1280px;margin:0 auto;padding:20px 16px 80px;">
 
+      <!-- AVISO DE ACTUALIZACIÓN — se arma con updateNotice() al cargar la
+           página; visible SOLO la primera vez que entra a esta versión
+           (localStorage), sin importar si es una pestaña normal, un acceso
+           directo guardado en el inicio, o la versión "descargable"
+           (acceso directo abierto como ventana propia) — todas cargan el
+           mismo admin.html, así que el mismo mecanismo cubre las tres. -->
+      <div id="avisoVersion" class="glass no-print fade-in" style="display:none;margin-bottom:16px;padding:16px 20px;border:1px solid rgba(107,225,227,.35);background:linear-gradient(135deg,rgba(107,225,227,.08),rgba(225,123,215,.06));">
+        <div style="display:flex;gap:12px;align-items:flex-start;">
+          <div style="flex-shrink:0;color:var(--one-cyan);margin-top:2px;"><i data-lucide="sparkles" style="width:20px;height:20px;"></i></div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-family:var(--font-title);font-weight:800;font-size:14px;color:var(--one-white);">
+              Nueva actualización <span id="avisoVersionNum" class="week-pill" style="margin-left:6px;"></span>
+            </div>
+            <ul id="avisoVersionLista" style="margin:8px 0 0;padding-left:18px;font-size:13px;color:rgba(198,201,215,.85);line-height:1.6;"></ul>
+          </div>
+          <button onclick="cerrarAvisoVersion()" class="btn btn-ghost" style="padding:5px 9px;font-size:12px;flex-shrink:0;" title="Cerrar">
+            <i data-lucide="x" style="width:13px;height:13px;"></i>
+          </button>
+        </div>
+      </div>
+
       <!-- TABS -->
       <div
         style="display:flex;gap:5px;margin-bottom:18px;flex-wrap:wrap;align-items:center;justify-content:space-between;"
@@ -242,6 +263,11 @@
           <button class="tab-btn" id="at-reloj" onclick="switchTab('reloj'); RelojAdmin.start();">⏰ Reloj</button>
         </div>
         <div style="display:flex;gap:6px;">
+          <div id="btnRefreshWrap" style="display:none;">
+            <button class="btn btn-ghost" id="btnRefreshReg" onclick="Registros.refrescarManual()" title="Actualizar registros">
+              <i data-lucide="refresh-cw" style="width:14px;height:14px;"></i>
+            </button>
+          </div>
           <div id="btnCsvWrap" style="display:none;">
             <button class="btn btn-gold" onclick="Registros.exportCSV()">⬇ CSV</button>
           </div>
@@ -966,6 +992,38 @@
   <script src="js/actividad.js"></script>
   <script src="js/reloj-admin.js"></script>
   <script>
+    /* ── Aviso de actualización ──
+       Se muestra UNA sola vez por versión (localStorage), sin importar
+       cuántas veces se recargue o se reabra el acceso directo del inicio.
+       Para publicar una versión nueva: agregar una entrada arriba de todo
+       (queda primera) y listo — el resto es automático. */
+    const APP_VERSION = '1.2.0';
+    const CAMBIOS_VERSION = [
+      { version: '1.2.0', cambios: [
+        'Reloj biométrico ZKTeco integrado: fichajes en vivo desde el lector',
+        'Sincronización automática a Registros (con el manual siempre respetado)',
+        'Pestaña Reloj: vínculos de personal, sincronización y estado en vivo',
+      ]},
+    ];
+    const CLAVE_VERSION_VISTA = 'one_horarios_version_vista';
+
+    function mostrarAvisoVersionSiCorresponde() {
+      if (localStorage.getItem(CLAVE_VERSION_VISTA) === APP_VERSION) return;
+      const actual = CAMBIOS_VERSION.find(v => v.version === APP_VERSION);
+      if (!actual) return;
+      document.getElementById('avisoVersionNum').textContent = 'v' + actual.version;
+      document.getElementById('avisoVersionLista').innerHTML =
+        actual.cambios.map(c => `<li>${c}</li>`).join('');
+      document.getElementById('avisoVersion').style.display = '';
+      // se marca como vista apenas se muestra (no al cerrarla) — así no
+      // vuelve a aparecer aunque la cierren sin querer o recarguen antes
+      localStorage.setItem(CLAVE_VERSION_VISTA, APP_VERSION);
+      if (window.lucide) lucide.createIcons();
+    }
+    function cerrarAvisoVersion() {
+      document.getElementById('avisoVersion').style.display = 'none';
+    }
+
     const TABS = ['dash', 'reg', 'per', 'lid', 'hsem', 'act', 'reloj'];
     let _hsemOk = false;
 
@@ -976,8 +1034,10 @@
       });
       const btnPdf = document.getElementById('btnPdfWrap');
       const btnCsv = document.getElementById('btnCsvWrap');
+      const btnRefresh = document.getElementById('btnRefreshWrap');
       if (btnPdf) btnPdf.style.display = t === 'dash' ? '' : 'none';
       if (btnCsv) btnCsv.style.display = t === 'reg' ? '' : 'none';
+      if (btnRefresh) { btnRefresh.style.display = t === 'reg' ? '' : 'none'; if (t === 'reg' && window.lucide) lucide.createIcons(); }
       if (t === 'hsem' && !_hsemOk) { _hsemOk = true; HorariosSem.init(); }
       if (t === 'lid') { Lideres.load(); CfgVentana.load(); }
     }
@@ -1128,9 +1188,12 @@
 
     document.addEventListener('DOMContentLoaded', () => {
       Auth.requireAdmin();
+      mostrarAvisoVersionSiCorresponde();
       Dashboard.load();
       Registros.load();
+      Registros.startRealtime();
       Personal.load();
+      if (window.lucide) lucide.createIcons();
     });
 
 
@@ -1138,13 +1201,3 @@
 </body>
 
 </html>
-```
-
----
-
-### 📄 `one-horarios/index.html`
-
-**Tamaño**: 25.6 KB
-
-```html
-/* ── V. 0.0.5 (Footer)── */
