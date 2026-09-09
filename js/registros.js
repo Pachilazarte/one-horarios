@@ -4,6 +4,26 @@ const Registros = (() => {
   let currentPage = 1;
   const regsPerPage = 100; // 100 registros por página
   let _channel = null;
+  let _lideres = null; // se carga una sola vez: [{id, nombre, areas}]
+
+  // Un líder puede manejar varias áreas (tabla lideres.areas es un array) —
+  // filtrar "por líder" es filtrar por cualquiera de sus áreas. Se carga
+  // una sola vez (no en cada load(), que corre en cada cambio de filtro y
+  // con cada evento de Realtime) y popula el <select id="fLider">.
+  async function _cargarLideresFiltro() {
+    if (_lideres) return;
+    const { data, error } = await SB.from('lideres').select('id,nombre,areas').eq('activo', true).order('nombre');
+    if (error) return;
+    _lideres = data || [];
+    const sel = document.getElementById('fLider');
+    if (!sel) return;
+    _lideres.forEach(l => {
+      const o = document.createElement('option');
+      o.value = l.id;
+      o.textContent = l.nombre;
+      sel.appendChild(o);
+    });
+  }
 
   function changePer() {
     const p = document.getElementById('fPer').value;
@@ -16,8 +36,10 @@ const Registros = (() => {
   }
 
   async function load() {
+    await _cargarLideresFiltro();
     const per = document.getElementById('fPer').value;
     const area = document.getElementById('fArea').value;
+    const liderId = document.getElementById('fLider')?.value || '';
 
     // ✅ Manejar períodos especiales correctamente
     let desde, hasta;
@@ -38,6 +60,10 @@ const Registros = (() => {
     if (desde) q = q.gte('fecha', desde);
     if (hasta) q = q.lte('fecha', hasta);
     if (area) q = q.eq('area', area);
+    if (liderId) {
+      const lider = _lideres.find(l => l.id === liderId);
+      if (lider) q = q.in('area', lider.areas || []);
+    }
     const { data, error } = await q;
     if (error) { showToast('Error al cargar', 'err'); return; }
     allRegs = data || [];

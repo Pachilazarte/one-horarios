@@ -66,6 +66,7 @@ let _lastRows = [], _lastPer = 'semana';
     _chartDia(rows);
     _topTard(rows, per);
     _topExtra(rows, per);
+    _topTemprano(rows, per);
     _areaTable(rows);
     _personasTable(rows);  // ✅ NUEVO - Mostrar tabla de personas
   }
@@ -341,6 +342,180 @@ ${allData.map((p,i)=>{
     document.body.appendChild(overlay);
   }
 
+ // ── TOP LLEGADAS TEMPRANAS CON MINIFILTRO (mellizo de _topTard: mismo
+  // patrón, pero diff<0 = llegó antes de hora, en vez de diff>0) ──
+  function _topTemprano(rows, per){
+    const el=document.getElementById('topTemprano');
+    if(!el) return;
+
+    const modo = document.getElementById('topTempranoMode')?.value || 'total';
+
+    const conPlan=rows.filter(r=>{
+      if(!r.turno||!r.hora_entrada||r.turno==='Flex'||r.turno==='Guardia'||r.turno==='Licencia')return false;
+      const e=r.turno.split('→')[0].trim();
+      return e.match(/^\d{2}:\d{2}$/);
+    });
+
+    let sorted, allData;
+
+    if(modo === 'total') {
+      const byPers={};
+      conPlan.forEach(r=>{
+        const planEnt=r.turno.split('→')[0].trim();
+        const diff=calcTardVsPlan(planEnt,r.hora_entrada.slice(0,5));
+        if(diff===null||diff>=0)return; // solo llegadas ANTES de hora
+        const k=r.nombre;
+        if(!byPers[k])byPers[k]={nombre:r.nombre,area:r.area,totalMin:0,veces:0};
+        byPers[k].totalMin+=Math.abs(diff);
+        byPers[k].veces++;
+      });
+      allData = Object.values(byPers).sort((a,b)=>b.totalMin-a.totalMin);
+      sorted = allData.slice(0,5);
+    } else {
+      const byPers={};
+      conPlan.forEach(r=>{
+        const planEnt=r.turno.split('→')[0].trim();
+        const diff=calcTardVsPlan(planEnt,r.hora_entrada.slice(0,5));
+        if(diff===null||diff>=0)return;
+        const k=r.nombre;
+        const abs=Math.abs(diff);
+        if(!byPers[k]){byPers[k]={nombre:r.nombre,area:r.area,maxMin:abs,maxFecha:r.fecha,veces:0};}
+        byPers[k].veces++;
+        if(abs > byPers[k].maxMin) {
+          byPers[k].maxMin = abs;
+          byPers[k].maxFecha = r.fecha;
+        }
+      });
+      allData = Object.values(byPers).sort((a,b)=>b.maxMin-a.maxMin);
+      sorted = allData.slice(0,5);
+    }
+
+    const ACOLOR={
+      'ADMINISTRACION':'#6be1e3','COMERCIAL':'#e17bd7','RECURSOS HUMANOS':'#e4c76a',
+      'MARKETING':'#f472b6','ACADEMICO / GT':'#a78bfa',
+      'INNOVACION Y DESARROLLO':'#34d399','MAESTRANZA':'#fb923c','PASANTIAS':'#60a5fa',
+    };
+
+    if(!sorted.length){el.innerHTML='<div style="font-size:12px;color:rgba(198,201,215,.3);">—</div>';return;}
+
+    const header = `
+      <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;">
+        <button class="tab-btn ${modo==='total'?'active':''}" style="padding:6px 12px;font-size:11px;"
+          onclick="document.getElementById('topTempranoMode').value='total'; Dashboard.load()">📊 Total (suma)</button>
+        <button class="tab-btn ${modo==='individual'?'active':''}" style="padding:6px 12px;font-size:11px;"
+          onclick="document.getElementById('topTempranoMode').value='individual'; Dashboard.load()">👤 Individual (máx)</button>
+      </div>
+    `;
+
+    const listHtml = sorted.map((p,i)=>{
+      const label = modo === 'total' ? `-${p.totalMin}m` : `-${p.maxMin}m`;
+      const subtitle = modo === 'total' ? `${p.veces} registros` : (p.maxFecha ? _fmtFechaCompleta(p.maxFecha) : 'máximo 1 día');
+      return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(198,201,215,.06);">
+        <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
+          <span style="color:${ACOLOR[p.area]||'#9ca3af'};font-weight:800;flex-shrink:0;">${i+1}</span>
+          <div style="min-width:0;flex:1;">
+            <div style="font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.nombre}</div>
+            <div style="font-size:10px;color:rgba(198,201,215,.4);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.area}</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;margin-left:8px;">
+          <div style="text-align:right;">
+            <div style="font-size:13px;font-weight:800;color:#34d399;">${label}</div>
+            <div style="font-size:10px;color:rgba(198,201,215,.4);">${subtitle}</div>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+
+    const verMasBtn = allData.length > 5 ? `
+      <div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(198,201,215,.06);">
+        <button onclick="Dashboard._showAllTemprano('${modo}')" style="width:100%;padding:8px;background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.25);color:#34d399;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;">
+          Ver más (${allData.length} total)
+        </button>
+      </div>
+    ` : '';
+
+    el.innerHTML = header + listHtml + verMasBtn;
+  }
+
+  // ── MOSTRAR TODAS LAS LLEGADAS TEMPRANAS EN MODAL ──
+  function _showAllTemprano(modo) {
+    const rows = _lastRows;
+    const conPlan=rows.filter(r=>{
+      if(!r.turno||!r.hora_entrada||r.turno==='Flex'||r.turno==='Guardia'||r.turno==='Licencia')return false;
+      const e=r.turno.split('→')[0].trim();
+      return e.match(/^\d{2}:\d{2}$/);
+    });
+
+    let allData;
+    if(modo === 'total') {
+      const byPers={};
+      conPlan.forEach(r=>{
+        const planEnt=r.turno.split('→')[0].trim();
+        const diff=calcTardVsPlan(planEnt,r.hora_entrada.slice(0,5));
+        if(diff===null||diff>=0)return;
+        const k=r.nombre;
+        if(!byPers[k])byPers[k]={nombre:r.nombre,area:r.area,totalMin:0,veces:0};
+        byPers[k].totalMin+=Math.abs(diff);
+        byPers[k].veces++;
+      });
+      allData = Object.values(byPers).sort((a,b)=>b.totalMin-a.totalMin);
+    } else {
+      const byPers={};
+      conPlan.forEach(r=>{
+        const planEnt=r.turno.split('→')[0].trim();
+        const diff=calcTardVsPlan(planEnt,r.hora_entrada.slice(0,5));
+        if(diff===null||diff>=0)return;
+        const k=r.nombre;
+        const abs=Math.abs(diff);
+        if(!byPers[k]){byPers[k]={nombre:r.nombre,area:r.area,maxMin:abs,maxFecha:r.fecha,veces:0};}
+        byPers[k].veces++;
+        if(abs > byPers[k].maxMin) {
+          byPers[k].maxMin = abs;
+          byPers[k].maxFecha = r.fecha;
+        }
+      });
+      allData = Object.values(byPers).sort((a,b)=>b.maxMin-a.maxMin);
+    }
+
+    const ACOLOR={
+      'ADMINISTRACION':'#6be1e3','COMERCIAL':'#e17bd7','RECURSOS HUMANOS':'#e4c76a',
+      'MARKETING':'#f472b6','ACADEMICO / GT':'#a78bfa',
+      'INNOVACION Y DESARROLLO':'#34d399','MAESTRANZA':'#fb923c','PASANTIAS':'#60a5fa',
+    };
+
+    document.getElementById('tempranoModalContent')?.remove();
+    const overlay=document.createElement('div');
+    overlay.id='tempranoModalContent';
+    overlay.style.cssText='position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.8);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:16px;';
+    overlay.innerHTML=`
+      <div style="background:#13111c;border:1px solid rgba(52,211,153,.22);border-radius:16px;padding:24px;max-width:500px;width:100%;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.6);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+          <div style="font-size:14px;font-weight:700;color:#34d399;">🌅 Todas las llegadas tempranas (${modo==='total'?'suma':'máximo'})</div>
+          <button onclick="document.getElementById('tempranoModalContent').remove()" style="background:none;border:none;color:rgba(198,201,215,.5);font-size:20px;cursor:pointer;">✕</button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+${allData.map((p,i)=>{
+            const label = modo === 'total' ? `-${p.totalMin}m` : `-${p.maxMin}m`;
+            const subtitle = modo === 'total' ? `${p.veces} registros` : (p.maxFecha ? _fmtFechaCompleta(p.maxFecha) : 'máximo 1 día');
+            return `<div style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:rgba(198,201,215,.05);border:1px solid rgba(198,201,215,.08);border-radius:8px;">
+              <div>
+                <div style="font-weight:700;color:#fff;">${i+1}. ${p.nombre}</div>
+                <div style="font-size:11px;color:${ACOLOR[p.area]||'#9ca3af'};margin-top:2px;">${p.area}</div>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-size:14px;font-weight:800;color:#34d399;">${label}</div>
+                <div style="font-size:10px;color:rgba(198,201,215,.4);">${subtitle}</div>
+              </div>
+            </div>`;
+          }).join('')}
+        </div>
+        <button onclick="document.getElementById('tempranoModalContent').remove()" style="margin-top:20px;width:100%;padding:10px;background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.28);color:#34d399;border-radius:10px;font-weight:700;font-size:12px;cursor:pointer;">Cerrar</button>
+      </div>`;
+    overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.remove();});
+    document.body.appendChild(overlay);
+  }
+
  // ── TOP HORAS EXTRA POST-SALIDA CON MINIFILTRO ──
   function _topExtra(rows, per){
     const el=document.getElementById('topExtra');
@@ -591,6 +766,7 @@ return {
     load, 
     _changeDPer,
     _showAllTardanzas,
-    _showAllExtra
+    _showAllExtra,
+    _showAllTemprano
   };
 })();
