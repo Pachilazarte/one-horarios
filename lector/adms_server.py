@@ -397,6 +397,22 @@ def bucle_saludo():
         time.sleep(600)  # chequea cada 10 min
 
 # ── Avisos de entrada/salida vs horario planificado ──────────────────────────
+_horarios_cache = {}  # lunes -> (momento, filas): una semana sirve para todo el personal
+
+def _horarios_de_semana(lunes, supa):
+    """Filas de horarios_semanales de una semana, con caché de 60 s.
+    Sin caché, calcular_dia pedía la semana entera una vez POR PERSONA
+    (preview_dia tardaba ~10 s con 20 personas)."""
+    hit = _horarios_cache.get(lunes)
+    if hit and time.time() - hit[0] < 60:
+        return hit[1]
+    req = urlreq.Request(
+        f"{supa['url']}/rest/v1/horarios_semanales?semana_desde=eq.{lunes}&select=horarios",
+        headers={"apikey": supa["key"], "Authorization": "Bearer " + supa["key"]})
+    rows = json.loads(urlreq.urlopen(req, timeout=8).read())
+    _horarios_cache[lunes] = (time.time(), rows)
+    return rows
+
 def fetch_horario(nombre, fecha):
     """Horario planificado de una persona para una fecha, leyendo
     horarios_semanales de Supabase (solo lectura). Replica getHorarioPlanificado
@@ -408,10 +424,7 @@ def fetch_horario(nombre, fecha):
     lunes = (d - datetime.timedelta(days=d.weekday())).isoformat()
     daykey = ["lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo"][d.weekday()]
     try:
-        req = urlreq.Request(
-            f"{supa['url']}/rest/v1/horarios_semanales?semana_desde=eq.{lunes}&select=horarios",
-            headers={"apikey": supa["key"], "Authorization": "Bearer " + supa["key"]})
-        rows = json.loads(urlreq.urlopen(req, timeout=8).read())
+        rows = _horarios_de_semana(lunes, supa)
     except Exception as e:
         log(f"! no pude leer horarios_semanales: {e}")
         return None
