@@ -3,16 +3,13 @@
 // vista previa en vivo, carga de personal, hora y reinicio remotos.
 // Lecturas de Supabase (personal) solamente; el vínculo se guarda LOCAL en el
 // servidor del reloj — esta base no se toca hasta activar la sincronización.
-// ⚙ El servidor del reloj corre en la X270, expuesto a internet vía un
-// túnel de Cloudflare (contenedor "reloj-tunnel" en la X270 — HTTPS real,
-// necesario porque esta página es HTTPS y el navegador bloquea llamadas a
-// http:// desde acá, "mixed content"). Es un túnel "quick" (sin cuenta ni
-// token): la URL cambia si el contenedor se reinicia — si deja de andar,
-// `docker logs reloj-tunnel` en la X270 tiene la URL nueva.
-const RELOJ_API = 'https://conclude-striking-vegetarian-spoken.trycloudflare.com';
-// Clave solo exigida cuando el pedido llega desde fuera de la red local
-// (o sea, siempre que se accede vía este dominio público) — en LAN directa
-// (el panel técnico en http://reloj...:8081/) nunca hace falta.
+// ⚙ El servidor del reloj corre en la X270 y se expone con Tailscale Funnel
+// (HTTPS real, necesario porque esta página es HTTPS y el navegador bloquea
+// llamadas a http:// desde acá, "mixed content"). La URL es fija: depende del
+// nombre de la X270 en Tailscale, no cambia al reiniciar.
+const RELOJ_API = 'https://x270-server.taild45448.ts.net:10000/reloj';
+// Clave exigida: todo pedido que llega por Funnel (internet) la necesita.
+const RELOJ_HEADERS = { 'X-Reloj-Key': 'one2026reloj' };
 const RELOJ_HEADERS = { 'X-Reloj-Key': 'one2026reloj' };
 
 const RelojAdmin = (() => {

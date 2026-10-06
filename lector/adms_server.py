@@ -46,46 +46,40 @@ LOGF = os.path.join(BASE, "lector.log")
 FOTOS = os.path.join(BASE, "fotos")
 PUERTO = 8081
 TZ_HORAS = -3  # Argentina
-# Token de acceso público: el lector y el panel técnico en LAN siguen sin
-# pedirlo (compatibilidad total). Solo se exige a pedidos que llegan desde
-# fuera de la red local — el caso de la página pública vía túnel (Cloudflare
-# o Tailscale Funnel).
-# OJO: cualquier túnel reverse-proxea al backend por loopback, así que
-# self.client_address SIEMPRE muestra 127.0.0.1 para ese tráfico — si se
-# mirara solo eso, todo pedido tunneled parecería "local" y el filtro
-# quedaría roto. Por eso _ip_origen() prioriza los headers que cada túnel
-# usa para llevar la IP real: Cloudflare manda CF-Connecting-IP, Tailscale
-# Funnel manda X-Forwarded-For (fuente: github.com/tailscale/tailscale/
-# issues/12972).
+# Token de acceso para el panel web (página de Netlify vía Tailscale Funnel).
+# Las redes privadas (LAN 10./192.168./172.16-31. y Tailscale 100.x) entran
+# sin clave: el lector y el panel técnico en LAN no cambian en nada.
+# OJO: Funnel reverse-proxea por loopback, así que TODO pedido que llega por
+# Funnel tiene client_address 127.0.0.1 y NO sabemos la IP real. Los headers
+# X-Forwarded-For / CF-Connecting-IP los puede mandar cualquiera, así que no
+# se confían. Regla: loopback nunca cuenta como red privada → exige clave.
 TOKEN_PUBLICO = "one2026reloj"
-REDES_PRIVADAS = ("10.", "192.168.", "127.", "100.")  # 100.x = red de Tailscale
+REDES_PRIVADAS = ("10.", "192.168.", "100.")  # 100.x = red de Tailscale
 for _o in range(16, 32):
     REDES_PRIVADAS += (f"172.{_o}.",)
-
-def _ip_origen(handler):
-    cf = handler.headers.get("CF-Connecting-IP", "")
-    if cf:
-        return cf.strip()
-    xff = handler.headers.get("X-Forwarded-For", "")
-    if xff:
-        return xff.split(",")[0].strip()
-    return handler.client_address[0]
 
 def _es_privada(ip):
     return ip.startswith(REDES_PRIVADAS)
 
+def _en_lan(handler):
+    """True solo si el pedido llega directo desde una red privada (no por proxy)."""
+    return _es_privada(handler.client_address[0])
+
 def _autorizado(handler):
-    """True si el pedido puede pasar sin token: viene de una red privada
-    (LAN, Tailscale) o directo desde loopback. Si es pública, exige el token
-    (header X-Reloj-Key o ?key=) — así el reloj físico y el panel técnico en
-    LAN no cambian en nada, y solo lo que entra desde internet vía Funnel
-    necesita la clave."""
-    ip = _ip_origen(handler)
-    if _es_privada(ip):
+    """True si el pedido puede pasar sin token: viene directo de una red privada.
+    Cualquier otro origen (internet vía Funnel, loopback) exige X-Reloj-Key o ?key=."""
+    if _en_lan(handler):
         return True
     q = parse_qs(urlparse(handler.path).query)
     return (handler.headers.get("X-Reloj-Key") == TOKEN_PUBLICO
             or q.get("key", [""])[0] == TOKEN_PUBLICO)
+
+def _pasa(handler, path):
+    """Gate de cada pedido. /iclock/* (el reloj físico) solo acepta LAN directa:
+    si pasara por Funnel, cualquiera de internet podría inyectar marcas falsas."""
+    if path.startswith("/iclock/"):
+        return _en_lan(handler)
+    return _autorizado(handler)
 
 _lock = threading.Lock()
 
@@ -754,12 +748,14 @@ class H(BaseHTTPRequestHandler):
     def do_GET(self):
         try:
             u = urlparse(self.path)
+            if u.path == "/reloj" or u.path.startswith("/reloj/"):
+                u = u._replace(path=u.path[len("/reloj"):] or "/")
             q = {k: v[0] for k, v in parse_qs(u.query).items()}
             sn = q.get("SN", "")
 
-            # el reloj físico habla /iclock/* siempre en LAN — nunca se gatea.
-            # todo lo demás (API/panel) pide token si llega desde internet.
-            if not u.path.startswith("/iclock/") and not _autorizado(self):
+            # /iclock/* es el reloj físico: solo LAN directa, nunca Funnel.
+            # Todo lo demás (API/panel) pide clave si no viene de una red privada.
+            if not _pasa(self, u.path):
                 self.send_response(401)
                 self.send_header("Content-Type", "text/plain; charset=utf-8")
                 self.send_header("Access-Control-Allow-Origin", "*")
@@ -917,12 +913,14 @@ class H(BaseHTTPRequestHandler):
     def do_POST(self):
         try:
             u = urlparse(self.path)
+            if u.path == "/reloj" or u.path.startswith("/reloj/"):
+                u = u._replace(path=u.path[len("/reloj"):] or "/")
             q = {k: v[0] for k, v in parse_qs(u.query).items()}
             sn = q.get("SN", "")
             tabla = q.get("table", "").upper()
             crudo = self._body()  # drenar el body siempre, gatee o no
 
-            if not u.path.startswith("/iclock/") and not _autorizado(self):
+            if not _pasa(self, u.path):
                 self.send_response(401)
                 self.send_header("Content-Type", "text/plain; charset=utf-8")
                 self.send_header("Access-Control-Allow-Origin", "*")
