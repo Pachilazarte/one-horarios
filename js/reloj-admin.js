@@ -9,7 +9,7 @@
 // http:// desde acá, "mixed content"). Es un túnel "quick" (sin cuenta ni
 // token): la URL cambia si el contenedor se reinicia — si deja de andar,
 // `docker logs reloj-tunnel` en la X270 tiene la URL nueva.
-const RELOJ_API = 'https://careers-hunt-mailman-tanks.trycloudflare.com';
+const RELOJ_API = 'https://conclude-striking-vegetarian-spoken.trycloudflare.com';
 // Clave solo exigida cuando el pedido llega desde fuera de la red local
 // (o sea, siempre que se accede vía este dominio público) — en LAN directa
 // (el panel técnico en http://reloj...:8081/) nunca hace falta.

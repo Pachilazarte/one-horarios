@@ -5,7 +5,7 @@
 // "quick" (sin cuenta ni token): la URL cambia si el contenedor se reinicia
 // — si algún día deja de andar, revisar `docker logs reloj-tunnel` en la
 // X270 y actualizar esta línea con la URL nueva.
-const RELOJ_API = 'https://careers-hunt-mailman-tanks.trycloudflare.com';
+const RELOJ_API = 'https://conclude-striking-vegetarian-spoken.trycloudflare.com';
 // Clave solo exigida cuando el pedido llega desde fuera de la red local
 // (o sea, siempre que se accede vía este túnel) — en LAN directa nunca
 // hace falta.
