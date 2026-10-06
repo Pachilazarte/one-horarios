@@ -10,7 +10,6 @@
 const RELOJ_API = 'https://x270-server.taild45448.ts.net:10000/reloj';
 // Clave exigida: todo pedido que llega por Funnel (internet) la necesita.
 const RELOJ_HEADERS = { 'X-Reloj-Key': 'one2026reloj' };
-const RELOJ_HEADERS = { 'X-Reloj-Key': 'one2026reloj' };
 
 const RelojAdmin = (() => {
   let _timer = null;
